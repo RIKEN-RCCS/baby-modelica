@@ -1,0 +1,577 @@
+(* small0.sml -*-Coding: us-ascii-unix;-*- *)
+(* Copyright (C) 2018-2020 RIKEN R-CCS *)
+
+(* SMALL FUNCTIONS FOR ELABORATION (first half). *)
+
+structure small0 = struct
+
+open plain
+open ast
+open message
+
+type cooker_t = common.cooker_t
+
+(* Prints a trace message. *)
+
+fun tr_tree (s : string) = if true then (print (s ^"\n")) else ()
+fun tr_tree_vvv (s : string) = if false then (print (s ^"\n")) else ()
+
+(* ================================================================ *)
+
+(* Converts a literal constant to an int value. *)
+
+fun literal_to_int w = (
+    case w of
+	L_Number (_, s) => (
+	case (string_is_int s) of
+	    NONE => raise error_non_integer_value
+	  | SOME v => v)
+      | _ => raise error_non_constant_value)
+
+(* (Note Real.fromString parses the prefix of s) *)
+
+fun r_value s = (
+    case (Real.fromString s) of
+	SOME x => x
+      | NONE => raise Match)
+
+fun z_value s = (
+    case (Int.fromString s) of
+	SOME x => x
+      | NONE => raise Match)
+
+fun r_literal x = (
+    L_Number (R, (Real.toString x)))
+
+fun z_literal x = (
+    L_Number (Z, (Int.toString x)))
+
+(* Tests if a class is a simple-type, that is, Real, Integer, Boolean,
+   String, enumerations, types extending them, and arrays of them. *)
+
+fun class_is_simple_type k = (
+    let
+	fun tag_is_simple_type tag = (
+	    case tag of
+		Ctag [""] => raise Match
+	      | Ctag [] => false
+	      | Ctag ["Real"] => true
+	      | Ctag ["Integer"] => true
+	      | Ctag ["Boolean"] => true
+	      | Ctag ["String"] => true
+	      | _ => false)
+    in
+	case k of
+	    Def_Body (mk, j, cs, (tag, n, x), ee, aa, ww) => (
+	    let
+		val _ = if (step_is_at_least E3 k) then () else raise Match
+	    in
+		(class_is_enum k) orelse (tag_is_simple_type tag)
+	    end)
+	  | Def_Der _ => false
+	  | Def_Primitive _ => true
+	  | Def_Name _ => raise Match
+	  | Def_Scoped _ => raise Match
+	  | Def_Refine (kx, v, ts, q, (ss, mm), aa, ww) => (
+	    (class_is_simple_type kx))
+	  | Def_Extending _ => raise Match
+	  | Def_Replaced _ => raise Match
+	  | Def_Displaced (tag, _) => (tag_is_simple_type tag)
+	  | Def_In_File => raise Match
+	  | Def_Mock_Array _ => raise Match
+    end)
+
+fun make_file_path basepath (Name ss) =
+    (foldl (fn (r, l) => (l ^ "/" ^ r)) basepath ss)
+
+(* Check eq on Id.  It is to avoid "polyEqual" warning. *)
+
+fun id_eq (Id s0 : id_t) (Id s1 : id_t) = (s0 = s1)
+
+fun id_as_name (Id p) = (Name [p])
+
+(* Returns a class-tag for a qualified name. *)
+
+fun qualified_name_as_tag name = (
+    case name of
+	Name [] => raise Match
+      | Name [""] => Ctag []
+      | Name ("" :: nn) => Ctag nn
+      | Name _ => raise Match)
+
+(* Returns a class-tag (which is full-qualified) for a unqualified
+   name.  For example, a qualified name of "Modelica" is
+   ".Modelica". *)
+
+fun make_name_qualified (Name nn) = (
+    (qualified_name_as_tag (Name ("" :: nn))))
+
+fun check_name_is_qualified name = (
+    case name of
+	Name ("" :: t) => true
+      | Name _ => false)
+
+fun tag_as_name tag = (
+    case tag of
+	Ctag [""] => raise Match
+      | Ctag [] => raise Match
+      | Ctag nn => Name ("" :: nn))
+
+(* Returns true if a qualified-name is a single part. *)
+
+fun class_is_at_top_level tag = (
+    case tag of
+	Ctag [""] => raise Match
+      | Ctag [] => false
+      | Ctag [_] => true
+      | Ctag _ => false)
+
+fun declaration_id (Defvar (v, _, _, _, _, _)) = v
+
+fun same_class k0 k1 = (
+    (tag_of_definition k0) = (tag_of_definition k1))
+
+fun definition_body (Defclass ((v, g), b)) = b
+
+(* Returns a TAG from which a class is modified. *)
+
+fun innate_tag k = (
+    case k of
+	Def_Body (mk, j, cs, (tag, n, x), ee, aa, ww) => tag
+      | Def_Der (tag, cs, n, vv, aa, ww) => tag
+      | Def_Primitive _ => raise Match
+      | Def_Name _ => raise Match
+      | Def_Scoped _ => raise Match
+      | Def_Refine (kx, v, ts, q, (ss, mm), aa, ww) => (innate_tag kx)
+      | Def_Extending (_, x, kx) => (innate_tag kx)
+      | Def_Replaced (kx, _) => (innate_tag kx)
+      | Def_Displaced (tag, _) => tag
+      | Def_In_File => raise Match
+      | Def_Mock_Array _ => raise Match)
+
+fun tag_of_body k = (
+    case k of
+	Def_Body (mk, j, cs, (tag, n, x), ee, aa, ww) => tag
+      | Def_Der _ => raise Match
+      | Def_Primitive _ => raise Match
+      | Def_Name _ => raise Match
+      | Def_Scoped _ => raise Match
+      | Def_Refine _ => raise Match
+      | Def_Extending _ => raise Match
+      | Def_Replaced _ => raise Match
+      | Def_Displaced _ => raise Match
+      | Def_In_File => raise Match
+      | Def_Mock_Array _ => raise Match)
+
+fun body_elements (k : definition_body_t) = (
+    case k of
+	Def_Body (mk, j, cs, nm, ee, aa, ww) => ee
+      | Def_Der _ => raise Match
+      | Def_Primitive _ => raise Match
+      | Def_Name _ => raise Match
+      | Def_Scoped _ => raise Match
+      | Def_Refine _ => raise Match
+      | Def_Extending _ => raise Match
+      | Def_Replaced _ => raise Match
+      | Def_Displaced _ => raise Match
+      | Def_In_File => raise Match
+      | Def_Mock_Array _ => raise Match)
+
+(* Returns a list of the class body elements. *)
+
+fun class_elements (Defclass ((v, g), k)) = (body_elements k)
+
+fun replace_body_elements (k : definition_body_t) ee = (
+    case k of
+	Def_Body (mk, j, cs, nm, ee_, aa, ww) => (
+	Def_Body (mk, j, cs, nm, ee, aa, ww))
+      | Def_Der _ => raise Match
+      | Def_Primitive _ => raise Match
+      | Def_Name _ => raise Match
+      | Def_Scoped _ => raise Match
+      | Def_Refine _ => raise Match
+      | Def_Extending _ => raise Match
+      | Def_Replaced _ => raise Match
+      | Def_Displaced _ => raise Match
+      | Def_In_File => raise Match
+      | Def_Mock_Array _ => raise Match)
+
+fun assert_match_subject subj k = (
+    if (subj = (subject_of_class k)) then () else raise Match)
+
+fun drop_last_subscript_of_subject subj = (
+    if (subj = the_model_subject) then
+	subj
+    else if (subj = the_root_subject) then
+	subj
+    else
+	let
+	    val (prefix, (v, ss)) = (subject_prefix subj)
+	in
+	    (compose_subject prefix v [])
+	end)
+
+(* Checks the subjects ignoring the subscripts of an instance k. *)
+
+fun assert_match_subject_sans_subscript subj0 k = (
+    let
+	val subj1 = (subject_of_class k)
+	val subj2 = (drop_last_subscript_of_subject subj1)
+    in
+	if (subj0 = subj2) then () else raise Match
+    end)
+
+(* ================================================================ *)
+
+(* Tests if the subjects are in the inner-outer relation -- true if
+   subj1 is the prefix of subj0.  (IT IGNORES SUBSCRIPTS). *)
+
+fun subject_is_prefix (subj0, subj1) = (
+    let
+	fun prefix (cc0, cc1) = (
+	    case (cc0, cc1) of
+		(_, []) => true
+	      | ([], _) => false
+	      | ((v0, _) :: tt0, (v1, _) :: tt1) =>
+		if (v0 <> v1) then
+		    false
+		else
+		    (prefix (tt0, tt1)))
+    in
+	case (subj0, subj1) of
+	    (Subj (ns0, cc0), Subj (ns1, cc1)) => (
+	    (ns0 = ns1) andalso (prefix (cc0, cc1)))
+    end)
+
+(* Tests the prefix relation with the same name part.  It is true for
+   "model.tank.system" and "model.system". *)
+
+fun subject_is_inner_outer (subj0, subj1) = (
+    case (subj0, subj1) of
+	(Subj (ns0, cc0), Subj (ns1, cc1)) => (
+	let
+	    val (tt0, s0) = (split_last cc0)
+	    val (tt1, s1) = (split_last cc1)
+	in
+	    if (s0 = s1) then
+		(subject_is_prefix (Subj (ns0, tt0), Subj (ns1, tt1)))
+	    else
+		false
+	end))
+
+fun outer_but_not_inner (q : element_prefixes_t) = (
+    (#Outer q) andalso (not (#Inner q)))
+
+(* ================================================================ *)
+
+(* Returns a new class with replacing body elements. *)
+
+fun replace_class_elements (Defclass ((v, g), k)) ee = (
+    Defclass ((v, g), (replace_body_elements k ee)))
+
+(* ??? *)
+
+(* Gathers what (f e) returns for each class element. *)
+
+fun gather_in_elements f (d as Defclass ((v, g), k)) = (
+    (foldl (fn (e, acc) => (acc @ (f e))) [] (class_elements d)))
+
+fun gather_in_body_elements f (k : definition_body_t) = (
+    (foldl (fn (e, acc) => (acc @ (f e))) [] (body_elements k)))
+
+(* Substitutes elements e0 by e1,... (by appending) if f e0 returns
+   [e1,...]. *)
+
+fun subst_element f (d as Defclass _) = (
+    (replace_class_elements d (gather_in_elements f d)))
+
+(* Substitutes elements e0 by e1,... if f (e0,a0) returns
+   ([e1,...],a1).  f is called along with passing around an argument
+   a0. *)
+
+fun subst_element_along f (k0, a0) = (
+    let
+	val (ee3, a3) =
+	      (foldl
+		   (fn (e1, (ee1, a1)) =>
+		       let val (ee2, a2) = (f (e1, a1)) in (ee1 @ ee2, a2) end)
+		   ([], a0)
+		   (class_elements k0))
+    in
+	((replace_class_elements k0 ee3), a3)
+    end)
+
+fun subst_body_element f (k : definition_body_t) = (
+    (replace_body_elements k (gather_in_body_elements f k)))
+
+(* Finds a class element for which (f e) returns SOME. *)
+
+fun find_in_elements f (k : definition_body_t) = (
+    (list_find_some f (body_elements k)))
+
+(* Finds all elements in a class for which (f e) returns SOME. *)
+
+fun find_all_in_elements f (b : definition_body_t) = (
+    (gather_some f (body_elements b)))
+
+fun app_in_element f (d as Defclass ((v, g), k)) = (
+    (app f (class_elements d)))
+
+fun class_is_encapsulated k = (
+    let
+	fun check (t, {Encapsulated, ...}, _) = Encapsulated
+    in
+	case k of
+	    Def_Body (mk, j, cs, nm, ee, aa, ww) => (check cs)
+	  | Def_Der (c, cs, n, vv, aa, ww) => (check cs)
+	  | Def_Primitive _ => raise Match
+	  | Def_Name _ => raise Match
+	  | Def_Scoped _ => raise Match
+	  | Def_Refine _ => raise Match
+	  | Def_Extending _ => raise Match
+	  | Def_Replaced _ => raise Match
+	  | Def_Displaced _ => raise Match
+	  | Def_In_File => raise Match
+	  | Def_Mock_Array _ => raise Match
+    end)
+
+(* Bound variables start with "" for globals *)
+
+fun reference_is_bound x0 = (
+    case x0 of
+	Vref (_, []) => raise Match
+      | Vref (false, (Id "", []) :: _) => true
+      | Vref (false, (Id "", _) :: _) => raise Match
+      | Vref (false, (Id s, _) :: _) => false
+      | Vref (true, _) => true
+      | _ => raise Match)
+
+(* Tests if modifiers is empty or a single value. *)
+
+fun modifier_is_value nn = (
+    case nn of
+	[] => true
+      | [m] => (
+	case m of
+	    Mod_Redefine _ => false
+	  | Mod_Elemental_Redefine _ => false
+	  | Mod_Redeclare _ => false
+	  | Mod_Elemental_Redeclare _ => false
+	  | Mod_Entry _ => false
+	  | Mod_Value _ => true)
+      | _ => false)
+
+fun predefined_reference (Id v) = Subj (VAR, [(Id v, [])])
+
+fun global_element dd = (Public, no_element_prefixes, dd, NONE)
+
+(* ================================================================ *)
+
+(*AHO*)
+
+(* Tests if classes are the same.  It is used to drop duplicates in a
+   list of base classes. *)
+
+fun classes_are_similar x y = (
+    case (x, y) of
+	(Def_Body _, Def_Body _) => (innate_tag x) = (innate_tag y)
+      | (Def_Der _, Def_Der _) => x = y
+      | (Def_Name _, _) => raise Match
+      | (_, Def_Name _) => raise Match
+      | (Def_Scoped _, _) => raise Match
+      | (_, Def_Scoped _) => raise Match
+      | (Def_Refine _, Def_Refine _) => (innate_tag x) = (innate_tag y)
+      | (Def_Extending _, Def_Extending _) => (innate_tag x) = (innate_tag y)
+      | (Def_Replaced _, _) => raise Match
+      | (_, Def_Replaced _) => raise Match
+      | (Def_Displaced _, Def_Displaced _) => (innate_tag x) = (innate_tag y)
+      | (Def_In_File, _) => raise Match
+      | (_, Def_In_File) => raise Match
+      | (_, _) => false)
+
+(*AHO*)
+
+(* Tests if classes are compatible for outer ci0 to inner ci1.  (They
+   are compatible if ci0 extends ci1). *)
+
+fun classes_are_compatible cv0 cv1 = (
+    let
+	(*val same = ((nominal_is_class cv0) = (nominal_is_class cv1))*)
+	(*val ci0 = (class_of_nominal cv0)*)
+	(*val ci1 = (class_of_nominal cv1)*)
+	val _ = (warn_no_compatibility_test ())
+    in
+	true
+    end)
+
+fun binding_is_public (Binding (v, _, _, (z, r, d, h))) = (z = Public)
+
+fun binding_is_imported (Binding (v, _, i, (z, r, d, h))) = i
+
+fun binding_is_class (Binding (v, _, _, (z, r, d, h))) = (
+    case d of
+	EL_Class _ => true
+      | EL_State _ => false)
+
+(* ================================================================ *)
+
+(* Returns true for a constant or a parameter.  It is used to list
+   constants in a package.  Note that the variability is precise for a
+   package after modifier applications, so it is not necessary to
+   check the class definition (k) when it is not processed yet. *)
+
+fun declaration_is_constant (Defvar (v, (fs, vc, io), k, c, a, w)) = (
+    (vc = Constant orelse vc = Parameter))
+
+(* Tests if the class is proper for variable declaration form. *)
+
+fun body_is_declaration_form k = (
+    case k of
+	Def_Body _ => raise Match
+      | Def_Der _ => false
+      | Def_Primitive _ => true
+      | Def_Name _ => true
+      | Def_Scoped _ => true
+      | Def_Refine (kx, v, ts, q, (ss, mm), aa, ww) => (
+	(body_is_declaration_form kx))
+      | Def_Extending _ => false
+      | Def_Replaced _ => false
+      | Def_Displaced _ => false
+      | Def_In_File => raise Match
+      | Def_Mock_Array _ => raise Match)
+
+(* ================================================================ *)
+
+(*AHO*)
+
+(* CLASS SIMILARITY IS NOT IMPLEMENTED. *)
+
+(* It does not matter about variable declarations at step=E3. *)
+
+fun drop_duplicate_declarations step (bindings : binding_t list) = (
+    let
+	fun eq (Binding (v0, subj0_, _, e0), Binding (v1, subj1_, _, e1)) = (
+	    if (v0 <> v1) then
+		false
+	    else
+		true)
+
+	fun unify (b0, b1) = (
+	    case (b0, b1) of
+		(Binding (v0, subj0_, _, e0), Binding (v1, subj1_, _, e1)) => (
+		case (e0, e1) of
+		    ((_, _, EL_Class d0, _), (_, _, EL_Class d1, _)) => (
+		    if ((tag_of_definition d0) = (tag_of_definition d1)) then
+			b0
+		    else
+			(*raise (error_duplicate_declarations (b0, b1))*)
+			b0)
+		  | ((_, q0, EL_State d0, _), (_, q1, EL_State d1, _)) => (
+		    if (step = E3) then
+			b0
+		    else
+			(*raise (error_duplicate_declarations (b0, b1))*)
+			b0)
+		  | _ => raise (error_duplicate_declarations (b0, b1))))
+
+	fun unify_by_pairs ([]) = raise Match
+	  | unify_by_pairs (b :: bb) = (foldl unify b bb)
+
+	val bb0 = (list_duplicates eq bindings)
+	val bb1 = (map unify_by_pairs bb0)
+    in
+	bb1
+    end)
+
+(* Tests approximately if a class is modifiable.  The cooker skips
+   modifier applications if it is not.  It returns true only when it
+   is certain.  Returning false is OK that continues applying
+   modifications. *)
+
+fun body_is_unmodifiable k = (
+    case k of
+	Def_Body _ => false
+      | Def_Der _ => true
+      | Def_Primitive _ => raise Match
+      | Def_Name _ => raise Match
+      | Def_Scoped _ => false
+      | Def_Refine _ => false
+      | Def_Extending _ => false
+      | Def_Replaced (kx, _) => (body_is_unmodifiable kx)
+      | Def_Displaced _ => false
+      | Def_In_File => raise Match
+      | Def_Mock_Array _ => raise Match)
+
+(* Tests if a definition is an extends-redeclaration. *)
+
+fun body_is_extending k = (
+    case k of
+	Def_Body _ => false
+      | Def_Der _ => false
+      | Def_Primitive _ => raise Match
+      | Def_Name _ => false
+      | Def_Scoped _ => false
+      | Def_Refine _ => false
+      | Def_Extending _ => true
+      | Def_Replaced _ => false
+      | Def_Displaced _ => false
+      | Def_In_File => raise Match
+      | Def_Mock_Array _ => raise Match)
+
+fun find_in_bindings v bindings = (
+    (List.find (fn Binding (x, _, _, _) => v = x) bindings))
+
+fun assert_cook_step step k = (
+    if ((cook_step k) = step) then () else raise Match)
+
+fun assert_cooked_at_least step k = (
+    if (step_is_at_least step k) then () else raise Match)
+
+(* ================================================================ *)
+
+fun extract_bases_in_main_class (k0 : definition_body_t) = (
+    let
+	fun base_classes e = (
+	    case e of
+		Import_Clause _ => false
+	      | Extends_Clause _ => false
+	      | Element_Class _ => false
+	      | Element_State _ => false
+	      | Redefine_Class _ => false
+	      | Redeclare_State _ => false
+	      | Element_Enumerators _ => false
+	      | Element_Equations _ => false
+	      | Element_Algorithms _ => false
+	      | Element_External _ => false
+	      | Element_Annotation _ => false
+	      | Element_Import _ => false
+	      | Element_Base _ => false
+	      | Base_List _ => false
+	      | Base_Classes _ => true)
+
+	fun content e = (
+	    case e of
+		Base_Classes u => u
+	      | _ => raise Match)
+
+	val (bb, ee) = (List.partition base_classes (body_elements k0))
+	val bases = (List.concat (map content bb))
+	val k1 = (replace_body_elements k0 ee)
+    in
+	if (null bb) then
+	    (NONE, k1)
+	else
+	    (SOME bases, k1)
+    end)
+
+fun class_is_main_class k = (
+    let
+	val _ = if (class_is_body k) then () else raise Match
+	val _ = if (step_is_at_least E3 k) then () else raise Match
+    in
+	case (extract_bases_in_main_class k) of
+	    (NONE, k_) => false
+	  | (SOME bases, k_) => true
+    end)
+
+end
