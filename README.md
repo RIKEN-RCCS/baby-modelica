@@ -42,7 +42,8 @@ See frontend/notes.pdf first, then start with frontend/bbm.sml.
 
 Set the environment variable "MODELICAPATH" to the library paths of
 the Modelica Standard Library.  The paths point to the directory
-containing such as "Modelica 3.2.3".
+containing such as "Modelica 3.2.3".  Use the MSL-3.2.3 (2019-01-23)
+for testing.
 
 Test with the following commands in the "frontend" directory.
 "bbm.sml" loads the needed source files.  Flatdumper dumps a flat
