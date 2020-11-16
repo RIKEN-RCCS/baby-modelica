@@ -1,0 +1,5318 @@
+%% notes.tex -*-Coding: us-ascii-unix; Mode: Fundamental;-*-
+
+%% Memo on Baby-Modelica
+
+\documentclass[10pt,b5paper]{article}
+\usepackage[b5paper,margin=1.5cm]{geometry}
+
+\title{\bf{}Baby-Modelica Implementation Notes}
+\author{Copyright (C) 2018-2021 RIKEN R-CCS}
+\date{Baby-Modelica 3.4.0, 2020-01-29}
+
+\usepackage[hidelinks]{hyperref}
+\usepackage{listings}
+\usepackage{amssymb} %% (for a checkmark, mathbb)
+
+\makeatletter
+%%\renewcommand*\l@section{\@dottedtocline{1}{1.5em}{2.3em}}
+%%\renewcommand*\l@subsection{\@dottedtocline{1}{3em}{2em}}
+\makeatother
+
+\setcounter{tocdepth}{2}
+
+%%\usepackage[linkbordercolor={0 0 1}]{hyperref}
+
+\lstset{basicstyle=\ttfamily,frame=leftline,columns=flexible,keepspaces=true}
+%%\lstset{basicstyle=\ttfamily\small,numbers=left,firstnumber=0,frame=leftline}
+
+%% Numbered quotations.
+
+\newcounter{quoteno}
+\newcounter{ruleno}
+\def\tombstone{\rule[-.2ex]{.3em}{1.8ex}}
+
+\def\quotelead{\refstepcounter{quoteno}{\bf{}Quote~\arabic{quoteno}}.}
+\newenvironment{qquote}{\begin{quote}\quotelead}%
+{\end{quote}\ignorespacesafterend}
+
+\newenvironment{specquote}[1]{\begin{qquote} (\specref{#1}\/) }%
+{\end{qquote}}
+
+\newenvironment{widequote}{%
+\list{}{\leftmargin=0mm\rightmargin=\leftmargin}%
+\item\relax}{\endlist}
+
+\def\rulelead{\refstepcounter{ruleno}{\bf{}Rule~\arabic{ruleno}}.}
+\newenvironment{QRULE}{\begin{widequote}\rulelead}%
+{\unskip\nobreakspace\tombstone\end{widequote}\ignorespacesafterend}
+
+\def\factlead{\refstepcounter{ruleno}{\bf{}Fact~\arabic{ruleno}}.}
+\newenvironment{QFACT}{\begin{widequote}\factlead}%
+{\unskip\nobreakspace\tombstone\end{widequote}\ignorespacesafterend}
+
+\def\bugslead{{\bf{}Bugs}.}
+\newenvironment{qbugs}{\begin{quote}\bugslead}%
+{\end{quote}\ignorespacesafterend}
+
+\def\quoteref#1{Qoute~\ref{#1}}
+\def\ruleref#1{Rule~\ref{#1}}
+\def\factref#1{Fact~\ref{#1}}
+
+%% Section titles of the_specification.
+
+\def\specrefx#1#2{Specification~#1\ifx\relax#2\relax{}\else~{\it{}#2}\fi}
+\def\specref#1{\specrefx{#1}{\csname spec#1\endcsname}}
+\def\defsection#1#2{\expandafter\def\csname spec#1\endcsname{#2}}
+
+\input{notes-spectoc}
+
+%% "_" as a space (to let key words searchable).
+
+\catcode`\_=\active
+\def_{\relax\ifmmode\sb\else\ \fi}
+
+\let\PARAGRAPH=\paragraph
+
+\if 0
+\def\xxtt{\small\tt}
+\makeatletter
+\def\spacex{\leavevmode\penalty10000\ }
+\def\delparx#1{\ifx#1\par\leavevmode\else\ifx#1\spacex\leavevmode\else#1\fi\fi%
+\parskip=0pt}
+\def\lbracex{\char`\{}\def\rbracex{\char`\}}
+\def\docspecials{\do\ \do\$\do\&\do\#\do\^\do\^^K\do\_\do\^^A\do\%\do\~}
+\obeyspaces\gdef\xtt{\xxtt\catcode``=13\@noligs\let\do\@makeother\docspecials%
+\let\parx\par\def\par{\hbox{}\parx}\obeylines%
+\frenchspacing\catcode`\ =\active\let =\spacex%
+\let\{=\lbracex\let\}=\rbracex\delparx}
+\def\endxtt{}
+\makeatother
+\fi
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+%%\section*{Preface}
+%%\addcontentsline{toc}{chapter}{Preface}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Introduction}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Baby-Modelica}
+
+Baby-Modelica is a simple frontend (parser+flattener) for the Modelica
+language specification 3.4.  It parses the source code then performs
+simple syntactic transformations, and optionally dumps a flat model.
+Flattening a model is an essential part of Modelica, and it resolves
+all the features as an object-oriented language.  Flattening is
+indispensable even for simple tools, because parameters in a model are
+substituted multiple times by nested parameterization.  A generated
+flat model is hopefully to be re-readable by Modelica compilers.
+
+Current status is a pre-zero version, and we are working towards
+version zero.  The version number of Baby-Modelica is the last digits,
+appended to the version number of the Modelica language specification.
+
+This random memo accompanies the source code.  We apologize if it is
+illegible.  This document often refers to the sections of
+the_specification.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Limitations and general remarks}
+
+\begin{itemize}
+
+\item The_implementation is written in SML~'97 (Standard ML).  The
+code is developed mainly with Poly/ML (on SunOS~5.11/amd64), but it
+may work with SML/NJ or MLton.  Sometimes the code is twisted because
+SML does not allow forward references of names.
+
+\item The_implementation uses a modified BYACC parser generator (not
+ml-yacc), which can be obtained separately.
+
+\item The file coding is ASCII, although it is defined as UTF-8 in
+\specref{13.2.2}.
+
+\item Error checking/reporting is none.  The parser records no source
+line number information.  No information is provided for errors in a
+model.
+
+\item Constant folding is very weak.  Folding constants at
+translation-time is mandatory for array dimensions.
+
+\item The_implementation may be confused by the uses of characters
+"{\tt{}.}" and "{\tt{}@}" in names in a model.  It internally uses
+them to separate identifiers.
+
+\item The_implementation treats $\mathbf{class}$ as a synonym of
+$\mathbf{model}$, that follows the old definition.
+
+\item The_implementation does not implement $\mathbf{pure}$
+expressions and errs on the uses of them.
+
+\item It does not parse the {\it{}Synchronous Language\/} and
+{\it{}State Machines}.
+
+\item Internal errors (assertions) raise the Match exception.  But,
+other errors are often synonyms of the Match exception.
+
+\item The_implementation does not check the representable values of
+{Integer}.  Escpecially, {Integer\_inf} may raise the Overflow
+exception.  The definition of {ModelicaServices.Integer\_inf} in
+MSL~3.2.3 is in 32~bits, and it is no problem for 64~bit SML
+implementations.
+
+\item (* Array subscripts ":" to connector references are not
+handled. *).
+
+\item (* The code for expanding for-equations and finding implicit
+iterator ranges is not tested at all. *).
+
+\item The package Connectors cannot be extended.  It is handled
+nominally.
+
+\item (?) Translation-time constants cannot depend on variables in
+expandable_connectors.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Useful documents}
+
+\begin{itemize}
+
+\item {\it{}Modelica Language Specification}~\cite{specification34} is
+the source of the definitions.  Note that some concepts are defined
+not in the text but in the glossary.
+
+\item {\it{}OpenModelica System Documentation}~\cite{openmodelica2014}
+explains the implementation of OpenModelica.  See the section
+{\it{}Structure}, for Parse and Elaborate/Instantiate/Flatten.
+
+\item {\it{}DSblock: A neutral description of dynamic
+systems}~\cite{otter1994} is an old description of structuring
+interfaces to solvers.
+
+\item {\it{}Translator to flat Modelica}~\cite{lms2007} describes some
+notes about a translator from Modelica subset to flat Modelica, which
+is under development as a tool for AMESim.
+
+\item {\it{}SysML--Modelica Transformation}~\cite{omg2012} describes a
+translator from SysML to Modelica.  (The overview says bi-directional
+but it seems not).  There is an accompanying paper~\cite{paredis2010}.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Parsing}
+
+{Parsing} is simply done by a BYACC generated parser.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Code tips}
+
+\begin{itemize}
+
+\item The rule set in {\it{}Modelica Concrete Syntax\/} defined in
+the_specification is used essentially verbatim.
+
+\item The keywords {\bf{}end} and {\bf{}initial} appearing in the
+{\it{}primary\/} expression of the syntax rules cause conflicts in
+BYACC\@.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Parsing of {\bf{}end} and {\bf{}initial}}
+
+The keywords {\bf{}end} and {\bf{}initial} appearing in the
+{\it{}primary\/} expression of the syntax rules cause conflicts in
+BYACC\@.  {\bf{}end} may appear as a predefined variable as well as a
+keyword.  {\bf{}initial} may also appear as a predefined function as
+well as a keyword.  For {\bf{}end}, see \specref{10.5.2}.  For
+{\bf{}initial}, see \specref{8.6}.
+
+The token {\bf{}end} only appears as a variable in subscript
+expressions.  The lexer recognizes {\bf{}end} as an identifier in
+subscript expressions, or as a keyword elsewhere.  The parser tells
+the lexer to switch the token type of {\bf{}end} as a keyword or an
+identifier.  The switching code is placed at the safe points where a
+look-ahead of the parser never looks at {\bf{}end}.
+
+The token {\bf{}initial} only appears as a keyword either in
+{\bf{}initial equation} or {\bf{}initial algorithm}.  The lexer
+handles each sequence of {\bf{}initial~equation} and
+{\bf{}initial~algorithm} as a single token.  The lexer judges by a
+look-ahead of a token next to {\bf{}initial}.  Otherwise, the lexer
+returns an identifier for {\bf{}initial}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Resolving}
+
+{Resolving} handles modifier applications in a model for elaboration.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Code tips}
+
+\begin{itemize}
+
+\item The_implementation directly handles a short_class_definition as
+a class {\it{}refining\/} which represents modifier applications,
+although it is defined as an expansion to a class definition with an
+extends-clause in \specref{4.5.1}.
+
+\item Mutual extendings are ignored (not errors).
+
+\item The_implementation does not save modified classes (even though
+they are named), and repeats the same modifications each time a
+package/instance is processed.
+
+%% \item The_implementation refers to a toplevel model by the name
+%% "model" (it just looks better than an empty name).
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Internal class naming}
+
+Most of the classes do not have names, because a modifier application
+creates a new class but it may not have a name unless explicitly
+given.  Also, name association may be changed by inner-outer matching
+and redeclarations.
+
+Thus, the_implementation refers to a class by a package/instance name,
+supplementally paired with a class name.  A pair is used becuase only
+main (non-base) classes are named in this way, but names of base
+classes are needed to distinguish them.  For example, it may refer to
+one base class with a pair
+$\mathit{tank}|\mathit{PartialLumpedVessel}$, where $\mathit{tank}$ is
+an instance of $\mathit{OpenTank}$ and $\mathit{PartialLumpedVessel}$
+is a base of it.
+
+A class being named by a package/instance name is appropriate, because
+only classes used are need to be accessed.  Note that all class bodies
+(a list of elements) have names, with the exception of a body of an
+extends-redeclaration, for which the base class name is used as a name
+for it.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Rewriting import-clauses}
+
+The parser rewrites an import-clause to an explicitly named form to
+reduce the number of variations.  This rewriting is performed in the
+parser.  For example, it rewrites:
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+import pkg.n;
+==>
+import n = pkg.n;
+
+import pkg.{n0,n1,n2};
+==>
+import n0 = pkg.n0;
+import n1 = pkg.n1;
+import n2 = pkg.n2;
+\end{lstlisting}
+\end{quote}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Handling of modifiers}
+
+\subsubsection*{Modifier applications}
+
+The_syntaxer associates an application of modifiers to a declaration
+which is converted to a modification.  Association to a class
+definition $C$ is by temporarily creating a syntax element
+$\mathit{refine}\,(C, ...)$ with modifiers.
+
+\subsubsection*{Redeclarations}
+
+The_syntaxer handles a redeclaration by replacing a replaceable.
+Similarly, it handles an extends-redeclaration by replacing a
+replaceable class and making it a base class.
+
+A class redefinition may need be applied to multiple occurrences of a
+replaceable in class elements, because the_syntaxer delays merging
+elements in a main and base classes.  See
+Rule~\ref{multiple-definitions}.
+
+\subsubsection*{Scoped modifiers}
+
+Names and expressions are attached with an environment which records
+the scope where they occur, especially for the RHS of modifiers.  This
+makes modifiers to be moved inside another class which are associated
+to.  The scope is represented by either an instance name or a class
+name.  This scoping is necessary to delay the name resolution of
+modifiers attached to extends-clauses.  Such modifiers have to be
+moved inside a base class before resolving the modifiers, because it
+lacks the information of the base classes at that time.
+
+\subsubsection*{A value attribute}
+
+An initializer_modifier to the simple_types and a modifier to the
+$\mathit{value}$ attribute are synonymous.  The_implementation handles
+them by converting an initializer_modifier to a $\mathit{value}$
+modfier.  See Fact~\ref{value-attribute} about a $\mathit{value}$
+attribute.
+
+\subsubsection*{Initializer_modifiers}
+
+An initializer_modifier like $x=e$ is converted to modifiers
+corresponding to components.  That is, $x=e$ is converted to
+$x\,(c_0=e.c_0,c_1=e.c_1,...)$ for each component $c_i$ of the class
+$x$.  It does not check $x$ and $e$ have the same set of components;
+$x$ can be of fewer components than $e$.  It will make many copy
+expressions of $e$.  (?) It will be problematic when the expression
+$e$ has effects.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Modifcations and lookups}
+
+Modifications are shallowly applied to the class, and then lookups of
+the class names are performed.  Here, shallow application means that
+each modifier is pushed inside the present class and it is attached as
+a modifier to a corresponding element.  The process does not
+immediately recurse.  Name lookups need to be performed after
+modification application, because redeclaration modifications affect
+lookups of names of bases classes.  Thus, modifications and lookups
+are performed alternatingly.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Lookups of base_classes}
+
+The resolving of a class of an extends-clause may involve resolving
+classes of the parts of a component name.  During the search, many new
+resolving processes may be started for intermediate packages.
+Resolving processes may interlace (which may visit a class being under
+resolving), and the search sees classes with unfinished resolving.
+The_implementation keeps track of a process by the three states of
+loaded, importing-resolved, and extending-resolved.
+
+The_implementation skips searching in the bases, when a lookup in the
+bases has a cycle of dependency.  See the
+section~\ref{sec:lookup-cycle}.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Other specific behabiors}
+
+\subsubsection*{Class prefixes}
+
+The_implementation accepts $\mathbf{encapsulated}$ only to a
+long-class-specifier but errs/ignores to a short-class-specifier and a
+der-class-specifier.  See Fact~\ref{encapsulated-class}.
+
+The_implementation ignores $\mathbf{final}$ to a class.  See
+Fact~\ref{final-class}.
+
+\subsubsection*{Folding constants}
+
+The_implementation uses int of SML for Integer values.  It may raises
+exceptions on overflows in folding constants.
+
+\subsubsection*{Constants and parameters}
+
+The_implementation does not distinguish constants and parameters.
+Both are treated as translation-time constants.  See
+Fact~\ref{parameters}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Instantiating}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Instantiating by one big pass}
+
+{Instantiating} is a bit complex procedure.  It works top down in
+order to handle modifiers and inner-outer matching, while it is
+usually natural to work bottom up because each submodel only knows and
+accesses their components but does not care its users.  In addition,
+chains of dependency in name resolutions and simultaneous constant
+folding complicate the procedure.  That is, determining array
+dimensions needs folding constants which extensively accesses
+constants in the components not yet instantiated.
+
+Processing packages also works top down, although processing is
+requested on demand at references.  It needs to work top down, because
+it is necessary first to process the enclosing package to obtain a
+class definition when the enclosing package has modifiers.  Here, the
+enclosing relation is considered as extended by importing and
+extending.
+
+Note that lexically enclosing classes cannot affect the enclosed class
+(See Fact~\ref{lexical-enclosing}).  Thus, it is safe to use the
+textual definition for such class references.  For example,
+Modelica.Fluid.Vessels.OpenTank is as textually defined, and it does
+not need to process Modelica.Fluid.Vessels first to take the
+definition.  Actually, the_implementation depends on this
+shortcutting, that is necessary to process ".Modelica", or it would
+make a cycle otherwise.
+
+\subsection{Name resolutions in steps}
+
+Name resolution needs be processed from the root for the hierarchies
+of both packages and instances.  The_implementation splits name
+resolution in two steps.  The first step resolves classes of
+importing/extending.  The second step resolves classes of components.
+
+(?) There is a simple dependency in processing the
+$\mathit{.Modelica}$ package.  $\mathit{.Modelica.Icons.Package}$ is a
+base of it.  Apparently, searching it needs to search $\mathit{Icons}$
+and $\mathit{.Modelica}$.  See Section~\ref{lookup-shortcutting}.
+Assume it would try continuing component processing.
+$\mathit{Complex}$ is used in $\mathit{.Modelica.Icons}$.  It results
+in searching $\mathit{Complex}$ in $\mathit{.Modelica}$, again.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Instances}
+
+The_syntaxer does not distinguish classes and instances, and a class
+is an instance when it is associated to a state variable.  It is like
+classless languages as Self.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Handling arrays with modifiers}
+
+The_implementation uses a pseudo function $\mathit{split}$ when a
+non-each modifier is moved in a class definition that is an array.
+For example, a modifier will be moved in the class definition in the
+example below.  The indexing $v[i]$ is represented by a
+$\mathit{split}$.  The index $i$ ranges in $\{1,\,...,\,10\}$.
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+A a[10] (x=v)
+==>
+model A' = A (x=v[i])
+A'[10] a;
+\end{lstlisting}
+\end{quote}
+
+\begin{qquote} (\specref{7.2.5}\/) If the modified element is a vector
+and the modifier does not contain the each-prefix, the modification is
+split...\end{qquote}
+
+$\mathit{split}$ is semantically an array indexing by a constant
+index.  But, $\mathit{split}$ is not a proper syntax in Modelica,
+because it only defines an array indexing on identifers but not on
+expressions.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Handling inner/outer declarations}
+
+The_syntaxer performs an inner-outer matching when it makes a list of
+visible names in an instance.  It leaves an alias for an outer
+variable pointing to an inner variable.  An alias is necessary to
+retain the component relation for a connector (a place where a
+connector is declared) which determines the flow direction.  Outer
+aliases are replaced after handling connectors.  Replacing an outer
+alias is performed by ignoring subscripts of a variable reference
+because they are irrelevant.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Record class identity}
+
+A record class needs identity for the purposes such as passing
+arguments to functions.  The_implementation identifies a class by the
+definition that is (last) modified by redeclarations.  Redeclarations
+may change the components of a class, and the_implementation treats
+redeclarations create a separate class but non-redeclarations do not
+create a new one.  The_implementation creates an identity by
+concatenating an identity of a package and a name given after
+redeclarations.  See Fact~\ref{record-class-identity}.
+The_implementation does not identify functions this way, because
+modifications of values change the function.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Syntaxing}
+
+{Syntaxing} performs simple semantic transformations to make a flat
+model.  It rewrites connect_equations to equations.  In that
+rewriting, it expands if-equations and for-equations that include
+connect_equations.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Implicit Iterator Ranges}
+
+A range of an implicit iterator is taken as a subscript part of an
+expression that includes an iterator.  It checks the occurrence only
+but ignores the surrounding expressions if any.  See
+Section~\ref{sec:implicit-iterator-ranges}.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Expandable_connectors}
+
+Instantiation of expandable_connectors is delayed, while other (usual)
+classes are instantiated by descending the model hierarchy.  Expanding
+expandable_connectors is performed in steps starting from a connector
+at the shallowest position.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Connector operators}
+
+Operator applications on or related to connectors,
+$\mathrm{inStream}\,(v)$, $\mathrm{actualStream}\,(v)$, and
+$\mathrm{cardinality}\,(c)$ are replaced by new variables with some
+associated equations.  See a $\mathit{mix}$ variable in \specref{15}.
+Variables are suffixed by \verb|_mix_in_| for
+$\mathrm{inStream}\,(v)$, \verb|_actual_in_| for
+$\mathrm{actualStream}\,(v)$, and \verb|_cardinality_| for
+$\mathrm{cardinality}\,(c)$.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Clarification of the_specification}
+
+Some rules are assumed in the_implementation on syntaxing.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Variable references in general}
+
+\subsubsection*{Composite names}
+
+A variable (instance) reference is in the form like
+$x[...].y[...].z[...]$.  Subscripts are optional in a variable
+reference.  A class reference is like $A.B.C$.  Subscripts are not
+allowed in a class reference.  Classes $A$, $B$, and $C$ can be
+packages or non-packages.  A constant refererence in a class is like
+$A.B.C.a[...].b[...].c[..]$, where all $a$, $b$, and $c$ are constants
+and subscripts are optional.
+
+A (non-constant) variable reference does not have any prefixes (none
+of a dot nor packages).  A class reference may be with a preceding
+dot, which refers to the unnamed root.  Or, a class reference may
+follow a variable reference, in that case classes are considered as
+packages.
+
+\begin{QRULE}\label{mixed-class-instance-reference} There is a single
+namespace for classes and variables.  It is allowed to refer to a
+constant in a package via a variable reference as $x.P.c$.  But, it is
+illegal to refer to a class via a variable reference in a declaration
+as (illegal) $x.C~v$.\end{QRULE}
+
+\begin{QRULE} A global variable reference cannot have a preceding dot.
+Note that $\mathit{time}$ is the only variable.\end{QRULE}
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+/*ILLEGAL*/
+model M
+    Real x;
+    equation
+    x = .time;
+end M;
+\end{lstlisting}
+\end{quote}
+
+\begin{QFACT} An enclosing class is considered as a package in the
+nesting of class definitions, and the scope of an enclosing class only
+includes the constants but variables are ignored.\end{QFACT}
+%%%%
+See Rule~\ref{model-nesting} for the binary roles of a class.
+
+\if 0
+%%%% Rewrite then include to the body (AHO 2020-02-04)
+\fi
+
+\subsubsection*{Scopes}
+
+The scope is flat in most cases, spanning from the main (non-base)
+class to base classes where the class and variable names are distinct.
+But, class names and constants are visible via enclosing classes.  An
+enclosing class is defined to each (base) class.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Importing}
+
+\def\baseofbase{This inclusion recurses transitively to the base
+classes}
+
+\def\noimport{This inclusion does not include the imported names in
+the base classes nor the names in the enclosing classes in the base
+classes}
+
+Importing makes visible the names of the definition/declaration
+elements of the specified package to the present class.  The inclusion
+is from any classes but they are processed as packages.  The inclusion
+is limited to the public elements. \baseofbase. \noimport.
+
+\subsubsection*{Import-clause syntax}
+
+\def\packagenames{P_0.\,...\,.P_{n-1}}
+
+See \specref{13.2.1}.  A package name in an import-clause is
+considered as fully~qualified.  It can import only from packages.  In
+the following, $\mathit{package}$ is a sequence of identifiers
+$\mathit{package}=\packagenames$.  Each prefix in $P_0\,...\,.P_i$
+refers to a class, and $P_{n-1}$ refers to a package.
+$\mathit{package}$ can be empty.  Each $P_i$ and $N$ refers to an
+indentifier.
+
+\begin{quote}
+\begin{description}
+
+\item [$\mathbf{import}\;N'=\mathit{package}.N$] (renaming
+import/renaming single definition import): makes a class (including a
+package) or a constant $N$ visible as an identifier $N'$.  There is no
+syntactic difference when $N$ refers to a class/package or a constant.
+
+\item [$\mathbf{import}\;\mathit{package}.*$] (unqualified import):
+imports each public name visible in the package including one in the
+base_classes as "$\mathbf{import}\;N_i=\mathit{package}.N_i$" for
+$N_i$.  The package part can not be empty in this case.
+
+\item [$\mathbf{import}\;\mathit{package}.N$] (qualified import/single
+definition import): is equivalent to
+"$\mathbf{import}\;N=\mathit{package}.N$".
+
+\item [$\mathbf{import}\;\mathit{package}.\{N_0,N_1,...,N_{m-1}\}$]
+(multiple definition import): is equivalent to
+"$\mathbf{import}\;N_i=\mathit{package}.N_i$" for each $i$.
+
+\if0
+\item [$\mathbf{import}\;\mathit{package}$] (qualified import): is
+equivalent to "$\mathbf{import}\;P_{n-1}=\packagenames$".
+\fi
+
+\if0
+\item [$\mathbf{import}\;N=\mathit{package}$] (renaming import): makes
+a package $P_{n-1}$ visible as an identifier $N$.
+\fi
+
+\end{description}
+\end{quote}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Extending}
+
+Extending includes the (definition/declaration) elements of the base
+classes to the present class.  \baseofbase.  \noimport.  The
+visibility is nothing to do with the bases because it is either
+$\mathbf{public}$ or $\mathbf{protected}$.
+
+\subsubsection*{Checks for extends clauses}
+
+\begin{QRULE}\label{uniqueness-after-extension} It is an error if a
+base class $A$ of $\mathbf{extends}\;A$ is defined in the class $A$
+itself or in other base classes.  This is broadly interpreted as a
+lookup of $A$ skips extends-clauses. \end{QRULE}
+
+This may be a result of requiring the uniqueness of resolution of a
+class name.  When another class $A$ were defined in $A$ in the code
+below, two occurrences of $A$ would refer to the different classes,
+which contradicts to an intuitive assumption that the both $A$ are the
+same.
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+model M
+    extends A;
+    A a;
+end M;
+\end{lstlisting}
+\end{quote}
+
+\begin{qquote} (\specref{5.6.1.4}\/) The classes of extends-clauses
+are looked up before and after handling extends-clauses; and it is an
+error if those lookups generate different results.\end{qquote}
+
+\subsubsection*{Mutual dependence of extends-clauses}
+
+\begin{QRULE}\label{ban-mutual-inheritance} Mutual dependence of
+extends-clauses is prohibited.  \end{QRULE}
+
+(?) The_specification does not likely state it explicitly.
+The_specification states that inheritance is unified in cases where a
+class extends a common base_class through distinct intermediate
+base_classes.  Mutual dependence could be resolved by identifying.
+
+%% ("diamond"-paths of inheritance)
+
+\subsubsection*{Extending a single base multiple times (?)}
+
+\begin{QRULE}\label{multiple-extensions-of-single-base} (?) Extending
+a single class multiple times (usually via a common base class) is
+allowed only if the modifiers to it are identical.  It is an error if
+the modifiers differ.  \end{QRULE}
+
+It is ambiguous what identical means.  Textual equality may not be
+sufficient with class modifications.  Consider "extends~A(x=a)" and
+"extends~A(x=b)" with "a=0" and "b=0".
+
+(?) It may require {unifying inherited elements}.  Classes and
+variables multiply inherited are unified.
+
+\begin{qquote}\label{quo:unifying-inherited-elements} (\specref{5.6.1.4},
+in the paragraph {\it{}The inherited contents of the element\/}) At
+the end, the current instance is checked whether their children with
+the same name are identical and only the first one of them is kept.
+It is an error if they are not identical. (* A "child" means a
+component. *)\end{qquote}
+
+(* The_implementation does not check the equivalence of modifiers, and
+arbitrary selects one modification. *)
+
+\subsubsection*{Operator_record}
+
+Operator_records have restrictions on extends-clauses.
+
+\begin{qquote} (\specref{4.6}, in the table) (?) It is not legal to
+extend from any of its enclosing scopes.  (* {\it{}enclosing\/} likely
+refers to {\it{}enclosed} *).\end{qquote}
+
+\subsubsection*{No scopes of bases in a lookup of a base class}
+
+\begin{QRULE} A lookup of a base class name skips bases of the present
+class.  It applies to a lookup of both the first part and the
+remaining parts of a composite name. \end{QRULE}
+
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+/*ILLEGAL*/
+
+model A
+    model B end B;
+end A;
+
+model M0
+    extends B;
+    extends A;
+end M0;
+
+model M1
+    extends M1.B;
+    extends A;
+end M1;
+\end{lstlisting}
+\end{quote}
+%%%%
+
+\paragraph {Remark}
+
+Note the first case is accepted with warnings in some_implementations,
+and the both cases will be accepted, when the extends-clauses are
+swapped, i.e., when $\mathbf{extends}\;A$ comes early.
+
+\subsubsection*{Unifying defined classes}
+
+\begin{QRULE}\label{multiple-definitions} It is not an error if
+classes with the same name are defined multiple times in the main
+class and its bases, when the definitions are considered identical.
+Identical classes are a sort of unified.  It is defined in
+the_specification that classes are identical if they are textually
+identical after possible modifications. \end{QRULE}
+
+For example, in Fluid/Interfaces, the declarations of
+$\mathit{Medium}$ need be unified, when $\mathit{PartialPump}$ extends
+both $\mathit{PartialTwoPort}$ and $\mathit{PartialLumpedVolume}$.
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+partial model PartialTwoPort
+    replaceable package Medium =
+        Modelica.Media.Interfaces.PartialMedium;
+    ......
+end PartialTwoPort;
+
+partial model PartialLumpedVolume
+    replaceable package Medium =
+        Modelica.Media.Interfaces.PartialMedium;
+    ......
+end PartialLumpedVolume;
+\end{lstlisting}
+\end{quote}
+%%%%
+$\mathit{PartialPump}$ is defined in
+$\mathit{Modelica.Fluid.Machines.BaseClasses}$.\\
+$\mathit{PartialTwoPort}$ and $\mathit{PartialLumpedVolume}$ are
+defined in $\mathit{Modelica.Fluid.Interfaces}$.
+
+\subsubsection*{Extending simple_types}
+
+\begin{QFACT}\label{extending-simple-types} Extending simple_types is
+legal either by a short_class_definition or by an extends-clause.  But
+adding elements is illegal.\end{QFACT}
+
+\subsubsection*{Restrictions on elements}
+
+\begin{qquote} (\specref{4.5.2}\/) It is not legal to combine other
+components or base-classes with an extends from an array class, a
+class with non-empty base-prefix, a simple_type...\end{qquote}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{A lookup of a class name}
+
+Resovling class names is better understood not by a scope but by a
+lookup procedure.  A lookup of a class name happens in import-clauses,
+extends-clauses, component declarations, and composite name references
+in expressions.  A lookup of import-clauses and extends-clauses has a
+different procedure, and is performed in this order because one
+depends on the predecessor.  A lookup is performed after applying
+renaming modifiers/redeclarations to the present class.
+
+A lookup of a composite class name starts from a lookup of the first
+part followed by lookups of the remaining parts.  A lookup of the
+remaining parts is performed in the class found in the previous
+lookup.
+
+A lookup considers the scopes of the following:
+%%%%
+\begin{itemize}
+
+\item declared_elements~(s0).  A scope of the declared_elements of the
+present class is closed in the class definition.
+
+\item imported_names~(s1).  A scope of the imported_names transitively
+extends to the declared_elements of the base_classes.
+
+\item base_classes~(s2).  A scope of the base_classes transitively
+extends to the declared_elements of the base_classes.
+
+\item an enclosing class~(s3).  A scope of an enclosing class consists
+of the declared_elements, the imported_names, and the base_classes,
+and transitively extends to its enclosing classes.
+
+\end{itemize}
+
+\begin{QFACT}\label{lookup-shortcutting} A lookup first tries to find
+in the declared_elements~(s0), and if it finds a name, other scopes
+are skipped.  See \quoteref{uniqueness-of-name-lookup}.\end{QFACT}
+%%%%
+Especially, this rule is needed to search for $\mathit{Icons}$ in
+$\mathit{.Modelica}$ which extends $\mathit{.Modelica.Icons.Package}$.
+The scope of $\mathit{.Modelica}$ should include
+$\mathit{.Modelica.Icons.Package}$ but it avoids a cycle by skipping
+the base classes.
+
+\begin{QFACT} A lookup of a first part of a name for an import-clause
+and an extends-clause is not affected by redeclarations.  See
+Rule~\ref{imported-not-replaceable} and
+Rule~\ref{base-not-replaceable}.  A lookup respects class
+redeclarations for an extends-clause in some
+implementations.\end{QFACT}
+
+\begin{QFACT}\label{lookup-renaming} A lookup of the remaining parts
+respects class redeclarations in modifiers and in elements.  It also
+respects outer prefixes.\end{QFACT}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{A lookup for importing}
+
+A package~name here denotes a class name of an import-clause.
+
+\begin{QRULE}\label{lookup-imports} A lookup of the first part of a
+package name is performed in the root of the namespace (the
+unnamed-enclosing-class), since the package name is considered as
+fully-qualified.  The root has no imports nor bases~(s0).
+
+A lookup of the remaining parts is performed in the declared_elements
+and in the base classes, but not in the imported names nor in the
+enclosing classes~(s0+s2).  A lookup of a remaining part has a
+restriction.  See Rule~\ref{lookup-cycle}.\end{QRULE}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{A lookup for extending}
+
+\begin{QRULE}\label{lookup-bases} A lookup of the first part of a name
+of a base class does not include the base classes, but does include
+the imported_names and the enclosing classes~(s0+s1+s3).  Note that
+the base classes of the imported classes and the base classes of the
+enclosing classes are included.  The names in the enclosing classes
+can be hidded by the other names.
+
+A lookup of the remaining parts is performed in the declared_elements
+and in the base_classes, but not in the imported_names nor in the
+enclosing classes~(s0+s2).  A lookup of a remaining part has a
+restriction.  See Rule~\ref{lookup-cycle}.\end{QRULE}
+
+\paragraph {Remark}
+
+Some_implementations find a base_class through another extends-clause,
+although it reports the code is illegal.
+%%%%
+\begin{qquote}\label{uniqueness-of-name-lookup}
+(\specref{5.6.1.4}; in the paragraph {"The inherited contents of the
+element"}) ... The classes of extends-clauses are looked up before and
+after handling extends-clauses; and it is an error if those lookups
+generate different results.\end{qquote}
+%%%%
+A lookup in the base_classes is only necessary for error detection.  A
+lookup in the base_classes can simply be ignored in a lookup of a
+class of an extends-clause.
+
+\subsubsection*{Ignoring base_classes}
+
+A lookup of a base_class name searches in the imported_names but may
+not search in the base_classes in some cases.
+
+%%%%
+\begin{QRULE}\label{lookup-base-class} {(A lookup of a base_class)} A
+lookup of a base_class name ignores the base_classes in the present
+class and the element classes transitively, where the present class is
+the class in which the lookup starts.  A lookup also likely ignores
+mutually dependent extends-clauses. \end{QRULE}
+%%%%
+
+Ignoring the base classes in the present class is a consequence of the
+uniqueness rule of extends-clauses (in
+\quoteref{uniqueness-of-name-lookup}).  It may also be deduced from
+the flattening process (\specref{5.6}\/).  The description in
+{\it{}The local contents of the element\/} states the element classes
+are inserted into the instance tree whose extends-clauses seems to be
+empty at the time.  The lookup of a class of an extends-clauses of the
+present class is perfomed with that state of the instance tree.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{A lookup of a component class}
+
+A lookup of a class name of a component declaration, or a variable
+name or a class name in an equation or a statement starts at the
+class, where a component/equation/statement is in.
+
+\begin{QRULE}\label{lookup-components} A lookup of the first part of a
+component class name is performed in the declared_elements, in the
+imported_names, in the base_classes, and the enclosing
+classes~(s0+s1+s2+s3).
+
+A lookup of the remaining parts is performed in the declared_elements
+and in the base_classes, but not in the imported_names nor in the
+enclosing classes~(s0+s2).
+\end{QRULE}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{A short-cut in a lookup}\label{sec:lookup-cycle}
+
+\subsubsection*{A cycle in a lookup for importing/extending}
+
+It is common to import/extend a package defined in the class or in its
+subpackages.  Such a package reference, when it appears in a remaining
+part of a composite name, may make a circular dependency.  It is due
+to the rule for a lookup of a remaining part, in
+Rule~\ref{lookup-imports} or Rule~\ref{lookup-bases}.
+
+Consider processing a toplevel package $M$ below.  A lookup of $M.I.P$
+in $M$ first finds $M$, and then a lookup continues for $I$ in $M$.
+It may need to look into bases of $M$, because $I$ is a remaining part
+of the name.  However, it is problematic because resolving the bases
+of $M$ is underway.
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+package M
+    package I
+        package P end P;
+    end I;
+    extends M.I.P;
+end M;
+\end{lstlisting}
+\end{quote}
+%%%%
+A similar code can be found in MSL~3.2.3, where $M$ as Modelica, $I$
+as Icon, and $P$ as Package.
+
+Similarly for importing, searching $C$ in $M.M.W$ may need to look
+into the imported definitions.
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+within M.M;
+package W
+    package C ... end C;
+    import M.M.W.C.s;
+end W;
+\end{lstlisting}
+\end{quote}
+%%%%
+A similar code can be found in MSL~3.2.3, where $M.M$ as
+Modelica.Media, $W$ as Water, and $C$ as ConstantPropertyLiquidWater.
+
+\subsubsection*{A short-cut in a lookup for an element class}
+
+\begin{QRULE}\label{lexical-enclosing} Lexically enclosing
+classes (the relation that is not extended by importing and extending)
+cannot affect the enclosed class by modifications.  Thus, it is safe
+to use the textual definition for such classes.\end{QRULE}
+%%%%
+For example, consider the case $M$ extends $M.I.P$ above.  As $M.I$ is
+textually defined, it is not necessary to process $M$ first to take
+the definition of $M.I$.  Thus, it avoids a potential cycle in the
+definition.
+
+%%(Actually, redeclarations may change the elements of a base class, but
+%%they work on the textual definition of the base class).
+
+%%%%%%%%%%%%%%%%
+
+%% The above observation implies a rule:
+%%%%
+%% \begin{QRULE}\label{lookup-cycle} A lookup of a remaining part of a
+%% composite name, that is for an importing/extending class, is
+%% restricted to declared elements (s0), when the lookup happens to be in
+%% the class in which it is originally started.\end{QRULE}
+
+%% (*WRONG*)
+%% \subsection{A lookup of a redeclared name}
+%%
+%% A {\classrenaming} can affect a lookup of a class name.
+%%
+%% \begin{QFACT}\label{lookup-redeclared-name} ({Lookup of a redeclared
+%% name}) When a lookup finds a {\classrenaming} in the middle of a
+%% composite name, a lookup continues after a lookup of the renaming by
+%% suffixing with the remaining parts. \end{QFACT}
+%%
+%% For example, in searching "A.B.C.D", when a lookup finds a renaming
+%% "C=X.Y" in A.B, the lookup restarts for "X.Y.D" in A.B\@.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Binary roles of a class}
+
+A class is used both as a type of an instance or as a package.  It is
+usually instantiated directly or via extends-clauses.  It is
+considered as a package, when a class name appears in the middle of a
+composite name.  Semantics of a class differs in these uses.
+
+\subsubsection*{Model nesting}
+
+A non-package class can contain a class, and it is possible to
+instantiate an enclosed one.  Here, to instantiate a class means to
+declare a variable of it or to use it as a target model.
+%%%%
+\begin{QRULE}\label{model-nesting} It is legal to instantiate a class
+enclosed by a non-package class, but the accessible variables in the
+enclosing class are restricted to constants.  This includes variables
+used in modifiers.  That is, an enclosing class is processed as a
+package in such a case, where declaring variables is permitted but
+using them is prohibited. \end{QRULE}
+
+It means that it is not possible to share a lexically visible variable
+from enclosed classes as usually expected.
+
+In the example below, assume instatiating $M$, where a class $M$
+contains a class $M.A$.  Only constants in $M$ are accessible from
+$A$, and it is illegal.  If $x$ were a constant, it is legal.  This
+restriction also exists when using a class $M.A$ as a target model.
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+/*ILLEGAL*/
+model M
+    /*constant*/ Real x=10;
+    model A
+        Real v=x;
+    end A;
+    A a;
+end M;
+\end{lstlisting}
+\end{quote}
+
+\subsubsection*{Processing a class as a package}
+
+Rule~\ref{model-nesting} implies a fact:
+%%%%
+\begin{QFACT}\label{class-as-package} An enclosing class of a class is
+processed as a package in a way that is different from a usual way.
+Variable declarations and outer class definitions are treated as
+non-existent when a class is processed as a package.  (?) Outer
+constants are included.  (?) Is it legal to prefix constants by outer?
+\end{QFACT}
+%%%%
+Note that a class is processed as a package during a lookup of
+intermediate names in a composite name.
+
+\begin{QRULE}\label{nonsense-element} Binary roles means allowance of
+illegal elements.  For example, outer elements are illegal in a
+package, but it is allowed unless it is used. \end{QRULE}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Modifications}
+
+\subsubsection*{Modification syntax}
+
+There is no syntactic difference of a modification on a class or a
+variable: $A(...)$ or $x(...)$.  A class form applies to a declaration
+$\mathbf{class}\;A\;...\mathbf{end}\;A$ or $\mathbf{class}\;A=...$,
+and a variable form applies to a declaration $B\;x$.
+
+Simple examples are:
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+model A
+    model B = C(..0..);
+end A;
+
+model M
+    model D = A(B(..1..));
+    /* D.B = C(..0.. + ..1..); */
+end M;
+\end{lstlisting}
+\end{quote}
+
+\begin{QFACT} The LHS of modifiers is an identifier (possibly, some
+parenthesized modifiers may be attached to the LHS).  Especially, the
+LHS does not admit array indexing.\end{QFACT}
+
+\subsubsection*{Modifications to enumerations or {der}-classes}
+
+\begin{QRULE}\label{modifications-to-der} (?) Modifications to
+{der}-classes are illegal. \end{QRULE}
+
+The simple_types accept modifiers to their attributes.  (?) For other
+predefined_types such as $\mathit{Clock}$, $\mathit{StateSelect}$,
+$\mathit{ExternalObject}$, $\mathit{AssertionLevel}$, and
+$\mathit{Connections}$, it is not checked.  Note that the grammar in
+the_specification defines initializers (e.g., in $C\;x=e$) as a form
+of modification, and they modify the $\mathit{value}$ attribute.
+
+\subsubsection*{Merging modifiers}
+
+Muliple modifications can be applied to the same class.
+
+\begin{QFACT}\label{each-final} (?) Modifications applied to the same
+class have the same $\mathbf{each}$, $\mathbf{final}$,
+$\mathbf{redeclare}$, and $\mathbf{replaceable}$ statuses. \end{QFACT}
+
+\subsubsection*{Resolving names in modifiers}
+
+Resolving names in modifiers differs in the LHS and the RHS of
+modifiers.  The LHS of modifiers means $x$ in $x=e$ or in $x(e)$.
+Note that the LHS is an identifier always.  Also, it differs between
+modifiers in class~refinings and extends-clauses.
+
+A rule of resolving names in the LHS of modifiers is:
+%%%%
+\begin{QRULE}\label{scope-in-modifiers} Resolving the LHS in modifiers
+is done in the scope of the modified class ($a$ in $A$ in the example
+below).  See {Example: Scope for modifiers} in \specref{7.2}.  The LHS
+in the modifiers is visible as a derived class in an extends-clause,
+while it is external in a class~refining.  Thus, protected elements
+are not visible in a class~refining.  See (\specref{4.1}\/).
+\end{QRULE}
+
+A rule of resolving names in the RHS of modifiers is:
+%%%%
+\begin{QRULE}\label{scope-rhs-in-modifiers} Resolving the RHS is done
+in the surrounding scope of the present class as usual.  It applies to
+both classes and variables.  It implies name resolution is postponed
+till expanding base classes. \end{QRULE}
+
+For example, $a$ and $x$ in the modifier $A(a=x)$ are visible, where
+$a$ is resolved in the LHS rule, and $x$ in the RHS rule.
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+/*LEGAL*/
+model A
+    Real a=0;
+    constant Real x=1;
+end A;
+
+model M0
+    extends X;
+    model X=A(a=x);
+end M0;
+
+model M1
+    extends A(a=x);
+end M1;
+\end{lstlisting}
+\end{quote}
+
+It should be noted that modifiers to extends-redeclarations have
+different scoping rules.  See
+Rule~\ref{scope-rule-in-extends-redeclaration}.
+
+\subsubsection*{Value_modifiers}
+
+The components of the simple_types are specially call as attributes.
+
+\begin{QFACT}\label{value-attribute} An attribute named
+$\mathit{value}$ is defined as a parameter in the simple_types, which
+holds a value of the type in the usual sense (the simple_types are
+$\mathrm{Real}$, $\mathrm{Integer}$, $\mathrm{Boolean}$,
+$\mathrm{String}$, and enumerations).  A modifier to the value is
+usually used to define a new type of a simple_type with a default
+value.  Specifying both a value_modifier and an initializer_modifier
+simultaneously is illegal.\end{QFACT}
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+/*ILLEGAL*/
+model M
+    Real v (value=1.0)=2.0;
+end M;
+\end{lstlisting}
+\end{quote}
+
+\subsubsection*{Independence of importing and extending from modifications}
+
+\begin{QFACT}\label{renaming-in-resolving} Resolving a class of an
+import-clause or extends-clause can be performed ignoring
+modifications.  It is because a replaceable class is not allowed for
+an import-clause or an extends-clause.\end{QFACT}
+
+Note redeclarations (both class and variable) are type
+parameterization.
+
+\begin{qquote} (\specref{5.6.1.4}\/) The possible redeclaration of the
+element itself takes effect (* in the step of "the element itself"
+*).\end{qquote}
+
+\begin{qquote} (\specref{5.6.1.4}\/) Extends clauses are not looked
+up, but empty extends clause nodes are created and inserted into the
+current instance~...\end{qquote}
+
+\subsubsection*{Initializers}
+
+Initializers attached to declarations like $C\;x=e$ are modifiers.  An
+initializer_modifier to classes is a set of modifiers to each of the
+components.  However, an initializer_modifier to the simple_types is
+treaded as a modifier to the value attribute.  Despite the fact that
+the simple_types are composite classes, their components (specially
+called as attributes) are treated differently from other classes.  See
+Quote~\ref{quo:attribute-access}.
+
+\begin{QFACT} An initializer_modifier to a simple_type only modifies
+the value attribute.\end{QFACT}
+
+\begin{QRULE} An initializer_modifier needs to have the same
+components in the RHS and LHS.  Especially, an initializer_modifier by
+a base instance is not allowed when some components are
+added.\end{QRULE}
+
+An initializer_modifier $\mathit{x1}=\mathit{x0}$ below is illegal
+because of an addition of $s$.  It is also illegal even if $s$ were a
+constant.  Additions of non-component definitions are allowed.
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+/*ILLEGAL*/
+
+model B
+    Real b=10;
+end B;
+
+model S
+    extends B;
+    Real s=20;
+end S;
+
+model M
+    B x0;
+    S x1=x0;
+end M;
+\end{lstlisting}
+\end{quote}
+
+\begin{QRULE} An initializer_modifier and modifiers can coexist.
+Modifiers are ignored in that case.\end{QRULE}
+
+A modifier $(x=20)$ is ignored in the following example.
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+/*LEGAL*/
+model A
+    Real x=10;
+    Real y=10;
+end A;
+
+model M
+    A x0;
+    A x1(x=20)=x0;      /* x1.x=10 */
+end M;
+\end{lstlisting}
+\end{quote}
+
+%%%%%%%%%%%%%
+
+\subsection{Ordering of modifications}
+
+\subsubsection*{Modifier ordering}
+
+\begin{QRULE}\label{modifier-precedence} A latter application of
+modifiers has a precedence.  The ordering is defined by a way how
+implementations should look at the modifications.  A component
+declaration is considered latter than a modifier
+application.\end{QRULE}
+%%%%
+For example, $x0=10$ is effective over $X(\mathit{value}=20)$.
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+model A
+    model X=Real;
+    X x0=10;		/* a.x0=10 */
+    X x1;		/* a.x1=20 */
+end A;
+
+model M
+    A a (X(value=20));
+end M;
+\end{lstlisting}
+\end{quote}
+
+\begin{qquote} (\specref{4.4.2}\/) The new environment is the result
+of merging $\bullet$\,the modification of enclosing class
+element-modification with the same name as the component
+$\bullet$\,the modification of the component declaration in that
+order.\end{qquote}
+
+%% Modifcations are handled from the outside to inside of the
+%% enclosing classes.  Modifcations to a class are handled from the
+%% most derived class.  Also, modifications need to be applied each
+%% time at handling each extends-clause.  That is, it is not allowed
+%% expanding extends-clauses of base_classes in advance.  See
+%% (\specref{5.6.1.4}\/), especially
+%% step 4, it suggests the existence of the ordering.
+
+\subsubsection*{Redeclaration ordering}
+
+\begin{QFACT}\label{modification-ordering} Ordering of modifications
+is inner to outer as strict applications.\end{QFACT}
+
+In the following example, a redeclaration $X=D$ in elements is applied
+later than and effective over $X=E$ in a modifier.
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+model C Real v=10; end C;
+model D Real v=20; end D;
+model E Real v=30; end E;
+
+model A
+    replaceable model X=C;
+    X a;        /* X=D */
+end A;
+
+model M
+    redeclare replaceable model X=D;
+    extends A (redeclare replaceable model X=E);
+end M;
+\end{lstlisting}
+\end{quote}
+
+In the following example, a redeclaration $X=E$ in $M$ is applied
+later than and effective over $X=D$ in $B$.
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+model C Real v=10; end C;
+model D Real v=20; end D;
+model E Real v=30; end E;
+
+model A
+    replaceable model X=C;
+    X a;        /* X=E */
+end A;
+
+model B
+    redeclare replaceable model X=D;
+    extends A;
+end B;
+
+model M
+    redeclare replaceable model X=E;
+    extends B;
+end M;
+\end{lstlisting}
+\end{quote}
+
+\subsubsection*{Modifiers over redeclarations}
+
+%% \begin{QRULE} Redeclaring a component does not drop the modifiers
+%% attached to the original component declaration.\end{QRULE}
+
+\begin{QRULE}\label{modifier-over-redeclaration} A modifier attached
+to a replaceable is effective after a redeclaration on an instance.
+In contrast, A modifier is dropped after a redeclaration on a
+class.\end{QRULE}
+
+For example, a modifier $x=30$ to a variable is effective after a
+redeclaration $D~a$.
+
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+model C Real v=10; end C;
+model D Real v=20; end D;
+
+model A
+    replaceable C a (v=30);
+end A;
+
+model M
+    extends A (redeclare D a);
+    /* a.v=30 */
+end M;
+\end{lstlisting}
+\end{quote}
+
+In contrast, a modifier $v=30$ to a class is dropped by a
+redeclaration $X=D$.
+
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+model C Real v=10; end C;
+model D Real v=20; end D;
+
+model A
+    replaceable model X=C (v=30);
+    X a;
+end A;
+
+model M
+    redeclare model X=D;
+    extends A;
+    /* a.v=20 */
+end M;
+\end{lstlisting}
+\end{quote}
+
+\paragraph {Remark}
+
+Furthermore, in some_implementations, a modifier $v=30$ to a class is
+kept when a redeclaration is in a modifier.
+
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+model C Real v=10; end C;
+model D Real v=20; end D;
+
+model A
+    replaceable model X=C (v=30);
+    X a;
+end A;
+
+model M
+    extends A (redeclare model X=D);
+    /* a.v=30 */
+end M;
+\end{lstlisting}
+\end{quote}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Redeclarations}
+
+A class redeclaration redefines a class, and a component redeclaration
+redeclares a variable to be another class.  Or, a redeclaration
+changes dimension sizes.  Redefinitions and redeclarations may be
+jointly called redeclarations.
+
+\begin{qquote} (\specref{7.2}\/) A more dramatic change is to modify
+the type and/or the prefixes and possibly the dimension sizes of a
+declared element. This kind of modification is called a
+redeclaration...\end{qquote}
+
+\begin{QFACT} $\mathbf{redeclare}$ is always required for a class
+definition in modifiers. \end{QFACT}
+
+Simply, it is an error to omit $\mathbf{redeclare}$ in modifiers.
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+/*ILLEGAL*/
+
+model C Real v=10; end C;
+model D Real v=20; end D;
+
+model A
+    X a;
+end A;
+
+model M
+    extends A (/*redeclare*/ class X=D);
+end M;
+\end{lstlisting}
+\end{quote}
+
+\subsubsection*{A target of a redeclaration}
+
+Note that a target (replaceable) class of a redeclaration cannot be
+defined at the same class, which results in duplicate definitions.
+
+\begin{QRULE} Redeclaring a class/variable in class elements applies
+to its base classes.  Redeclaring a class/variable in modifiers
+applies to the main class and its base classes.  In both cases, a
+replaceable class/variable in bases can be redeclared.  It means that
+redeclaring a class definition is visible from base classes, although
+a usual class definition is not visible. \end{QRULE}
+
+\begin{QFACT}\label{no-colocate-redeclare-replaceable} Co-locating
+redeclare and replaceable definitions is duplicate definitions and an
+error.  Thus, a replaceable definition should be an inherited class
+(which is defined in a base class). \end{QFACT}
+
+Redeclaring $X=D$ in $M$ is visible from a base class $A$.
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+model C Real v=10; end C;
+model D Real v=20; end D;
+
+model A
+    replaceable model X=C;
+    X a; /* X=D */
+end A;
+
+model M
+    redeclare model X=D;
+    extends A;
+end M;
+\end{lstlisting}
+\end{quote}
+
+\begin{QFACT} A redeclaration replaces a definition of a replaceable.
+A replaceable defined outside is not visible. \end{QFACT}
+
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+/*ILLEGAL*/
+
+model C Real v=10; end C;
+model D Real v=20; end D;
+
+replaceable model X=C;
+
+model A
+    X a;
+end A;
+model M
+    extends A (redeclare model X=D);
+end M;
+\end{lstlisting}
+\end{quote}
+
+\subsubsection*{Imported names being not replaceable}
+
+\begin{QRULE}\label{imported-not-replaceable} Imported names are not
+replaceable. \end{QRULE}
+
+An imported $X$ is not repalceable.
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+/*ILLEGAL*/
+
+model C Real v=10; end C;
+model D Real v=20; end D;
+
+model A
+    replaceable model X=C;
+end A;
+
+model B
+    import X=A.X;
+    X a;
+end B;
+
+model M
+    redeclare model X=D;
+    extends B;
+end M;
+\end{lstlisting}
+\end{quote}
+%%%%
+To make it replaceable in the code above, it needs to be rewritten as
+$\mathbf{import}\;A;$ and
+$\mathbf{replaceable}\;\mathbf{class}\;X=A.X;$ in $B$.
+
+\subsubsection*{Base names being not replaceable}
+
+\begin{QRULE}\label{base-not-replaceable} A base class in an
+extends-clause cannot be replaceable, implying it cannot be
+redeclared.  (?) Each part of a composite name be non-replaceable.\end{QRULE}
+
+%% (???) It applies to both via definitions (in class elements) and via
+%% modifiers.
+
+\begin{qquote} (\specref{7.1.4}\/) The class name used after extends
+for base-classes and for constraining classes must use a class
+reference considered transitively non-replaceable.\end{qquote}
+%%%%
+\begin{qquote} (\specref{7.3}\/) A redeclare construct in a
+modifier~...  A redeclare construct as an element~...  Both redeclare
+constructs work in the same way.\end{qquote}
+%%%%
+\begin{qquote} (\specref{7.3.1}\/) ...~In contrast to normal extends
+it is not subject to the restriction that B should be transitively
+non-replaceable~...\end{qquote}
+
+\begin{QFACT} There is a trick to extend a replaceable class.  One can
+extend a replaceable class once redeclares it to be not
+replaceable.\end{QFACT}
+%%%%
+It is used for $\mathit{BaseProperties}$ in
+Media.Examples.TwoPhaseWater.  It can be found near line 2542,
+Media/package.mo (in MSL~3.2.3).
+
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+  package TwoPhaseWater
+    extends Modelica.Media.Water.StandardWater;
+    redeclare model extends BaseProperties
+      "Make StandardWater.BaseProperties non replaceable in order that
+       inheritance is possible in model ExtendedProperties"
+    end BaseProperties;
+
+    model ExtendedProperties
+      extends BaseProperties;
+    ...
+\end{lstlisting}
+\end{quote}
+
+\paragraph {Remark}
+
+The both of the following code are illegal.  Some_implementations
+accept the first code.  $X$ is redeclared, and $A$ extends $X=D$.
+some_implementations accept a redeclaration in modifiers, but do not
+accept a redeclaration in elements.  Some_implementations accept the
+second code.  The redeclaration is ignored.  $X$ is not redeclared,
+and $A$ extends $X=C$.
+
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+/*ILLEGAL*/
+
+model C Real v=10; end C;
+model D Real v=20; end D;
+
+model A
+    replaceable model X=C;
+    extends X; /* X=D */
+end A;
+
+model M
+    A a (redeclare model X=D);
+end M;
+\end{lstlisting}
+\end{quote}
+
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+/*ILLEGAL*/
+
+model C Real v=10; end C;
+model D Real v=20; end D;
+
+model A
+    replaceable model X=C;
+    extends X; /* X=C */
+end A;
+
+model M
+    redeclare model X=D;
+    extends A;
+end M;
+\end{lstlisting}
+\end{quote}
+
+\subsubsection*{Redeclarations of dimension sizes}
+
+Redeclaring dimension sizes works non-$\mathbf{replaceable}$ elements.
+
+\begin{qquote} (\specref{7.3.3}\/) Array dimensions may be redeclared;
+provided the sub-typing rules in 6.3 are satisfied. [This is one
+example of redeclare of non-replaceable elements.]\end{qquote}
+
+\subsubsection*{Redeclarations to a class and a component}
+
+\begin{QFACT} Redeclaring a class and redefining a component are
+independent and both are effective.  \end{QFACT}
+
+For example, $X\;a$ is converted to $D\;a$.
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+model A Real v=10; end A;
+model B Real v=20; end B;
+model C Real v=30; end C;
+model D Real v=40; end D;
+
+model H
+    replaceable model X=A;
+    replaceable model Y=B;
+    replaceable X a;
+end H;
+
+model M
+    redeclare Y a;
+    redeclare model X=C;
+    redeclare model Y=D;
+    extends H; /* a.v=40 */
+end M;
+\end{lstlisting}
+\end{quote}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Redeclarations in modifiers and in elements}
+
+%%Redeclarations can be written in modifiers or in class elements.
+
+Redeclarations can be written in class elements (in-element) or in
+modifiers (in-modifier).  They are sightly different
+syntactically/semantically.  That is, an in-element redeclaration
+accepts $\mathbf{inner}$/$\mathbf{outer}$, but an in-modifier
+redeclaration not (see Fact~\ref{inner-outer-in-redeclarations}).  An
+in-element redeclaration affects a base class, which do not happen in
+usual languages.
+
+\begin{QFACT} Coexisting an in-element redeclaration and an
+in-modifier redeclaration in an extends-clause which would apply to
+the same class/variable is illegal.\end{QFACT}
+%%%%
+This is a rephrasing of the following quote.
+%%%%
+\begin{qquote} (\specref{7.3}\/) The redeclare construct as an
+element ... cannot be combined with a modifier of the same element in
+the extends-clause.\end{qquote}
+
+This does not apply to a combination of a class and a component, nor a
+non-redeclaration modifier.  The modifier below has an effect as
+$a.v=30$.
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+model C Real v=10; end C;
+model D Real v=20; end D;
+
+model A
+    replaceable model X=C;
+    X a; /* a.v=30 */
+end A;
+
+model M
+    redeclare replaceable model X=D;
+    extends A (a.v=30);
+end M;
+\end{lstlisting}
+\end{quote}
+
+\subsubsection*{Ordering of redeclarations}
+
+\begin{QRULE} A redeclaration in a derived class is applied later to a
+redeclaration in a modifier to a base class (in-element vs.\@
+in-modifier).  A redeclaration in a derived class is applied later to
+a redeclaration in a base class (in-element vs.\@
+in-element).\end{QRULE}
+
+Redeclaring $X=D$ in $M$ has precedence to a modifier $X=E$.
+
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+model C Real v=10; end C;
+model D Real v=20; end D;
+model E Real v=30; end E;
+
+model A
+    replaceable model X=C;
+    X a; /* X=D */
+end A;
+
+model M
+    redeclare replaceable model X=D;
+    extends A (redeclare replaceable model X=E);
+end M;
+\end{lstlisting}
+\end{quote}
+
+Redeclaring $X=E$ in $M$ has precedence to $X=D$ in $B$.
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+model C Real v=10; end C;
+model D Real v=20; end D;
+model E Real v=30; end E;
+
+model A
+    replaceable model X=C;
+    X a; /* X=E */
+end A;
+
+model B
+    redeclare replaceable model X=D;
+    extends A;
+end B;
+
+model M
+    redeclare replaceable model X=E;
+    extends B;
+end M;
+\end{lstlisting}
+\end{quote}
+
+\subsubsection*{Redeclarations with prefixes}
+
+\begin{QFACT}\label{inner-outer-in-redeclarations} Replaceables accept
+prefixes inner/outer.  In-element redeclarations accept inner/outer,
+but in-modifier redeclarations do not.\end{QFACT}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Merging parts of a redeclaration}
+
+A redeclaration merges a part of a replaceable (original) declaration.
+It is called inheriting in the_specification.
+
+\subsubsection*{Merging prefixes in a redeclaration}
+
+\begin{qquote} (\specref{7.3}\/) In redeclarations some parts of the
+original declaration is automatically inherited by the new
+declaration.\end{qquote}
+
+\begin{qquote} (\specref{6.3}\/) (i.e., no need to repeat 'parameter'
+in a redeclaration).\end{qquote}
+
+\begin{QFACT} A variability prefix is merged.  A prefix input or
+output is merged.  Prefixes inner and/or outer are merged.  A
+conditional part is merged.  (See \specref{6.3}\/).\end{QFACT}
+
+The definition of merging is made precise by the class_compatibility
+(See Quote~\ref{quo:class-compatibility}).
+
+\begin{QRULE} (?) Visibility statuses must be equal.  Final statuses
+must be equal (final variables can be replaceable).  A variability
+prefix is replaced with regard to the variability ordering.  An input
+or output prefix in a replaceable is added, when none are given in a
+redeclaration.  Inner and/or outer prefixes in a replaceable are
+added, when none are given in a redeclaration.  A conditional part is
+added.  If both a replaceable and a redeclaration have a conditional
+part, they must be semantically the same.\end{QRULE}
+
+That is, $\mathit{parameter}$ on a replaceable replaces one if a
+redeclaration is $\mathit{discrete}$ or $\mathit{continuous}$, but
+does not replace $\mathit{constant}$.
+
+\subsubsection*{Merging modifiers in a redeclaration}
+
+The_implementation follows the rules of merging modifiers, when
+modifiers are in a redeclaration.  Note that it may not be compatible
+with some_implementations.
+
+\begin{QRULE}\label{modifiers-in-redeclaration} Modifiers in a
+redeclaration is merged to ones in a replaceable with modifiers in a
+redeclaration being applied later.\end{QRULE}
+
+\subsubsection*{More on merging parts of a redeclaration}
+
+\paragraph {Remark}
+
+Some_implementations do not merge inner/outer prefixes by a
+redeclaration in elements.  That is, an outer prefix attached to $X$
+in $A$ is dropped in a redeclaration in $B$, in the following example.
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+model C Real v=10; end C;
+model D Real v=20; end D;
+model E Real v=30; end E;
+
+model A
+    outer replaceable model X=C;
+    X a;
+end A;
+
+model B
+    redeclare model X=D;
+    extends A;
+end B;
+
+model M
+    inner model X=E;
+    B b;        /* b.a.v=20 */
+end M;
+\end{lstlisting}
+\end{quote}
+
+\paragraph {Remark}
+
+In some_implementations, a redeclaration in modifiers and one in
+elements work differently.  One in elements drops a modifier attached
+on a replaceable, but one in modifiers does not.
+
+A modifier $v=30$ to a class $C$ is dropped by a redeclaration in
+elements, in the following code.
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+model C Real v=10; end C;
+model D Real v=20; end D;
+
+model A
+    replaceable model X=C (v=30);
+    X x;
+end A;
+
+model A0=A (redeclare model X=D);
+
+model A1
+    redeclare model X=D;
+    extends A;
+end A1;
+
+model A2
+    extends A (redeclare model X=D);
+end A2;
+
+model M
+    A0 a0;      /* a0.x.v=30 */
+    A1 a1;      /* a1.x.v=20 */
+    A2 a2;      /* a1.x.v=30 */
+end M;
+\end{lstlisting}
+\end{quote}
+
+A modifier $v=30$ to a component $x$ is dropped by a redeclaration in
+elements, in the following code.
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+model C Real v=10; end C;
+model D Real v=20; end D;
+
+model A
+    replaceable C x (v=30);
+end A;
+
+model A0=A (redeclare D x);
+
+model A1
+    redeclare D x;
+    extends A;
+end A1;
+
+model A2
+    extends A (redeclare D x);
+end A2;
+
+model M
+    A0 a0;      /* a0.x.v=30 */
+    A1 a1;      /* a1.x.v=20 */
+    A2 a2;      /* a1.x.v=30 */
+end M;
+\end{lstlisting}
+\end{quote}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Extends-redeclarations}
+
+An extends-redeclaration defines a new class based on an inherited
+class and replaces it.  It redefines an inherited class as other
+redeclarations.
+
+\subsubsection*{A base being replaceable}
+
+\begin{QFACT} An extends-redeclaration applies to an inherited class.
+It implies that it searches for a base class in the base classes of
+the present class where it is defined.  While a base class usually
+should not be replaceable, a base class of an extends-redeclaration
+needs to be replaceable.\end{QFACT}
+
+\begin{qquote} (\specref{7.3.1}\/) A class declaration of the type
+"$\mathbf{redeclare}\;\mathbf{class}\;\mathbf{extends}\;B(...)$", ...,
+replaces the inherited class $B$ with another declaration that extends
+the inherited class~...\end{qquote}
+
+It is not straightforwardly translated to a combination of an
+extends-clause and a redeclaration.  It is because the scoping rule of
+modifiers is unusual.  In addition, an extends-redeclaration extends
+an original base and replaces it, but a redeclaration may hide an
+original base.
+
+It is illegal to define one without $\mathbf{redeclare}$, such as
+$\mathbf{class}\;\mathbf{extends}\;A~...~\mathbf{end}\;A$.  It is
+simply a duplicate definition, when it were allowed.
+
+%% Rule~\ref{no-colocate-redeclare-replaceable} implies that.
+
+\subsubsection*{A scope of modifiers}
+
+\begin{QRULE}\label{scope-rule-in-extends-redeclaration} The scope of
+the RHS of a modifier to an extends-redeclaration is the class that is
+to be redeclaring (the base and the body of the class).  But, it does
+not include the class in which a modifier appears (the ususal scope).
+Note that, the scope of the RHS of a modifier is not the same as the
+LHS, because the LHS is limited to the base.\end{QRULE}
+
+The modifier $(a=x+y)$ is legal in the following example, because $x$
+and $y$ are visible.  In contrast, $z$ declared in $M$ is not visible,
+if it were used in the modifier.
+
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+model E
+    replaceable model A
+	Real a=10;
+	Real x=20;
+    end A;
+end E;
+
+model M
+    extends E;
+    redeclare model extends A (a=x+y)
+	Real y=30;
+    end A;
+    Real z=40;
+    A m;
+end M;
+\end{lstlisting}
+\end{quote}
+
+This occurs in MSL.  A parameter $\mathit{preferredMediumStates}$ is
+visible in modifiers, near line 154, Media/Water/package.mo (in
+MSL~3.2.3).  But, $\mathit{preferredMediumStates}$ is defined in
+$\mathit{BaseProperties}$ but not in $\mathit{WaterIF97\_base}$ nor
+its base $\mathit{PartialTwoPhaseMedium}$.
+
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+partial package WaterIF97_base
+  extends Interfaces.PartialTwoPhaseMedium(...);
+  redeclare replaceable model extends BaseProperties(
+    h(stateSelect=if ph_explicit and preferredMediumStates
+           then StateSelect.prefer
+           else StateSelect.default), ...)
+\end{lstlisting}
+\end{quote}
+
+The definition of $\mathit{preferredMediumStates}$ can be found at
+line 241, Media/package.mo (in MSL~3.2.3).
+
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+package Interfaces
+  partial package PartialMedium
+    replaceable partial model BaseProperties
+      parameter Boolean preferredMediumStates=false
+\end{lstlisting}
+\end{quote}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Inner/outer declarations}
+
+Inner-outer matching makes a class definition or a variable
+declaration depend on instantiations.  It makes a name defined in an
+outer instance visible in an inner instance.
+
+%% A class (even without
+%% modifiers) can have different classes for elements at each
+%% instantiation.
+
+\subsubsection*{An inner-outer relation}
+
+Inner-outer refers to a relation of component embedding.  A word
+{\it{}instance_hierarchy\/} is also used to refer to it.  Assume class
+$M$ includes declarations $A\;a$ and $B\;b$, and $B$ includes a
+declaration $A\;c$.  By instantiating $M\;m$, $m$ is outer and $m.b$
+is inner.  When the variable $A\;a$ is prefixed by $\mathbf{inner}$
+and $A\;c$ by $\mathbf{outer}$, the references $m.a$ and $m.b.c$
+are identical.
+
+Note that an enclosing class relation is not an embedding relation.
+They are different concepts.
+
+\begin{QRULE}\label{inner-outer} Inner/outer prefixes applies to both
+classes and variables.  An outer definition/declaration imports an
+identifier defined in some outer instance and makes it visible in the
+present class.  An inner prefix indicates a definition/declaration to
+match to an outer one.  An outer class/variable can be declared
+multiple times in a class and its bases.  They refer to the same inner
+class/variable. \end{QRULE}
+%%%%
+An outer prefixes an identifier, and an inner prefixes a class
+definition or a variable declaration.
+
+\begin{QFACT} (?) An inner-outer relation on classes does not extend
+outward to lexically enclosing classes. \end{QFACT}
+
+In the following example, the model class is $M$.  The outer $P.X$
+is defined in a package $P$ and it cannot have an inner-outer
+relation.  Note the hierarchies are $M\owns{}P.B$ and $P>P.B$ ($\owns$
+for component embedding, $>$ for lexical enclosing).
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+/*ILLEGAL*/
+
+model A0 Real x=10; end A0;
+model A1 Real x=20; end A1;
+
+model P
+    outer model X = A0;
+    model B
+       X a;
+    end B;
+end P;
+
+model M
+    inner model X = A1;
+    P.B b;
+    Real y = b.a.x;
+end M;
+\end{lstlisting}
+\end{quote}
+
+\subsubsection*{Class_compatibility}
+
+There is a compatibility restriction among classes of inner-outer.
+%%%%
+\begin{QRULE}\label{inner-outer-compatibility} A relation
+$A\,{\mathcode`-=`-\mathit{inner-outer}}\,B$ is allowed for classes,
+if $A$ is a subclass of $B$, $A<:B$.  (?) What for other classes?  (?)
+What for variable declarations?  \end{QRULE}
+
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+inner model C = A;
+outer model C = B;
+model A extends B; end A;
+\end{lstlisting}
+\end{quote}
+
+An example of inner/outer prefixes on classes is given in
+the_specification as function definitions (functions are a kind of
+classes).  See \specref{5.4.1}.
+
+\subsubsection*{Syntax restrictions of modifiers}
+
+\begin{QFACT} Outer class definitions are short_class_definition.
+Modifiers to outer definitions/declarations are usually ignored unless
+there is no matching inner.  Inner definitions/declarations have no
+restrictions.  Simultaneous inner/outer class definitions are
+short_class_definitions.  Modifiers to simultaneous inner/outer
+definitions/declarations apply to the inner part unless there is no
+matching inner. \end{QFACT}
+%%%%
+See \specref{5.5}.
+
+\subsubsection*{Outers in a class during lookups}
+
+\begin{QFACT} Outer classes and constants are treated as non-existent
+when a class is processed as a package. \end{QFACT}
+%%%%
+See also Fact~\ref{class-as-package}.
+
+\subsubsection*{Extending outers}
+
+\begin{QFACT} It is legal to extend an outer class. \end{QFACT}
+
+\subsubsection*{Simultaneous inner/outer}
+
+\begin{QFACT} A simultaneous inner/outer definition/declaration can be
+regarded as being with inner and outer separately.  The only definite
+effect is that the present class sees an outer
+class/variable.\end{QFACT}
+%%%%
+See \specref{5.5}.
+
+Note that the instance created for a simultaneous inner/outer
+definition is not visible in the class it is defined (exactly
+speaking, in case when there is some inner which an outer part
+matches).
+
+%%%%%%%%%%%%%
+
+\subsection{Visibility}
+
+\begin{QRULE} A protected class is visible from an enclosed
+class.\end{QRULE}
+
+In syntax, $\mathbf{public}$, $\mathbf{protect}$, $\mathbf{equation}$,
+and $\mathbf{algorithm}$ construct a section separated by themselves
+until the end of class elements.  It is public, when sections may be
+started with none of them.  That is, sections of equations and
+algorithms have no distinction of public/protected.
+
+(?) (*CHECK*) Check the visibility of import/extends-clauses and
+redeclarations.
+
+%%%%%%%%%%%%%
+
+\subsection{Enclosing classes}
+
+A lookup of a name in a class sometimes continues to the enclosing
+class of the class.
+
+\subsubsection*{An enclosing class of a definition-body}
+
+\begin{QFACT} An enclosing class is a class which defines the
+definition-body of the requested class (assigning a name does not
+change the enclosing class).  An enclosing class may be a modified
+one, and thus, it is not just the lexical relation.  An enclosing
+class respects the relation of a definition-body, that is, each
+main/base class has a separate enclosing class.\end{QFACT}
+
+\subsubsection*{Scopes not extending to enclosing classes}
+
+Elements from enclosing classes are not visible through import- or
+extends-clauses.  The following code is illegal, because $v$ is
+visible from $A$, but not visible in the derived class $M0$.  Also,
+$v$ is not visible in $M1$.
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+/*ILLEGAL*/
+
+package P
+    constant Real v=10;
+    model A end A;
+end P;
+
+model M0
+    extends P.A;
+    Real z=v;
+end M0;
+
+model M1
+    import P.A;
+    Real z=v;
+end M1;
+\end{lstlisting}
+\end{quote}
+
+\subsubsection*{A scope to each base class}
+
+An enclosing class is associated to each base class.  Different
+classes are visible by the same name in a class.
+
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+package B0
+    type T = Real(value=10);
+    model B1
+        T b;
+    end B1;
+end B0;
+
+package D0
+    type T = Real(value=20);
+    model D1
+        extends B0.B1;
+        T d;
+    end D1;
+end D0;
+
+model M
+    D0.D1 m; /* m.b=10, m.d=20 */
+end M;
+\end{lstlisting}
+\end{quote}
+
+\subsubsection*{An enclosing class is the defining class}
+
+In the following, the enclosing class of $D0.B1$ is $D0|B0$, a base of
+$D0$ (as denoting a base part of a class by $D0|B0$).
+
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+package B0
+    type T = Real(value=10);
+    model B1
+        T b;
+    end B1;
+end B0;
+
+package D0
+    extends B0(T(value=20));
+end D0;
+
+model M
+    D0.B1 m; /* m.b=20 */
+end M;
+\end{lstlisting}
+\end{quote}
+
+\subsubsection*{An enclosing class of a reclaration}
+
+A redeclaration works as expected, as it does not change the scope.
+
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+package B0
+    type T = Real(value=10);
+    model B1
+        replaceable model B2
+            T x;
+        end B2;
+        B2 b;
+    end B1;
+end B0;
+
+package D0
+    type T = Real(value=20);
+    model D1
+        extends B0.B1;
+        redeclare model B2=D2;
+        model D2
+            T x;
+        end D2;
+    end D1;
+end D0;
+
+model M
+    D0.D1 m;  /* m.b.x=20 */
+end M;
+\end{lstlisting}
+\end{quote}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Restrictions of within}
+
+\subsubsection*{Processing a target model}
+
+A target model is usually loaded from a user specified file.  It is
+possible to modify a target model, when it is defined in an enclosing
+classes which has modifiers on it. (?) It probably is not an
+intention.
+%%%%
+\begin{QRULE} (?) It is forbidden to declare a class in an enclosing
+class which is defined by refining, where an enclosing class is
+specified via $\mathbf{within}$. \end{QRULE}
+%%%%
+That is, $A$ is not defined by $\mathbf{package}\;A = ...$ when using
+$\mathbf{within}\;A$.
+
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+(*CHECK*)
+/* File A: */
+package A = B(M(x=10));
+
+/* File M: */
+within A;
+model M
+    Real x=0;
+end M;
+\end{lstlisting}
+\end{quote}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Class prefixes}
+
+\begin{QFACT}\label{encapsulated-class} (?) $\mathbf{encapsulated}$
+can be attached to any class definitions in the syntax rules, but it
+only has a meaning to long-class-specifier and meaningless to
+short-class-specifier and der-class-specifier.\end{QFACT}
+
+\begin{QFACT} $\mathbf{encapsulated}$ is only effective for main
+(non-base) classes.\end{QFACT}
+
+\begin{QFACT}\label{final-class} $\mathbf{final}$ to a class is
+unclear.  It might disable modifiers or might disable extending.
+\end{QFACT}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Variability}
+
+Variability of components is specified by keywords for
+$\mathbf{constant}$, $\mathbf{parameter}$, and $\mathbf{discrete}$,
+but $\mathit{continuous}$ when nothing is specified.  Variability is
+ordered by the inclusion relation: $$\mathit{constant} \subset
+\mathit{parameter} \subset \mathit{discrete} \subset
+\mathit{continuous}\;.$$ Continuous means unconstrained, and declaring
+continuous integers is valid.  The ordering is used in class
+compatibility.  It is described in \specref{3.8}\/ and \specref{6.3}.
+
+\begin{QFACT}\label{parameters} The ordering strict.  However, it can
+be treated as $\mathit{parameter}=\mathit{constant}$ for translation
+and simulation, although parameters and constants are distinguished at
+a surface level.  Note that parameters, in addition to constants, in
+packages are visible.  Values of parameters and constants may be
+specified by modifiers, unless they are final.\end{QFACT}
+%%%%
+Constants cannot be changed at runtime after translation of a model by
+definition.  However, parameters are also hard to be changed at
+runtime, because parameters are treated as constants in simplification
+of constants.
+
+\begin{qquote} (\specref{3.8.1}\/) The value of a constant can be
+modified after it has been given a value, unless the constant is
+declared final...\end{qquote}
+
+\begin{qquote} (\specref{4.4.4}\/) A constant variable is similar to a
+parameter with the difference that constants cannot be changed after
+translation and usually not changed after they have been given a
+value.\end{qquote}
+
+\begin{qquote} (\specref{7.2.6}\/) [Setting the value of a parameter
+in an experiment environment is conceptually treated as a
+modification.\end{qquote}
+
+\begin{QFACT} Variability is not orthogonal to number types.  Simple
+types except Real are discrete.  However, declaring such as continuous
+integers is allowed (and typical because continuous is the
+default).\end{QFACT}
+%%%%
+See \specref{3.8.3}\/ for discrete values.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Connectors}
+
+A connector is a type or a record that is marked to be used in
+connect_equations.
+
+\subsubsection*{Sides of connectors}
+
+A side is an aspect of a connector whether it is connected in a
+declaring class.  An outside_connector is an internal connection in
+the declaring class, and the flow direction is considered reversed
+(the value is negated) for that connection.  An opposite is an
+inside_connector.  A connector is considered split to the
+inside/outside ones, but they share the same variables.  The side is
+taken into account in connect_equations but not in the {cardinality}
+operator.
+
+\begin{QFACT} Determination of a side of a connector must respect the
+place where the connector is declared, and inner/outer declarations
+are ignored for that.  An outside_connector is distinguished by the
+use of a connector that is declared and used in the class.  That is,
+the first part of a composite name is a declared connector.\end{QFACT}
+%%%%
+For example, $c$ in $\mathrm{connect}\,(c,...)$ is an
+outside_connector when it appears in the class declaring $c$.  And
+also, $c.m.d$ in $\mathrm{connect}\,(c.m.d,...)$ is an
+outside_connector when it appears in the class declaring $c$, where
+$m$ is a possibly empty list of components (connectors or
+non-connectors).  (*CHECK*) It is an outside_connector in the case
+when a non-connector intervenes like $c.m.d$.
+
+\subsubsection*{A connection_set}
+
+A connector is a record that may contain simple_types, records,
+operator_records, and connectors (but not models specifically).  A
+connect_equation connects variables including component connectors
+declared in the connector.
+
+A connection_set consists of tuples of a variable and its side.  The
+set is defined as a symmetric and transitive closure of a relation
+that contains the pairs in connect_equations.  The variables are
+simple_types or operator_records (overdetermined_records), and a
+record in a connector is broken down to its components, but an
+overdetermined_record (or every operator_record (?)) is treated as a
+single element.
+
+\subsubsection*{(?) Connect equations on arrays}
+(?) Array sizes are determined?
+
+\subsubsection*{Connection restrictions}
+
+Connect equations are fixed at translation-time.
+
+\begin{qquote} (\specref{9.3}\/) $\bullet$\,The connect_equations (and
+the special functions for overdetermined connectors) may only be used
+in equations and may not be used inside if-equations with
+non-parametric condition, or in when-equations. [For-equations always
+have parameter expressions for the array expression.]\end{qquote}
+
+\begin{qquote} (\specref{8.3.2}\/) The expression of a for-equation
+shall be a vector expression. ... The expression of a for-equation
+shall be a parameter expression.\end{qquote}
+
+\subsubsection*{Expandable_connectors}
+
+An expandable_connector is a set of connectors, and it is only
+connected to expandable_connectors.  A component will be included when
+it is used.  All components in an expandable_connector are implicitly
+considered as connectors.  An expandable_connector is first considered
+empty until a component (even a declared one) is included by using it
+explicitly.
+
+A direct reference of a component in a connect equation signifies an
+addition of a component to an expandable_connector.  A reference is
+$m...m.c.d$, with $m$ a possibly empty component, $c$ an
+expandable_connector, and $d$ a component.
+
+%% A component will be included for the outside use of an
+%% expandable_connector even if it is not declared in the definition.
+
+\begin{qquote} (\specref{9.1.3}\/) $\bullet$\,expandable connectors
+can only be connected to other expandable connectors.\end{qquote}
+
+\begin{qquote} (\specref{9.1.3}\/) $\bullet$\,All components in an
+expandable connector are seen as connector instances even if they are
+not declared as such\end{qquote}
+
+\begin{qquote} (\specref{9.1.3}\/) Before generating connection
+equations non-parameter scalar variables and non-parameter array
+elements declared in expandable connectors are marked as only being
+potentially present.\end{qquote}
+
+(*CHECK*) Declared components of an expandable_connector cannot be
+used in connect_equations unless they are connected to connectors not
+in some expandable_connectors.
+
+\subsubsection*{Stream_connectors}
+
+See \specref{15}.
+
+A stream_connector is a connector containing stream_variables.  A
+stream_connector contains a single scalar real flow_variable and some
+reals of (or arrays of) stream_variables.  The record components of a
+stream_variable are considered as stream_variables.
+
+$\mathrm{inStream}\,(v)$ and $\mathrm{actualStream}\,(v)$ take a
+stream_variable (which may be an array).
+
+\subsubsection*{Overdetermined_types/records}
+
+A type/record defining $\mathrm{equalityConstraint}\,(x,y)$ is called
+overdetermined_type/record.  The {Connections} class defines some
+predefined functions to reduce overdetermined constraints.
+
+\subsubsection*{(?) Operator_record components}
+
+(?) A connection component of an operator_record is used as an
+aggregate in generated equations with defined eqaulity, summation, or
+negation.
+
+\subsubsection*{Unconnected connectors}
+
+Flow variables are set to zero for unconnected connectors.
+Conditional connectors are unconnected if their conditions are false.
+See Section~\ref{conditional-component}.
+
+\subsubsection*{cardinality operator}
+
+The $\mathrm{cardinality}\,(c)$ operator returns the count of the uses
+of connect_equations on the inside part of the argument connector.  It
+is not the size of a connection set.  Cardinality of an embedded
+connector is counted, when it is indirectly used in connect_equations.
+For example, $\mathrm{cardinality}\,(c.d)$ counts an equation
+$\mathrm{connect}\,(c,\_)$.
+
+{cardinality} only appears in equation sections (only in assertions).
+{cardinality} does not take expandable_connectors, components of
+expandable_connectors, nor arrays of connectors.  {cardinality} is a
+translation-time constant.  However, $\mathrm{cardinality}\,(c)$
+cannot be replaced by a constant in general, because a connector
+reference is not a translation-time constant (array indices can be
+non-constants).
+
+The_clarification a bit differs from the_specification:
+%%%%
+\begin{specquote}{3.7.2} Returns the number of (inside and outside)
+occurrences of connector instance c in a connect-equation as an
+Integer number.  See also Section 3.7.2.3.\end{specquote}
+%%%%
+\begin{specquote}{3.7.2.3} The cardinality is counted after removing
+conditional_components.  and may not be applied to expandable
+connectors, elements in expandable connectors, or to arrays of
+connectors (but can be applied to the scalar elements of array of
+connectors).  The cardinality operator should only be used in the
+condition of assert and if-statements -- that do not contain connect
+(and similar operators -- see section 8.3.3).\end{specquote}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Conditional_components}\label{conditional-component}
+
+A declaration may have a condition to enable/disable it.  A disabled
+non-connector component is unusable.  A conditional connector can be
+used only in connect_equations, and connect_equations with a disabled
+connector are considered removed.  Connectors in a disabled component
+are disabled.
+
+\subsubsection*{Conditional non-connectors}
+
+A disabled non-connector component is unusable.  Thus, usually,
+conditional non-connector components are used for the purpose to
+observe particular states in a simulation.
+
+\subsubsection*{Restrictions of conditional connectors}
+
+Conditional_components are only used in connections.
+%%%%
+\begin{specquote}{4.4.5} A component declared with a
+condition-attribute can only be modified and/or used in
+connections\end{specquote}
+%%%%
+\begin{specquote}{5.6.2} [Conditional_components can be used in
+connect-statements, and if the component is conditionally disabled the
+connect-statement is removed.]\end{specquote}
+%%%%
+Conditions of conditionals are translation-time constants.
+%%%%
+\begin{qquote} (\specref{4.4.5}\/) The expression must be a Boolean
+scalar expression, and must be a parameter-expression\end{qquote}
+%%%%
+Conditions of conditionals are retained after component
+redeclarations.
+%%%%
+\begin{qquote} (\specref{4.4.5}\/) A redeclaration of a component may
+not include a condition attribute; and the condition attribute is kept
+from the original declaration\end{qquote}
+%%%%
+Conditional_components cannot be used in modifiers of declarations.
+It is indicated by the example in \specref{4.4.5}.
+%%%%
+Conditional_components cannot have ":" as an array dimension.
+It is described in \specref{6.3}.
+
+\subsubsection*{Conditional declarations}
+
+\begin{QFACT}\label{scope-with-conditional-declaration} A condition of
+a conditional_component does not affect the scope.  Particularly, a
+variable with a condition can be a target of modifications regardless
+of the condition.\end{QFACT}
+
+Is the value of $x$ dependes on a condition?
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+(*CHECK*)
+package A
+    Real x=1;
+    model M
+        Real x=2 if (...);
+        /* ? x */ /* x dependes on a condition? */
+    end M;
+end A;
+\end{lstlisting}
+\end{quote}
+
+(* (?) Check if an inner is affected by its condition. *)
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Class names}
+
+Names of classes are almost insignificant after collecting elements of
+main/base classes.  Records are exceptions which are refered to by
+names at runtime.
+
+Classes of packages/instances can be nameless if modifiers are applied
+but not assigned by a name.  However, dotted forms of variable
+references can be used to refer to packages/instances (like "x.y.P"),
+because only used classes need to be referred to.  In addition, each
+class (a main/base part of a class) is generally associated to three
+names: $\bullet$\,a name given to a lexically appearing definition
+body, $\bullet$\,a name lastly assigned by a short_class_definition,
+and $\bullet$\,a name indicating where the definition body is taken
+from.  The second name by a short_class_definition is the name of a
+usual sense and needed to refer to a record name (needed in
+instances).  The third name indicating its origin is needed to obtain
+an enclosing class (needed in packages).
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Class_equality}\label{class-equality}
+
+Generally, an equality or identity of a class is not significant, but
+class_compatibility is used, instead.  An identity of a class is not
+important even for records, which would be meaningful since they are
+used in function calls or copying in algorithms.  See
+Fact~\ref{record-class-identity} for records.  In most cases,
+class_equality is treated as a textual equality, which is required
+when removing duplicate class definitions.
+
+$\mathbf{input}$ and $\mathbf{outer}$ are not a part of a type.
+
+\begin{qquote} (\specref{4.5.1}\/) A base-prefix applied in the
+short-class definition does not influence its type, but is applied to
+components declared of this type or types derived from it; see also
+section 4.5.2.\end{qquote}
+
+(?) (*CHECK*) The equality of functions is by textual (defined?).  The
+overloading resolution is based on a set of functions (requiring
+uniqueness), thus, the equality of functions needs be defined.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{(Class_compatibility)}\label{class-compatibility}
+
+A redefinition/redeclaration can be applied to compatible classes.
+
+\subsubsection*{Compatibility}
+
+\specref{6.3}\/ defines compatibility, which applies when a class is
+redeclared.  It is APPROXIMATELY summarized here.  The conditions of
+$A<:B$, $A$ is a subtype of $B$.
+
+\begin{qquote}\label{quo:class-compatibility} (\specref{6.3}\/) A is a
+subtype of the type of B, iff [intuitively all important elements of B
+must be present in A].\end{qquote}
+
+\begin{itemize}
+
+\item A extends C iff B extends C, where C is an operator record.
+
+\item $A$ extends $C_A$ iff $B$ extends $C_B$, where $C_A$ and $C_B$
+are ExternalObject with the same name.
+
+\item If $B$ is non-replaceable, $A$ must be non-replaceable.  (* Why
+negatively expressed? *)
+
+\item If $B$ is transitively non-replaceable, $A$ must be transitively
+non-replaceable.
+
+\item $\forall C_B \in B, \exists C_A \in A,\; C_A <: C_B$ where $C_B$
+and $C_A$ are components of the same name and visibility in each
+corresponding class.
+
+\item If $B$ is replaceable, OK.
+
+\item If $B$ is neither transitively non-replaceable nor replaceable,
+$A$ must be linked (?) to the same class ((?) linked).
+
+\item If $B$ is a non-replaceable long class definition, $A$ must be a
+long class definition.
+
+\item Analogical (flow, effort (default), or stream) should be the
+same.
+
+\item $\mathrm{variability} A \leq \mathrm{variability} B$, with
+respect to the variability ordering.
+
+\item Prefixes input and output must be the same.
+
+\item Prefixes inner, outer, and inner-outer must be the same.
+
+\item If $B$ is final, $A$ must be final and has semantically the same
+value.  (This rule does not apply to redeclarations.)
+
+\item The number of array dimensions in $A$ and $B$ must be the same.
+
+\item Conditional_components are only compatible with conditional
+components, where the conditions are semantically the same.
+
+\item Class_kinds must satisfy kinds compatibility.
+
+\item An enumeration is only compatible with an enumeration.  A
+compatible enumeration (except for enumeration(:)) must have the same
+literals in the same order.  Or, $\forall A,\; A <:
+\mathit{enumeration}\,(:)$.
+
+\item $B$ is a built-in iff $A$ is a built-in and $A=B$.
+
+declared variability???
+
+\end{itemize}
+
+\paragraph{Supplementary notes}
+
+\begin{itemize}
+
+\item Plug-compatibility is stricter than compatibility.
+
+\item Compatibility functions is stricter than compatibility.
+
+\item A modifier must be compatible or plug-compatible with the
+element being modified.
+
+\item $A$ is an operator record when it extends an operator record.
+
+\item $A$ is an ExternalObject when it extends an ExternalObject.
+
+\end{itemize}
+
+\begin{QRULE} (?) The conditions on prefixes are checked before
+inheriting the prefixes from a replaceable to a
+redeclaration.\end{QRULE}
+
+\subsubsection*{Plug-compatibility}
+
+Plug-compatibility is defined in \specref{6.4}.
+
+\subsubsection*{Function compatibility}
+
+Function compatibility is defined in \specref{6.5}.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Class_kinds}
+
+The table in \specref{4.6}\/ shows the class_kinds.  Every kind is
+syntactically the same as a class, but some restrictions on its
+contents apply to the class with regard to its kind.
+
+\subsubsection*{Class_kinds}\label{sec:class-kinds}
+
+The following is the copy of the table in \specref{4.6}.
+
+\begin{quote}
+\begin{description}
+
+\item[model] is a general collection of elements.
+
+\item[class] is a restricted collection that contains extends-clauses,
+class definitions, and annotations.  Note that it was a synonym of
+$\mathbf{model}$ by the old definition, and some_implementations
+accept other elements.  See Quote~\ref{quo:class-is-restricted}.
+
+\item[block] is a restricted {model}, whose connectors are directed by
+$\mathbf{input}$/$\mathbf{output}$.
+
+\item[package] contains similar elements as $\mathbf{record}$ that is
+restricted to contain constants/parameters but no variables.
+(*CHECK*) It can contain protected sections.
+
+\item[type] is one of the simple_types, arrays of a type, or one
+extending a type.
+
+\item[record] is a record in a usual sense.  A component of a record
+is a type, a record, or an array of them.  It contains no
+equation/algorithm sections nor protected sections (but it can contain
+functions).
+
+\item[operator_record] is a record, but is restricted for
+operator-overloading.  It can contain the same elements as records,
+but also it can contain operators.
+
+\item[operator] contains similar elements as $\mathbf{package}$, that
+is restricted to contain only functions as definitions.  An operator
+is only defined in an operator_record.
+
+\item[(operator_function)] is $\mathbf{operator}$ with one function.
+
+\item[connector] is either a {type} or a {record}, but it is allowed
+to connect on it.  It is actually a subkind of them.  The use of a
+keyword $\mathbf{connector}$ defines a record, when it is used in a
+long class definition.  It gives a connector-status to a type/record,
+when it is used in a short class definition.  Connector declarations
+are implicit in expandable_connectors.
+
+\item[expandable_connector] is a connector.
+
+\item[function] is a function in a usual sense.  It is syntactically a
+package (not an instance).  It can contain either one algorithm
+section or one external interface.  It does not contain equation
+sections nor initial algorithm sections.  It can contain component
+declarations (variables) of $\mathbf{type}$, $\mathbf{record}$,
+$\mathbf{operator~record}$, and $\mathbf{function}$.  Only functions
+can contain an external interface.  See (\specref{12.2}\/).  (?)
+Functions can contain only input/output variables.
+
+\end{description}
+\end{quote}
+
+(* $\mathbf{function}$ is not stated as a restriction of
+$\mathbf{package}$ while $\mathbf{operator~function}$ is. *)
+
+\subsubsection*{Kind restrictions}
+
+The contents of a class are: import-clauses, extends-clauses, class
+definitions (class/enumeration/der), component declarations
+(variable/parameter/constant), equation/algorithm sections
+(with/without initial), and external interfaces.  Any class can
+contain import-clauses, extends-clauses, and other class definitions.
+The other contents are restricted by its kind.  In summary, the
+relations of content restrictions are:
+%%%%
+\vskip 1ex
+\begin{tabular}{|l||l*{3}{|p{4.5em}}|l|}
+\hline
+kind &variable &{parameter constant} & equation &algorithm &{similar kinds} \\
+\hline
+type & & & & & \\
+model &\checkmark &\checkmark &\checkmark &\checkmark & block, (class) \\
+class & & & & & \\
+record &\checkmark &\checkmark & & & operator_record \\
+package & &\checkmark & & & \\
+connector &\checkmark &\checkmark & & & expandable_connector \\
+operator &\checkmark &\checkmark & & & operator_function \\
+function & & & &\checkmark & \\
+\hline
+\end{tabular}
+\vskip 1ex
+%%%%
+
+%% (?) Functions can contain only input/output variables.  But, impure
+%% functions may refer to variables in enclosing classes.
+
+\begin{QFACT}\label{kind0} (?) The classes that contain state
+variables are: ($\mathbf{class}$), $\mathbf{model}$, $\mathbf{block}$,
+$\mathbf{record}$, $\mathbf{operator~record}$, $\mathbf{connector}$,
+$\mathbf{expandable~connector}$, $\mathbf{function}$.  Conversely, the
+classes that do not contain states are: $\mathbf{package}$,
+$\mathbf{operator}$, and $\mathbf{operator~function}$.\end{QFACT}
+
+\subsubsection*{Extending and class_kinds}
+
+The table in \specref{7.1.3}\/ shows the restrictions on derived vs.\@
+base class relations.  It shows that one class can extend some class.
+$A$ can extend $B$, if $A\in\mathit{kind}_A$ and $B\in\mathit{kind}_B$
+and $\mathit{kind}_B<:_k\mathit{kind}_A$ (note it is swapped).
+%%%%
+\begin{itemize}\parsep=0pt\itemsep=0em
+\item $\mathbf{class}$ $<:_k$ {\it{}any\/}
+%%%%
+\item $\mathbf{block}$ $<:_k$ $\mathbf{model}$
+\item $\mathbf{record}$ $<:_k$ $\mathbf{model}$ (redundant)
+%%%%
+\item $\mathbf{record}$ $<:_k$ $\mathbf{block}$
+%%%%
+\item $\mathbf{type}$ $<:_k$ $\mathbf{connector}$
+\item $\mathbf{record}$  $<:_k$ $\mathbf{connector}$
+\item $\mathbf{operator~record}$ $<:_k$ $\mathbf{connector}$
+\item $\mathbf{expandable~connector}$ $<:_k$ $\mathbf{connector}$
+%%%%
+\item $\mathbf{function}$ $<:_k$ $\mathbf{operator~function}$
+\end{itemize}
+%%%%
+The excerpt is the entries that are highlighted by shading in the
+table.  We omit the reflexive relation on the same kind:
+$\mathit{kind}_A<:_k\mathit{kind}_A$.
+
+\subsubsection*{(?) Kind compatibilty}
+
+(?) It is unsure that the extending relation is a part of the
+subtyping relation.  See Section~\ref{class-compatibility} for the
+subtyping relation.  (?) A kind is not compatible (accepting
+redeclarations) to other kinds.
+
+\subsubsection*{Kind restrictions in short_class_definitions}
+
+\begin{QFACT}\label{kind-restriction} Short_class_definitions follow
+the base class restrictions (in \specref{7.1.3}\/).  For example, it
+is legal to define a boolean as a connector.
+"$\mathbf{connector}\;\mathit{BooleanInput}=\mathbf{input}\;\mathbf{Boolean}$".
+\end{QFACT}
+
+It is a consequnce of the description of rewriting a
+short_class_definition to a class definition with an extends-clause:
+%%%%
+\begin{qquote}\label{quo:short-class-definitions} (\specref{4.5.1}\/) A
+class definition of the form ... is identical ... to the longer
+form.\end{qquote}
+
+\subsubsection*{The class kind}
+
+\paragraph{Remark}
+
+The $\mathbf{class}$ kind is defined to be more restricted than in
+\specref{7.1.3}.
+%%%%
+\begin{qquote}\label{quo:class-is-restricted} (\specref{7.1.3}\/) A class
+may only contain class-definitions, annotations, and extends-clauses
+(having any other contents is deprecated).\end{qquote}
+%%%%
+By the deprecated definition, it is notable that a more restricted
+kind can be extend by $\mathbf{class}$.
+%%%%
+\begin{QFACT}\label{kind1} It is required to check base classes
+respect the restriction.\end{QFACT}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Predefined_classes}
+
+Predefined_classes are called predefined_types in the_specification,
+but some are not types.
+
+\subsubsection*{Simple_types}
+
+A simple_type is one of {Real}, {Integer}, {Boolean}, {String}, and
+$\mathit{enumeration}$.  Enumerations are types.  And, thus, an
+enumeration is defined by a short_class_definition using the
+$\mathbf{type}$ class kind.  The names {Real}, {Integer}, {Boolean},
+and {String} are not keywords but cannot be redefined.
+
+\begin{qquote}\label{quo:reserved-words} (\specref{4.8}\/) The names Real,
+Integer, Boolean and String are reserved such that it is illegal to
+declare an element with these names.\end{qquote}
+
+Each simple_type has modifiable attributes and thus actually
+represents a set of types.  Variable declarations have effective
+attributes of simple_types, but values of expressions have no
+attributes, and their values are primitive_types like usual reals or
+integers.  See Section~\ref{sec:attributes}.
+
+There are some predefined conversion functions among the simple_types
+(not for all pairs).
+$\mathrm{Integer}:\mathit{enumeration}\rightarrow\mathrm{Integer}$,
+$\mathit{enumeration}:\mathrm{Integer}\rightarrow\mathit{enumeration}$
+
+\paragraph{Remark}
+
+There are no predefined conversion functions between Boolean and
+Integer.  However, array binding with these index types assumes
+mapping between these types, such as false=1 and true=2, etc.
+
+Note that there are no constructors to the simple_types.  See
+Fact~\ref{constructors-to-predefined-types}.
+
+The least required ranges of the domains of types are defined by
+Modelica.Constants.inf for Real, and Modelica.Constants.Integer_inf
+for Integer.  (?) The behavior on overflows is unspecified.
+
+\subsubsection*{Integer, String, enumerations}
+
+\begin{QFACT}\label{simple-type-conversions} The class names of
+$\mathrm{Integer}$, $\mathrm{String}$, and $\mathit{enumeration}$ can
+be used as conversion functions.  Since there is a single namespace
+for classes and functions, these names are overloaded.\end{QFACT}
+%%%%
+See \specref{3.7.1}.  $\mathrm{Integer}$ and names of enumerations
+convert between integers and enumerations.
+
+An enumeration definition by $\mathbf{enumeration}\,(:)$ is an
+unspecified list, which must be redeclared (\specref{4.8.5.4}\/).
+
+\subsubsection*{Ordering of simple_types}
+
+See relational operators in Section~\ref{sec:relational-operators}.
+
+\subsubsection*{Predefined_classes}
+
+Predefined_type is simple_types and other classes defined in
+\specref{4.8.8}.  They are {Clock}, {StateSelect}, {ExternalObject},
+{AssertionLevel}, {Connections}, and classes for graphical
+annotations.
+
+\begin{description}
+
+\item [Clock] is a class.
+
+\item [StateSelect] is an enumeration.
+
+\item [ExternalObject] is a partial class.
+
+\item [AssertionLevel] is an enumeration.
+
+\item [Connections] is a package.
+
+\end{description}
+
+\subsubsection*{Connections}
+
+Connections is a package is used to remove overdetermined equations.
+It is described in \specref{9.4}.  A type/record defining
+$\mathit{equalityConstraint}\,(x,y)$ is called an
+overdetermined_type/record.  Connections works with
+overdetermined_types/records.  It contains equation_operators
+$\mathit{branch}$, $\mathit{root}$, and $\mathit{potentialRoot}$
+(appear as equations), and boolean-valued operators $\mathit{isRoot}$
+and $\mathit{rooted}$ (appear as functions).
+
+Connecting connectors may induce an undirected graph of
+overdetermined_types/records in connectors as nodes and equality as
+edges.  Such a graph may have cycles when the equations are
+overdetermined.  A graph is reduced to trees by removing some of the
+edges by replacing them with weaker contraints.  Operators in
+Connections are used to specify trees in the graph.
+
+$\mathit{branch}\,(m.c.r,m.c.r)$ makes an edge between
+overdetermined_types/records.  $\mathit{root}\,(m.c.r)$ specifies a root
+of a tree of overdetermined_types/records.
+$\mathbf{connect}\,(m.c,m.c)$ creates weak edges for the
+overdetermined_types/records in the connectors.  Some weak edges may
+be marked (as removed), and the equality of marked edges are replaced
+by $\mathit{equalityConstraint}\,(x,y)$ equations.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Records}
+
+A record is a record in a usual sense.  Restrictions on components of
+a record are described in Section~\ref{sec:class-kinds}.
+
+\subsubsection*{Class_equality}
+
+\begin{QFACT}\label{record-class-identity} An identity of a record
+class is not clearly defined.  The equality of the lists of the
+defined names may be required.\end{QFACT}
+
+Some_implementations may accept the following code:
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+record R0
+    Real v;
+end R0;
+
+record R1
+    Integer v;
+end R1;
+
+model M
+    R1 x1 (v=20);
+    R0 x0 = x1;
+end M;
+\end{lstlisting}
+\end{quote}
+
+See also Section~\ref{class-equality}.  (*CHECK*) Function calls may
+require stricter equality.
+
+\subsubsection*{Casting}
+
+A record constructor can take a class instance, and it is called
+casting.  See \specref{12.6.1}.
+
+\subsubsection*{equalityConstraint}
+
+A function $\mathit{equalityConstraint}$ can be defined in types and
+records.  $\mathit{equalityConstraint(...)}=0$ is added as equations,
+when it is defined (0 in the RHS is used for an array of zeros).
+See \specref{9.4.1}.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Arrays}
+
+\subsubsection*{Component array declarations}
+
+\begin{QFACT} Dimensions of component arrays are translation-time
+constants, while dimensions of other arrays (appearing in functions)
+can be runtime values.\end{QFACT}
+
+\begin{qquote} (\specref{4.4.2}\/) Array dimensions shall be
+non-negative parameter expressions, or the colon operator\end{qquote}
+
+\begin{qquote} (\specref{10}\/) The number of dimensions of an array
+is fixed and cannot be changed at run-time...  However, the sizes of
+array dimensions can be computed at run-time\end{qquote}
+
+An extent in an array dimension is non-negative, that is, it can be
+zero.  Those variables with size zero, obviously, cannot be used.
+
+Constants in array dimensions are fairly arbitrary expressions.  They
+can refer to other components.  But, constant-folding may fail, when a
+dimension depends on a value in the array, which directly or
+indirectly causes cycles in the dependency.  For example,
+$\mathit{dim}$ in $x[\mathit{dim}]$ may not refer to a constant
+$x[1].c$.
+
+\subsubsection*{Array dimension ordering}
+
+\begin{QFACT} Multi-dimensional arrays are arrays of arrays.  The
+ordering of an array dimension is "row-major".\end{QFACT}
+
+See code examples in (\specref{10.1}\/):
+%%%%
+\begin{qquote} (\specref{10.1}\/) It is possible to mix the two
+declaration forms although it might be confusing.
+\begin{lstlisting}[]
+Real[3,2] x[4,5]; // x has type Real[4,5,3,2];
+\end{lstlisting}
+\end{qquote}
+%%%%
+Note that accessing the example array by $x[\textrm{-},\textrm{-}]$
+returns an array of $[3,2]$, which means, partial indexing is applied
+from the left in the dimension.  This ordering is row-major, despite
+that Fortran is column-major.
+
+The definition of the {fill} operator by recursion also implies the
+row-major ordering (\specref{10.3.3}\/).
+
+\subsubsection*{Rectangle-ness of array dimension}
+
+An array is rectangular, and an array of arrays has the same size in
+each element.  This applies to the uses of nested array constructors.
+
+\subsubsection*{Non-integer array dimension}
+
+Enumeration types and Boolean can be used as a dimension, and their
+elements are used in indexing.  They can also be used as ranges in
+for-loops.  See code examples in (\specref{10.1}\/):
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+type TwoEnums = enumeration(one,two);
+Real[TwoEnums] y;
+\end{lstlisting}
+\end{quote}
+
+An index of enumeration types is ordered by the declaration order.  An
+index of Boolean is ordered as $\mathit{false}<\mathit{true}$.
+While indexing by different types is illegal, arrays are bound or
+assigned without regard to the index types.
+
+\begin{qquote} (\specref{10.1}\/) Binding equations of the form x1 =
+x2 as well as declaration assignments of the form x1 := x2 are allowed
+for arrays independent of whether the index types of dimensions are
+subtypes of Integer, Boolean, or enumeration types\end{qquote}
+
+\begin{qquote} (\specref{10.1.1}\/) $\bullet$\,An array dimension
+indexed by Boolean values has the lower bound false and the upper
+bound true.  $\bullet$\,An array dimension indexed by enumeration
+values of the type E=enumeration(e1, e2, ..., en) has the lower bound
+E.e1 and the upper bound E.en.\end{qquote}
+
+\subsubsection*{Function promotions to arrays}
+
+Functions are promoted to array arugments.  In promoting functions,
+array arguments are promoted to higher dimensinal arrays.
+
+\subsubsection*{Redeclaring array dimensions}
+
+Array dimensions may be redeclared.
+%%%%
+\begin{qquote} (\specref{7.3.3}\/) Modification on array dimensions
+are redeclarations.\end{qquote}
+
+\subsubsection*{Empty arrays}
+
+\begin{QFACT} An array indexed with
+$\mathit{lower~bound}>\mathit{upper~bound}$, such as $x[1{:}0]$, is an
+empty array.\end{QFACT}
+
+See \specref{10.7}\/ for empty arrays.  This may actually appear
+(under some condition) in Interfaces.PartialMedium.BaseProperties (in
+Media/package.mo).
+
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+    replaceable partial model BaseProperties
+    ...
+    equation
+      if standardOrderComponents then
+        Xi = X[1:nXi];
+\end{lstlisting}
+\end{quote}
+
+A {fill} with a zero dimension can be used to create an empty array,
+such as $\mathrm{fill}\,("",0)$.
+
+\subsubsection*{Homogeneity of array elements}
+
+Instances of an array elements are similar, in that, the classes of
+the elements are similar, and the number of dimenions of them are the
+same, because redeclarations (in-element or in-modifier) cannot depend
+on an index, although the values of constants can be different, and
+the dimesion of arrays can be different.  The classes may have
+conditional_components, but they are of similar classes even though
+they can be disabled.  This ensures the identity of promoting
+operators to arrays.  (?) Class similarity is defined by class
+compatibility.
+
+\subsubsection*{(?) Array class definition}
+
+An array type definition for simple types
+$\mathbf{type}\;B=\mathrm{Real}\;[4]$ is legal.  (?) In contrast, a
+definition like $\mathbf{model}\;B=A\;[4]$ does not work.
+
+\subsubsection*{Array package definition}
+
+\begin{QFACT} An array package definition like
+$\mathbf{package}\;B=A\;[4]$ is illegal.\end{QFACT}
+%%%%
+Some_implementations simply ignore subscripts, that is, $B$ is an
+alias of $A$.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Array expressions}
+
+\subsubsection*{Array indexing}
+
+\begin{QFACT} Array indexing is only in
+$\mathit{identifier}\,[i0,i1,...]$.  General forms
+$\mathit{expression}\,[i0,i1,...]$ are not allowed.\end{QFACT}
+
+\subsubsection*{Array ranges}\label{sec:array-ranges}
+
+$\textrm{-}:\textrm{-}$ and $\textrm{-}:\textrm{-}:\textrm{-}$ create
+a one dimensional array (vector) of Real, Integer, Boolean, and
+enumerators.  For numbers, they create Integer vectors if all elements
+are Integers, or Real vectors otherwise.  Triple argument ones are not
+defined for Boolean and enumerations.  They may create an empty
+vector.  See \specref{10.4.3}\/ and also \specref{3.2}.
+
+\subsubsection*{Array constructors}
+
+An expression $\{...\}$ creates an array, which is one-dimensional if
+the elements are scalar or multidimensional otherwise.  An array
+constructor cannot be empty by the syntax definition, although an
+array can have zero in its dimension (it ensures the type an array
+constructor returns).
+
+\subsubsection*{Predefined functions on arrays}\label{sec:array-size}
+
+$\mathrm{ndims}\,(A)=0$ and $\mathrm{size}\,(A)=\{\}$ (an empty array)
+for a scalar $A$ (See \specref{10.3.1}\/).
+
+Functions are defined to create certain arrays: {identity},
+{diagonal}, {zeros}, {ones}, {fill}, and {linspace}
+(See \specref{10.3.3}\/).  Note that {identity}, {zeros} and {ones}
+return an integer array, and {linspace} returns a real array.
+
+Some can be easily defined by others.
+\begin{eqnarray*}
+&& \mathrm{identity}\,(n)=\mathrm{diagonal}\,(\mathrm{ones}\,(n))\;,\\
+&& \mathrm{zeros}\,(...)=\mathrm{fill}\,(0,...)\;,\\
+&& \mathrm{ones}\,(...)=\mathrm{fill}\,(1,...)\;,\\
+&& \mathrm{linspace}\,(\mathit{lb},\mathit{ub},n)
+=\mathit{lb}:\mathit{ub}:(\mathit{ub}-\mathit{lb}/(n-1))\;, \textrm{and}\\
+&& \mathrm{fill}\,(e,n_0,...)=\mathrm{fill}\,(\mathrm{fill}\,(e,...),n_0)\;.
+\end{eqnarray*}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Iterators of for}\label{sec:for-iterator}
+
+Iterators are used in for-equations, for-statements, reductions, and
+comprehensions.  An iterator ranges in Real, Integer, Boolean, and an
+enumeration, and its range is specified by a vector expression or by a
+type of Boolean or an enumeration.
+
+\subsubsection*{Range expressions of iterators}
+
+For-iterators with multiple iterators are defined by expanding to
+nested ones.
+%%%%
+\begin{qquote} (\specref{11.2.2.3}\/) it can be expanded into the
+usual form by replacing each "," by 'loop for' and adding extra 'end
+for'.\end{qquote}
+
+Range expressions of for-equations are translation-time constants, and
+they can include iterators in the nested ranges.
+
+\begin{qquote} (\specref{8.3.2}\/) The expression of a for-equation
+shall be a parameter expression.\end{qquote}
+
+It is allowed to refer to an iterator in vector expressions in a
+single for-equation.
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+equation
+for i in 1:s, j in 1:i-1 loop
+    x[i,j]=j;
+end for;
+\end{lstlisting}
+\end{quote}
+
+The following quotes of the scope description might conflict with the
+handling by nesting iterators.
+
+\begin{qquote}\label{quo:iterator-scope} (\specref{8.3.2}\/) It is
+evaluated once for each for-equation, and is evaluated in the scope
+immediately enclosing the for-equation.\end{qquote}
+
+\subsubsection*{Implicit iterator ranges}\label{sec:implicit-iterator-ranges}
+
+A range expression of an iterator is optional, and the range is
+inferred from the uses of an iterator.  Implicit ranges are accepted
+for arrays with dimensions of Integer, Boolean, and enumeration.
+Implicit iterator ranges are allowed in any {\it{}for}-iteration in
+equations, statements, reductions, and array constructors.
+
+It is assumed that the range of an implicit iterator is inferred by
+the range of the subscript where an iterator occurs.
+
+See the example in \specref{4.8.5}.
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+/* 4.8.5 */
+type DigitalCurrentChoices = enumeration(zero, one);
+Real x[DigitalCurrentChoices];
+for e loop
+    x[e] := 0.;
+end for;
+\end{lstlisting}
+\end{quote}
+
+See the example in \specref{11.2.2.3}.
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+/* 11.2.2.3 */
+Real x[4,3];
+algorithm
+for j, i in 1:2 loop
+// The loop-variable j takes the values 1,2,3,4 (due to use)
+// The loop-variable i takes the values 1,2 (given range)
+x[j,i] := j+i;
+end for;
+\end{lstlisting}
+\end{quote}
+
+\begin{QFACT} Boolean and enumerations can be an index space for
+arrays.  However, Interger, even with min/max attributes specified,
+cannot be an index space.\end{QFACT}
+
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+/*ILLEGAL*/
+type R = Integer(min=3,max=5);
+Real x[R];
+\end{lstlisting}
+\end{quote}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Overloaded operators}
+
+Operators can be overloaded on the arguments, one of which is an
+operator record or an array of it.
+
+\subsubsection*{Overloading}
+
+\begin{QFACT} Functions are not overloaded.  Functions are classes and
+having the same name is a duplication.\end{QFACT}
+
+Some predefined functions are overloaded.  They include simple_type
+names of Integer, String, and $\mathit{enumeration}$ (see
+Fact~\ref{simple-type-conversions}).  They also include ones taking
+array arguments of varying dimensions, including ndims, size, and
+reductions (min, max, sum, and product).  Also note that, functions
+which take indefinite number of arguments cannot be defined as
+functions.
+
+\subsubsection*{List of operators}
+
+The operators can be overloaded.  See \specref{14}.  The set of the
+overloaded operators is fixed.
+
+\begin{quote}
+\spaceskip=1.5em
+\begin{verbatim}
+- not
++ - * / ^ == <> > < >= <= and or
+constructor 0
+String
+\end{verbatim}
+\end{quote}
+%%%%
+The \verb'-' appears twice as a unary and a binary.  Note that the
+list lacks unary \verb'+', becuase it is not overloaded.
+
+\begin{QFACT} Operators except constructors need be defined in an
+operator record on which the operators take the arguments.
+Constructors need be defined in an operator record on which the
+constructors return the value.  Binary operators can be defined in one
+of the left or right operands.  (?) If functions to an operator are
+defined in both the left and right operands, they should be equal
+(equality of functions may be textual).\end{QFACT}
+
+This rule is implied by the matching rules in \specref{14.4}\/ and
+\specref{14.5}.
+
+\begin{QFACT}\label{constructors-to-predefined-types} Constructors are
+not defined on the simple_types.\end{QFACT}
+
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+/*ILLEGAL*/
+Real x = Real(10);
+\end{lstlisting}
+\end{quote}
+
+\subsubsection*{Resolution rules}
+
+The rules of resolving overloading are described in \specref{14.4}\/
+and \specref{14.5}.
+
+The application of an unary operator $\oplus a$ with $a$ of class $A$
+is determined as follows.  The tests are tried in the specified order.
+$\tilde{A}.\oplus$ denotes a set of functions of the operator $\oplus$
+in the operator_record $\tilde{A}$ with arrays stripped off from $A$.
+
+\begin{itemize}
+
+\item If $A$ is a simple_type or an array of it, apply a predefined
+operator.
+
+\item Apply a function $f \in \tilde{A}.\oplus$, whose argument type
+is $A$.  If $f$ is not unique, it is illegal.
+
+\item Apply a function $f$ by promoting it to an array argument.
+
+\end{itemize}
+
+The application of a binary operator $a \oplus b$ with $a$ of class
+$A$ and $b$ of class $B$ is determined as follows.  The tests are
+tried in the specified order.
+
+\begin{itemize}
+
+\item If $A$ and $B$ are simple_types or arrays of them, apply a
+predefined operator.
+
+\item Apply a function $f \in \tilde{A}.\oplus$ or $f \in
+\tilde{B}.\oplus$, whose argument types are $A\times B$.  If $f$ is
+not unique, it is illegal.
+
+\item Apply $f \in \tilde{A}.\oplus$ with trying type conversions applicable on
+the second argument.
+
+\item Apply $f \in \tilde{B}.\oplus$ with trying type conversions
+applicable on the first argument.
+
+\item Apply a function $f$ by promoting it to array arguments.
+
+\end{itemize}
+
+\subsubsection*{Operators}
+
+The names of the operators need be quoted by {\tt{}'} to make them
+recognized as ordinary identifiers, for example, \verb|'+'|.  (?) It
+is not clear quoting is redundant for {\tt{}'constructor'} and
+{\tt{}'String'}.
+
+Refer to sections, {14.2} for constructors, {14.3} for conversions,
+{14.4} for binaries, and {14.5} for unaries.
+
+\subsubsection*{Operators on arrays}
+
+Arrays are the general entity including scalars, vectors and matrices.
+Scalars are arrays with no dimensions, vectors with one dimension, and
+matrices with two dimensions.
+
+\begin{QFACT} Overloaded operators on scalars are promoted to
+arrays.\end{QFACT}
+
+\begin{qquote} (\specref{14}\/) The operator or operator function
+must be encapsulated;\end{qquote}
+
+\begin{qquote} (\specref{14}\/) It is not legal to extend from an
+operator record, except as a short class definition modifying the
+default attributes...\end{qquote}
+
+\subsubsection*{(?) Default constructors}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Predefined operators}\label{sec:predefined-operators}
+
+Operators are overloaded on the arguments of a simple_type or an array
+of it.  The set of operators is different from the one for operator
+records.
+
+\subsubsection*{List of operators}
+
+\begin{quote}
+\spaceskip=1.5em
+\begin{verbatim}
++ - .+ .- not
+= + - * / ^ .+ .- .* ./ .^ and or
+== <> > < >= <=
+\end{verbatim}
+\end{quote}
+
+\subsubsection*{Equalities}
+
+\paragraph{(?) Equality {\tt{}=}}
+
+The equality and assignment are element-wise.  Classes which admit
+equality are simple_types or records whose components admit equality.
+Arrays admit equality when the class of the elements admits equality.
+
+\subsubsection*{Operators on numbers}
+
+The numbers (or the numerical types) are subtypes of either Real or
+Integer.  Conversion from an Integer to a Real is applied, when an
+Integer expression is passed to an operator requiring a Real.  The
+usual types for the arithmetic operators ({\tt{}+} {\tt{}-} {\tt{}*}
+{\tt{}/}) are assumed: $\mathbb{Z} \times \mathbb{Z} \rightarrow
+\mathbb{Z}$ and $\mathbb{R} \times \mathbb{R} \rightarrow \mathbb{R}$.
+The type of the operator {\tt{}\char`\^} is $\mathbb{R} \times
+\mathbb{R} \rightarrow \mathbb{R}$.
+
+Note that subtypes are mentioned for Real and Integer, because Real
+and Integer are defined as $\mathit{type}$ and thus it is possible to
+extend them.
+
+\begin{qquote} (\specref{10.6}\/) In all contexts that require an
+expression which is a subtype of Real, an expression which is a
+subtype of Integer can also be used; the Integer expression is
+automatically converted to Real.\end{qquote}
+
+Operators on numbers and strings are defined for arrays in
+\specref{10.6}.
+
+%% {10.6}{Scalar, Vector, Matrix, and Array Operator Functions}
+%% {14.6}{Example of Overloading for Complex Numbers}
+
+\paragraph{Unary {\tt{}+} {\tt{}-} {\tt{}.+} {\tt{}.-}}
+
+The operators \verb'+' and \verb'.+' on numbers are the identity and
+element-wise.  The operators \verb'-' and \verb'.-' on numbers are
+negation and element-wise.  These are the same with/without a dot.
+
+\paragraph{Binary {\tt{}+} {\tt{}-}}
+
+The operators \verb'+' and \verb'-' on numbers are the addition and
+the subtraction, and element-wise.
+
+\paragraph{Binary {\tt{}.+} {\tt{}.-}}
+
+The operators \verb'.+' and \verb'.-' on numbers are similar to
+\verb'+' and \verb'-'.  The difference to ones without a dot is that
+if one (not both) of the arguments is a scalar, it is promoted to an
+array.
+
+\paragraph{Binary {\tt{}*}}
+
+The operator \verb'*' on numbers is the multiplication.  If one of the
+arguments is a scalar, it is the scalar product.  1-dimensional
+(vector) and 2-dimensional (matrix) cases are, as usual, an inner
+product, a matrix-vector product, or a matrix-matrix product.  Higher
+dimensional multiplication is illegal.
+
+\paragraph{Binary {\tt{}.*}}
+
+The operator \verb'.*' on numbers is the element-wise multiplication.
+If one of the arguments is a scalar, it is promoted to an array, that
+is, it is a scalar product.
+
+\paragraph{Binary {\tt{}/}}
+
+The operator \verb'/' on numbers is the element-wise division.  The
+RHS should be a scalar.
+
+\paragraph{Binary {\tt{}./}}
+
+The operator \verb'/' on numbers is the element-wise division.  If one
+of the arguments is a scalar, it is promoted to an array.
+
+\paragraph{Binary {\tt{}\char`\^}}
+
+The operator \verb'^' on numbers is the exponentiation.  The arguments
+are a scalar-scalar pair or a matrix-scalar pair.  If the arguments
+are scalar-scalar, arguments of Integers are promoted to Reals.  If
+the arguments are matrix-scalar, it is the matrix exponentiation where
+the scalar argument must be a non-negative integer.
+
+\paragraph{Binary {\tt{}.\char`\^}}
+
+The operator \verb'.^' on numbers is the element-wise exponentiation.
+If one of the arguments is a scalar, it is promoted to an array.
+Arguments of Integers are promoted to Reals.
+
+\subsubsection*{Operators on booleans}
+
+\paragraph{Booleans {\tt{}and} {\tt{}or} {\tt{}not}}
+
+The operators work on boolean values and element-wise.
+
+\subsubsection*{Operators on strings}
+
+\paragraph{Binary {\tt{}+}}
+
+The operator \verb'+' on strings is the concatenation and
+element-wise.
+
+\subsubsection*{Relational operators}\label{sec:relational-operators}
+
+\paragraph{Relationals {\tt{}==} {\tt{}<>} {\tt{}<} {\tt{}<=} {\tt{}>}
+{\tt{}>=}}
+
+Relational operators are defined on the scalar simple_types only, but
+not for arrays.  Moreover, equality on class instances is not defined.
+
+\begin{qquote} (\specref{3.5}\/) Relational operators ... are only
+defined for scalar operands of simple types.\end{qquote}
+
+The ordering of elements of simple_types is defined in \specref{3.5}.
+On numbers, the arguments may be promoted from {Integer} to {Real}, if
+the types of the arguments differ.  Boolean is ordered as
+$\mathit{false}<\mathit{true}$.  A set of enumerators is ordered by
+the definition order.  The ordering in String is defined by the libc
+function $\mathit{strcmp}\,(x,y) \bowtie 0$ (replacing $\bowtie$ with a
+relational operator).
+
+\paragraph{Remark}
+
+The predefined operators are defined for the simple_types, although
+\specref{14.3}\/ and \specref{14.4}\/ refer to the predefined_types.
+The predefined_types excluding the simple_types cannot have operators,
+because they are not operator records.
+
+\paragraph{Remark}
+
+$\mathit{strcmp}$ compares strings as unsigned bytes (not unicode
+strings).
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Type conversions}
+
+Function argument conversions are defined in \specref{12.4.6}.
+
+\begin{QFACT}\label{no-cycle-in-conversions} Type conversions are
+defined by constructors.  Conversions may be chained, but it is
+illegal that they make a cycle.\end{QFACT}
+
+\begin{qquote} (\specref{14.2}\/) For a pair of operator record
+classes C and D and components c and d of these classes both of
+C.'constructor' (d) and D.'constructor' (c) shall not both be
+legal.\end{qquote}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Constant expressions}
+
+A dimension of a component array needs to be translation-time
+constants, and thus, folding constants is essentially required.  A
+vast set of expressions are allowed for array dimensions, and
+especially for example, they include array indexing because it is an
+operator.  They include user defined functions, too.  Note that we
+refer here by constants to both constants and parameters (parameter is
+a wider set in the_specification).
+
+\begin{qquote} (\specref{3.8.2}\/) a function or operator with
+parameter subexpressions is a parameter expression.\end{qquote}
+
+\specref{3.8.1}\/ and \specref{3.8.2}\/ list constant expressions
+(functions and variables) which can take non-constant arguments:
+%%%%
+\begin{quote}\spaceskip=2em
+initial
+terminal
+der
+edge
+change
+sample
+pre
+\end{quote}
+%%%%
+\begin{quote}\spaceskip=2em\let~=\enspace
+ndims(A)
+cardinality(c)
+end
+size(A) size(A,~j)
+Connections.isRoot(A.R)
+Connections.rooted(A.R)
+\end{quote}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Attributes}\label{sec:attributes}
+
+The attributes are parameters predefined in the simple_types.  They
+can be modified by names through modifiers, but cannot be accessed by
+names using a dot notation.  They can only be accessed in a subclass
+of simple_types.  The $\mathit{value}$ attribute can be accessed by
+referencing a variable.
+
+\begin{qquote}\label{quo:attribute-access} (\specref{4.8}\/)
+Attributes cannot be accessed using dot notation, and are not
+constrained by equations and algorithm sections. E.g. in Real
+x(unit="kg")=y; only the values of x and y are declared to be equal,
+but not their unit attributes, nor any other attribute of x and
+y.\end{qquote}
+
+A dot notation is used for enumerations when accessing an enumerator
+element.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Expressions}
+
+\subsubsection*{(?) pure}\label{pure-expression}
+
+$\mathrm{pure}\,(...)$ is not well specified.
+%%%%
+\begin{qquote} (\specref{12.3}\/) pure(impureFunctionCall(...)) - which
+allows calling impure functions in any pure context,\end{qquote}
+
+$\mathrm{pure}$ accepts only one argument, although it can accept a
+list of arguments by the syntax definition.
+
+\subsubsection*{Predefined operators}
+
+See Section~\ref{sec:predefined-operators}.
+
+\subsubsection*{Result types}
+
+A result type of an expression can be determined by subexpressions,
+like C~Language.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Functions}
+
+Arguments to a function are simple_types, records (including
+connectors, operator_records) and arrays of them, and functions.
+
+\begin{qquote} (\specref{12.2}\/) $\bullet$ A function may only
+contain components of the restricted classes type, record, operator
+record, and function; i.e. no model or block components.\end{qquote}
+
+\subsubsection*{(?) No results}
+
+An output of an empty array is used to return no values.  See an
+example in \specref{9.4.3.1}.
+
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+function equalityConstraint
+    input AC_Angle theta1;
+    input AC_Angle theta2;
+    output Real residue[0] "No constraints"
+    algorithm
+\end{lstlisting}
+\end{quote}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Equations}
+
+\subsubsection*{if-equation}
+
+Each branch of $\mathbf{if}$ is tested sequentially, and the first
+true branch is taken.
+
+\subsubsection*{for-equation}
+
+A range of $\mathbf{for}$ is a vector expression (real or integer)
+that is a translation-time constant, or types of Boolean or an
+enumeration.  See Section~\ref{sec:for-iterator}.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Semantics remarks to grammar rules}
+
+\paragraph {IDENT}
+
+There is a single namespace for classes and variables, and {IDENT} can
+refer to a class name or a variable name which is not distinguished in
+the grammar rules.
+
+{\it{}name\/} is a sequence of {IDENT}.  In {\it{}type-specifier},
+IDENT in {\it{}name\/} refers to a class.  In
+{\it{}element-modification}, IDENT refers to a variable.  In
+{\it{}function-argument}, IDENT refers to a class, and a sequence of
+them refers to a function.  Note that functions are classes.
+
+In {\it{}enumeration-literal}, {\it{}declaration}, {\it{}for-indices},
+{\it{}component-reference}, and {\it{}named-argument}, IDENT refers to
+a variable.
+
+In {\it{}external-function-call}, {\it{}class-specifier}, and
+{\it{}der-class-specifier}, IDENT refers to a class.  In
+{\it{}import-clause}, IDENT refers to a class, whose last IDENT can
+refers to a class or a variable.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Additional rules}
+
+\subsubsection*{(?) Steps of class name resolution}
+
+Class name resolution in a class may not proceed to process component
+classes at once.  It may stop at resolving classes of
+import/extends-clauses, and postpone resolving component classes.
+
+The following is code fragments in the MSL.
+
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+within;
+package Modelica
+  extends Modelica.Icons.Package;
+
+within Modelica;
+package Icons
+  operator record TypeComplex = Complex;
+\end{lstlisting}
+\end{quote}
+
+Name resolution may proceed as in the follow steps.  But, at the last
+step, the base-classes are not ready to lookup in (.Modelica) yet.
+%%%%
+\begin{quote}
+\begin{verbatim}
+1. Process (.Modelica)
+2. Resolve base-classes in (.Modelica)
+    - Lookup base-class (Modelica.Icons.Package) in (.Modelica)
+    - Lookup (Modelica) in (.)
+    - Lookup (Icons) in (.Modelica)
+3. Process (.Modelica.Icons) (* to find Package in it *)
+4. Resolve component classes in (.Modelica.Icons)
+    - Lookup component class (Complex) in (.Modelica.Icons)
+    - Lookup (Complex) in (.Modelica) (* go up by enclosing class *)
+    - Lookup (Complex) in base-classes of (.Modelica)
+\end{verbatim}
+\end{quote}
+
+\subsubsection*{No non-each redeclarations}
+
+It is not possible to apply distinct redeclarations to elements of an
+array.  Splitting of a redeclaration is not defined, and there is no
+way to drop each in the following.
+
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+A a[10] (each redeclare class X=B);
+\end{lstlisting}
+\end{quote}
+
+This implies class redeclarations can be handled without determining
+(folding constants, etc.) the array indices.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Memo}
+
+\begin{itemize}
+
+\item Classes needing special handling: connectors, states in
+transitions, etc.
+
+\item Compilers can ignore "package.order" files.  It mainly be used
+to display classes in some order.
+
+\item (?) Is there no problem on using a file name "A/B/package.mo"
+for package descriptions (a partial support is that "package" is
+usually not used as a class name).
+
+\item Arrays are described in (\specref{4.5.1}\/).
+
+\item Class $\mathit{Complex}$ is defined in the root, not in
+$\mathit{.Modelica}$.
+
+\item Modifiers to a class do not directly applies to an
+extends-redeclaration but to a replaced class.
+
+\item (?) $\mathbf{protected}$ inner/outer may be illegal.
+
+\item (?) inner/outer compatibility of arrays.
+
+\item Connections .branch, .root, .potentialRoot, .isRooted.
+
+\end{itemize}
+
+\begin{QFACT}\label{class-lookup} A class definition needs to be
+obtained by following the hierarchy, because a class may be modified
+by its enclosing classes (by replacing itself or its
+parts). \end{QFACT}
+
+\if 0
+\item $\mathbf{each}$: ($\mathbf{each}$ in a redeclaration in modifiers be
+dropped at application to an array variable).
+\fi
+
+\if 0
+Prefix Rules [4.4.2.2 Prefix Rules].
+* functions: prefixes define causality.
+* models/blocks: input prefix defines the need of binding equations.
+* connectors: input/ouput prefix defines the correspondence of connectors.
+(?) Causality condition of functions is unclear.
+\fi
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Some noteworthy excerpts}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Terms with unnamed}
+
+There are many uses of {\it{}unnamed\/} in the_specification.
+
+\begin{quote}
+\begin{description}
+
+\item [unnamed enclosing class]
+in {5.2 Enclosing Classes}
+
+\item [unnamed root of the class tree]
+in \specref{5.6.1.1}
+
+\item [unnamed nodes in the instance tree]
+in \specref{5.6.1.2}
+(unnamed nodes are generated by extends clauses)
+
+\item [unnamed root of the instance tree]
+in \specref{5.6.2}
+
+\item [unnamed top-level package]
+in \specref{13.2.1.1}
+
+\item [unnamed top-level scope]
+in \specref{13.2.4.1}
+
+\item [unnamed element of a class definition]
+in \specrefx{}{Glossary}
+As "extends clause: an unnamed element of a class definition"
+
+\end{description}
+\end{quote}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Quotes about class name lookups}
+
+\def\partiallyflattenedclass{partially flattened class}
+\def\temporarilyflattenedclass{temporarily flattened class}
+
+\paragraph{Qualified package~names}
+
+\begin{qquote}\label{quo:lookup-importing} (\specref{13.2.1}\/) Here
+packagename is the fully qualified name of the imported package~...
+(\specref{13.2.1.1}\/) ...~Lookup of the name of an imported package
+or class, ..., deviates from the normal lexical lookup by starting the
+lexical lookup of the first part of the name at the
+top-level.\end{qquote}
+
+\paragraph{Remaining parts lookups}
+
+A lookup of the remaining parts of a name includes the elements from
+the base_classes.  It is because the lookup is in the
+\temporarilyflattenedclass.
+%%%%
+\begin{qquote}\label{quo:lookup-remaining} (\specref{5.3.2}, 4th-item) If
+the identifier denotes a class, that class is temporarily flattened
+...  The rest of the name ... is looked up among the declared named
+elements of the temporary flattened class.  If the class does not
+satisfy the requirements for a package, the lookup is restricted to
+encapsulated elements only.\end{qquote}
+%%%%
+And, ... becuase the \temporarilyflattenedclass is usual flattening
+with empty modifications.
+%%%%
+\begin{qquote} (\specref{5.3.2}, in the following comment) [The
+temporary class flattening performed for composite names follow the
+same rules ..., except that the environment is empty.~...]\end{qquote}
+%%%%
+And, the \partiallyflattenedclass includes the elements from the
+base_classes.
+%%%%
+\begin{qquote}\label{quo:partially-flattened-class} (\specref{5.2}\/)
+During flattening, the enclosing class of an element being flattened
+is a partially flattened class.  [For example, this means that a
+declaration can refer to a name inherited through an
+extends-clause.]\end{qquote}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Miscellaneous implementation tips}
+
+\subsection{Odd facts}
+
+\begin{itemize}
+
+\item It is said that the RML compiler of OpenModelica is written in
+SML~'97 (Standard ML).  RML is Relational Meta-Language.  Refer to
+OpenModelica for MetaModelica and RML.
+
+\end{itemize}
+
+\subsection{Code indentation (emacs setting)}
+
+Code is indented by emacs sml-mode.el (6.9).  It is with minor
+modifications to adjust spacing in the first mrule after
+{\tt{}"case~x~of~pat~=>~({\char`\\}n} to align with other mrules.  And
+similarly after {\tt{}"fun~f~=~({\char`\\}n"}.
+
+%%%%
+\begin{quote}
+\small
+\begin{lstlisting}[aboveskip=-\baselineskip]
+--- sml-mode.el.org
++++ sml-mode.el
+@@ -530,14 +530,20 @@
+     (`(:after . "struct") 0)
+     (`(:after . "=>") (if (smie-rule-hanging-p) 0 2))
+     (`(:after . "in") (if (smie-rule-parent-p "local") 0))
+-    (`(:after . "of") 3)
++    (`(:after . "of") 2)
+-    (`(:after . ,(or `"(" `"{" `"[")) (if (not (smie-rule-hanging-p)) 2))
++    (`(:after . ,(or `"(" `"{" `"["))
++     (if (not (smie-rule-hanging-p))
++        2
++        (if (or (smie-rule-parent-p "|") (smie-rule-parent-p "of"))
++            (+ sml-indent-level -2)
++            (+ sml-indent-level 0))))
+     (`(:after . "else") (if (smie-rule-hanging-p) 0)) ;; (:next "if" 0)
+     (`(:after . ,(or `"|" `"d|" `";" `",")) (smie-rule-separator kind))
+     (`(:after . "d=")
+-     (if (and (smie-rule-parent-p "val") (smie-rule-next-p "fn")) -3))
++     (if (and (smie-rule-parent-p "val") (smie-rule-next-p "fn")) -3 2))
+     (`(:before . "=>") (if (smie-rule-parent-p "fn") 3))
+-    (`(:before . "of") 1)
++    (`(:before . "of") 2)
+     ;; FIXME: pcase in Emacs<24.4 bumps into a bug if we do this:
+     ;;(`(:before . ,(and `"|" (guard (smie-rule-prev-p "of")))) 1)
+     (`(:before . "|") (if (smie-rule-prev-p "of") 1 (smie-rule-separator kind)))
+\end{lstlisting}
+\end{quote}
+%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Supplemental glossary}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Words specific to the_implementation}
+
+Some words are coined for the_implementation or used with different
+meaning.  The marker {$\mbox{}^\top$} indicates the word is with
+stricter meaning.  The marker {$\mbox{}^\bot$} indicates the word with
+different meaning.
+
+\begin{description}
+
+\item [analogical] is used to refer to a set of flow, effort, and
+stream.
+
+\item [array, scalar, vector, matrix].  Scalars are arrays with no
+dimensions, vectors with one dimension, and matrices with two
+dimensions.  There are no separate vector nor matrix types.
+
+\item [component{$^\top$} {\rm{}and} element{$^\top$}] component
+{$\subseteq$} element as a set in a class definition.  Components are
+variable declarations.  Elements are both variable declarations and
+class definitions.
+
+\item [definition/declaration] are often distinguished to mean a class
+definition and a variable declaration.  It adheres to the uses in the
+syntax rules.  It is the same for redefinition/redeclaration.
+Declaration may be used to refer to both.
+
+\item [definition-body] is a set of elements of a definition that is
+not short-class-definition.
+
+\item [lexically enclosing class] is used as an enclosing class
+without modifications and $\mathbf{encapsulated}$ considered.
+
+\item [instance/state/variable] are used interchangeably.
+
+\item [internal_connection] is an aspect of a connector, which refers
+to a connection to an outside_connector.
+
+\item [main_class] refers to a class which is not a base class.
+
+\item [merging_modifiers] is to merge a part of prefixes and modifiers
+in a redeclaration.  It is called inheriting in the_specification.
+
+\item [predefined_type{$\mbox{}^\top$}] is simple_types and classes
+defined in \specref{4.8.8}.  "Built-in_type" is synonymous and
+avoided.
+
+\item [present_class] is a class at attention.  It is called a current
+class in the_specification.
+
+\item [refining] is a modifier application, including one by a
+short_class_definition.
+
+\item [resolve] is determining the class to which a class name refers.
+
+\item [simple_type{$\mbox{}^\top$}] is a set of {Real}, {Integer},
+{Boolean}, {String}, and $\mathit{enumeration}$.  The_implementation
+also includes types extending them.  (It does not includes der's).
+
+(* They are called in many ways.  A BASIC DATA TYPE is Real, Integer,
+Boolean and String.  A PREDEFINED VARIABLE TYPE is Real, Integer,
+Boolean, and String.  A SIMPLE TYPE is Real, Integer, Boolean, String
+and enumerations.  A TYPE is Real, Integer, Boolean, String,
+enumerations, arrays of a type, and ones extending a type.  *)
+
+\item [subject] is a name of a package or an instance.  It is used as
+a key to an associated class definition.  For example, "tank.level" is
+a subject of a state, ".Modelica.Fluid" is a subject of a package.
+
+\item [$\in$] indicates an element is in a class or in a class of a
+state variable.
+
+%%%%%%%%%%%%%%%%
+
+\item [attributes] are parameters defined in predefined_types (Real,
+Integer, Boolean, and String) and enumerations.
+
+\item [base-prefix] = input or output (see syntax rules).
+
+\item [elemental redeclaration] is a redeclaration that appears in
+class elements, in contrast to in modifiers.
+
+\item [environment] (in \specref{7.1}\/) = {modification environment}.
+
+\item [instance] (in \specref{5.4}\/) is a state, declared as a
+variable of a certain class.
+
+\item [instance~hierarchy] (in \specref{5.4}\/) is an embedding
+relation of instances.  (Related words: instance~hierarchy,
+instance~scope).  A hierarchy is created by an instance declaration in
+a class definition.  It is distinct from lexically enclosings.
+
+\item [instance~scope] (in~\specref{5.6.1.2}, \specref{5.3.1}\/)
+Instance~scope is a scope excluding enclosing classes.  It consists of
+declared elements, declared elements from base_classes, and
+imported_names.
+
+\item [instance~tree] = instance~hierarchy.
+
+\item [(instance) model hierarchy{$\mbox{}^\bot$}]
+(in~\specref{5.4}\/) = instance~hierarchy.
+
+\item [instantiation{$^\bot$}] (in \specref{5.6.1}\/) refers to
+applying modifications.  It makes a {partially instantiated} element
+be fully instantiated.
+
+\item [(instantiation) partial instantiation] (in \specref{5.6.1.4}\/)
+is an intermediate state of flattening a class where modifiers are
+associated (but not applied) to an element but redeclarations are
+applied.  This state is necessary to enable redeclarations to be
+applied before handling extends-clauses.
+
+\begin{qquote} (\specref{5.6.1.4}\/) 2.1. ...~(the partially
+instantiated elements have correct name allowing lookup)\end{qquote}
+
+\item [(instantiation) partial instantiation] (in \specref{5.6.1.4}\/)
+is to make a pair of a class element and a {modification environment},
+where redeclarations are applied.  A produced pair is called a
+{partially instantiated element}.
+
+\begin{qquote} (\specref{5.6.1.4}\/) ...~a partially instantiated
+element (...) is comprised of a reference to the original element
+(from the class tree) and the modifiers for that element.\end{qquote}
+
+\item [modification~environment{$^+$}] (or {\bf{}flattening
+environment}) is a set of modifiers attached to a {\it{}partially
+instantiated element}.
+
+\begin{qquote} (\specref{7.2.2}\/) The {modification environment}
+contains arguments which modify elements of the class.\end{qquote}
+
+\item [flattening~context] is a pair of a {modification environment}
+and a set of {enclosing classes} (\specref{5.1}\/).
+
+\item [(flattening) partial flattening{$^+$}] = {\it{}partial
+instantiation}, as instantiation is a part of flattening.
+
+\item [(flattening) partially flattened enclosing class] is simply
+{\it{}partially flattened\/} + {\it{}enclosing class\/} (See
+\specref{7.1}\/).
+
+\item [(flattening) partially flattened enclosing class]
+From the quote, it means the extends-clauses are resolved.  Thus, the
+names in the base_classes can be looked up.
+
+\begin{qquote} (\specref{5.2}\/) During flattening, the enclosing
+class of an element being flattened is a partially flattened
+class. [For example, this means that a declaration can refer to a name
+inherited through an extends-clause.]\end{qquote}
+
+\item [(flattening) temporary flattening] (in \specref{5.3.2}\/) is a
+flattening with an empty modification environmemnt.
+
+\item [(flattening) modification environmemnt] ?.
+
+\item [simple~name {\rm{}and} composite~name].
+
+\item [built-in~classes] = (Synonyms) predefined_classes.
+
+\item [import~name] (in \specref{5.3.1}\/) is an element imported by a
+qualified import.
+
+\begin{qquote} (\specref{5.1}\/) Flattening is made in a context which
+consists of a {modification environment} (Section 7.2.2) and an
+ordered set of enclosing classes.\end{qquote}
+
+\item [temporary flattened class] is a flattened class with an empty
+{modification environment}.  (* the following part is uncertain *) It
+includes the declared_elements, elements from the extends-clauses, and
+the elements from the import-clauses, but not the elements from the
+enclosing classes.
+
+\begin{qquote} (\specref{5.3.3}\/) ...~the class A is temporarily
+flattened with an empty environment (i.e. no modifiers, see Section
+7.2.2)~...\end{qquote}
+
+\item [class tree] (in \specref{5.6.1.1}\/) is class definitions,
+hierarchically organized.
+
+\item [local class/component] (in \specref{5.6.1.4}\/) It is a
+class/variable defined/declared in elements, not including inherited
+classes.  It, probably, excludes imported, base, and enclosing
+classes.
+
+\item [lookup of base name] for {extends}.
+
+\begin{qquote} (\specref{7.1}\/) The name of the base_class is looked up
+in the partially flattened enclosing class.\end{qquote}
+
+The sentence {\it{}The found base_class is flattened with~...\/} has
+the recurrence of the word flattened as {\it{}arguments of all
+enclosing class environments that match names in the flattened
+base_class\/} in the following itemization.
+
+\item [ordering of the merging rules]
+
+\item [redeclaration] A redeclaration apprears in three ways
+(\specref{7.3}\/): $\bullet$\,in modifiers; $\bullet$\,in class
+definition elements; $\bullet$\,in extends-redeclaration.
+
+For an element-redeclaration, a class/variable must be inherited.  The
+modifiers on the extends-clause of the base_class are ignored
+(\specref{7.3}\/).
+
+\item [simple~types{$^+$}] are boolean, integer, enumeration, real,
+string, Clock, and {\it{}externally defined object}.  (The definition
+in glossary lacks the last two).
+
+\item [specialized class] (\specref{4.6}\/) lists a list of classes
+with specific kinds (e.g, $\mathbf{model}$, $\mathbf{block}$).
+
+\item [unnamed top-level package] = ?
+
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Issues need to be checked in MSL}
+
+\subsection{Missing each}
+
+An each seems missing for p, at line 850, Fluid/Interfaces.mo in
+MSL~3.2.3:
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+partial model PartialDistributedVolume
+  ......
+  Medium.BaseProperties[n] mediums(
+    each preferredMediumStates=true,
+    p(start=ps_start),
+    each h(start=h_start),
+    each T(start=T_start),
+    each Xi(start=X_start[1:Medium.nXi]));
+\end{lstlisting}
+\end{quote}
+
+\subsection{Mismatch of final statuses}
+
+Final statuses do not match in a redeclaration in Fluid/Vessels:
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+  package BaseClasses
+      partial model PartialLumpedVessel
+        replaceable model HeatTransfer =
+            Modelica.Fluid.Vessels.BaseClasses.HeatTransfer.IdealHeatTransfer
+          ...;
+
+        HeatTransfer heatTransfer(
+          redeclare final package Medium = Medium,
+          ...);
+
+    partial model PartialVesselHeatTransfer
+      extends Modelica.Fluid.Interfaces.PartialHeatTransfer;
+      ...
+
+    model IdealHeatTransfer
+      extends PartialVesselHeatTransfer;
+      ...
+\end{lstlisting}
+\end{quote}
+%%%%
+and in Fluid/Interfaces.mo:
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+  partial model PartialHeatTransfer
+    replaceable package Medium=Modelica.Media.Interfaces.PartialMedium
+    ...
+\end{lstlisting}
+\end{quote}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\bibliographystyle{plain}
+\bibliography{notes}
+
+\stepcounter{section}
+\addcontentsline{toc}{section}{\numberline{\arabic{section}}References}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\appendix
+%%\appendices
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{List of keywords and predefined names}
+
+%% KEYWORDS AND BUILTINS
+
+This appendix summarizes some list of keywords and predefined names,
+etc.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Modelica keywords}
+
+%% (Make quoted words separated; use ~ for usual spacing).
+\def\widespacing{\spaceskip=2em%
+\fussy\hyphenpenalty=10000\exhyphenpenalty=10000%
+\let~=\enspace}
+%%\sloppy\fussy\linepenalty=0\tolerance=0%
+
+(\specref{2.3.3}\/)
+
+\subsubsection*{Syntactic keywords}
+
+\begin{quote}\widespacing
+algorithm
+and
+annotation
+block
+break
+class
+connect
+connector
+constant
+constrainedby
+der
+discrete
+each
+else
+elseif
+elsewhen
+encapsulated
+end
+enumeration
+equation
+expandable
+extends
+external
+false
+final
+flow
+for
+function
+if
+import
+impure
+in
+initial
+inner
+input
+loop
+model
+not
+operator
+or
+outer
+output
+package
+parameter
+partial
+protected
+public
+pure
+record
+redeclare
+replaceable
+return
+stream
+then
+true
+type
+when
+while
+within
+\end{quote}
+
+\subsubsection*{Reserved type names}
+
+\begin{quote}\widespacing
+Real
+Integer
+Boolean
+String
+\end{quote}
+
+\noindent
+In addition to the syntactic keywords above, the type names are
+reserved and cannot be redefined (See Quote~\ref{quo:reserved-words}).
+These names have overloaded meanings.
+
+(*CHECK*) Check the status of "constructor".
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Predefined_classes}
+
+(\specref{4.8}\/)
+
+\subsubsection*{Classes}
+
+\begin{quote}
+\spaceskip=2em
+\sloppy\hyphenpenalty=10000\exhyphenpenalty=10000
+
+Real
+Integer
+Boolean
+String
+{\it{}enumeration}
+Clock
+StateSelect
+ExternalObject
+AssertionLevel
+Connections
+
+\end{quote}
+
+\noindent $\mathit{enumeration}$ means names of any enumeration.  All
+enumerations are members of simle_types.  It may be referred to as
+{\it{}EnumTypeName\/} in the_specification.
+
+\subsubsection*{Attributes}
+
+\begin{quote}\widespacing
+
+start
+fixed
+nominal
+unbounded
+
+\end{quote}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Predefined variable}
+
+\subsubsection*{Time}
+
+(\specref{3.6.7}\/)
+
+\begin{quote}\widespacing
+time
+\end{quote}
+
+\noindent $\mathit{time}$ is defined in the unnamed root.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Operators with special syntax}
+
+\subsubsection*{Arithmetic operators (on scalars or arrays of Real, Integer)}
+
+(\specref{10.6}\/)
+
+\begin{quote}
+\spaceskip=2em
+\begin{verbatim}
++ - .+ .- * / ^ .* ./ .^ = :=
+\end{verbatim}
+\end{quote}
+
+\noindent The descriptions span multiple sections:
+\specref{10.6.2},
+\specref{10.6.3},
+\specref{10.6.4},
+\specref{10.6.5},
+\specref{10.6.6},
+\specref{10.6.7},
+\specref{10.6.8}.
+
+\subsubsection*{Relational operators (on scalars of Real, Integer, Boolean, String)}
+
+(\specref{10.6.10}\/)
+
+\begin{quote}
+\spaceskip=2em
+\begin{verbatim}
+== <> < <= > >=
+\end{verbatim}
+\end{quote}
+
+\subsubsection*{Boolean operators (on scalars or arrays of Boolean)}
+
+(\specref{10.6.11}\/)
+
+\begin{quote}
+\spaceskip=2em
+\begin{verbatim}
+and or not
+\end{verbatim}
+\end{quote}
+
+\subsubsection*{Class constructors}
+
+\begin{quote}
+\spaceskip=2em
+\begin{verbatim}
+0 constructor
+\end{verbatim}
+\end{quote}
+
+\noindent These are used in defining constructors.
+
+\subsubsection*{Array constructor}
+(\specref{10.4}\/)
+
+\begin{quote}
+\begin{verbatim}
+{...}
+\end{verbatim}
+\end{quote}
+
+\noindent This can be written as $\mathrm{array}\,(...)$.
+
+\subsubsection*{Matrix constructor}
+(\specref{10.4.2}\/)
+
+\begin{quote}
+\begin{verbatim}
+[...]
+\end{verbatim}
+\end{quote}
+
+\noindent "," is a column separator, and ";" is a row separator.  This
+is a restricted notation of $\mathrm{cat}\,(...)$ for two dimensional
+cases.
+
+\subsubsection*{String literal}
+
+\begin{quote}
+\begin{verbatim}
+"..."
+\end{verbatim}
+\end{quote}
+
+\subsubsection*{String operators}
+
+\begin{quote}
+\begin{verbatim}
++
+\end{verbatim}
+\end{quote}
+
+\subsubsection*{Array indexing operator}
+(\specref{10.5}\/)
+
+\begin{quote}
+\begin{verbatim}
+_ [...]
+\end{verbatim}
+\end{quote}
+
+\subsubsection*{Record access operator}
+
+\begin{quote}
+\begin{verbatim}
+.
+\end{verbatim}
+\end{quote}
+
+\subsubsection*{Function call}
+
+\begin{quote}
+\begin{verbatim}
+_ (...)
+\end{verbatim}
+\end{quote}
+
+\subsubsection*{Array range}
+(\specref{10.4.3}\/)
+
+%%({3.6.4 Array Range Operator} is just a pointer to {10.4.3})
+
+\begin{quote}
+\spaceskip=2em
+\begin{verbatim}
+_:_ _:_:_
+\end{verbatim}
+\end{quote}
+
+\noindent See Section~\ref{sec:array-ranges}.
+
+\subsubsection*{Tuples}
+(\specref{8.3.1}, \specref{11.2.1.1}\/)
+
+\begin{quote}
+\spaceskip=2em
+\begin{verbatim}
+(...)
+\end{verbatim}
+\end{quote}
+
+\noindent Tuples are comma separated expressions.  Tuples are only
+used in equalities and assignments for functions returning multiple
+values.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Predefined functions}
+(\specref{3.7}\/)
+
+Predefined functions are defined in the unnamed root, and it can be
+accessed with a preceding dot $.\mathit{abs}\,(v)$ for
+$\mathit{abs}\,(v)$.  Array constructor admits an iterator syntax
+($\mathrm{array}$).  Reductions admit a reduction syntax in addition
+to a function call syntax ($\mathrm{min}$, $\mathrm{max}$,
+$\mathrm{sum}$, and $\mathrm{product}$).  $\mathrm{der}$ and
+$\mathrm{pure}$ are keywords but they can also be used by a function
+call syntax.
+
+\subsubsection*{Numeric functions and conversion functions}
+(\specref{3.7.1}\/)
+
+\begin{quote}\widespacing
+
+abs(v)
+sign(v)
+sqrt(v)
+Integer(e)
+{\it{}enumeration}(i)
+String(...)
+
+\end{quote}
+
+\subsubsection*{Event triggering mathematical functions}
+(\specref{3.7.1.1}\/)
+
+\begin{quote}\widespacing
+
+div(x,~y)
+mod(x,~y)
+rem(x,~y)
+ceil(x)
+floor(x)
+integer(x)
+
+\end{quote}
+
+\subsubsection*{Predefined mathematical functions}
+(\specref{3.7.1.2}\/)
+
+\begin{quote}\widespacing
+
+sin(x)
+cos(x)
+tan(x)
+asin(x)
+acos(x)
+atan(x)
+atan2(y,~x)
+sinh(x)
+cosh(x)
+tanh(x)
+exp(x)
+log(x)
+log10(x)
+
+\end{quote}
+
+\subsubsection*{Derivative and special purpose operators}
+(\specref{3.7.2}\/)
+
+\begin{quote}\widespacing
+
+der(expr)
+delay(expr,~delayTime,~delayMax)
+delay(expr,~delayTime)
+cardinality(c)
+homotopy(actual,~simplified)
+semiLinear(x,~positiveSlope,~negativeSlope)
+inStream(v)
+actualStream(v)
+spatialDistribution(in0,~in1,~x,~positiveVelocity,~initialPoints,~initialValues)
+getInstanceName()
+
+\end{quote}
+
+\noindent $\mathrm{der}\,(...)$ accepts only one argument, although it
+can accept a list of arguments by the syntax definition.
+
+inStream(v) and actualStream(v) introduce a new state variable and
+equations related to a given steam variable $v$.
+
+\subsubsection*{Event-related operators}
+(\specref{3.7.3}\/)
+
+\begin{quote}\widespacing
+
+initial()
+terminal()
+noEvent(expr)
+smooth(p,~expr)
+sample(start,~interval)
+pre(y)
+edge(b)
+change(v)
+reinit(x,~expr)
+
+\end{quote}
+
+\subsubsection*{Assert}
+(\specref{8.3.7}\/)
+
+\begin{quote}\widespacing
+
+assert(condition,~message,~level)
+
+\end{quote}
+
+\subsubsection*{Terminate}
+(\specref{8.3.8}\/)
+
+\begin{quote}\widespacing
+
+terminate(s)
+
+\end{quote}
+
+\subsubsection*{Array dimension and size functions}
+(\specref{10.3.1}\/)
+
+\begin{quote}\widespacing
+
+ndims(A)
+size(A,~i)
+size(A)
+
+\end{quote}
+
+\noindent See~\ref{sec:array-size}.
+
+\subsubsection*{Dimensionality conversion functions}
+(\specref{10.3.2}\/)
+
+\begin{quote}\widespacing
+
+scalar(A)
+vector(A)
+matrix(A)
+
+\end{quote}
+
+\subsubsection*{Array constructor}
+(\specref{10.4.1}\/)
+
+\begin{quote}\widespacing
+array(...)
+\end{quote}
+
+\noindent This can be written as $\{...\}$.
+
+\subsubsection*{Specialized array constructor functions}
+(\specref{10.3.3}\/)
+
+\begin{quote}\widespacing
+identity(n)
+diagonal(v)
+zeros(n1,~n2,~n3,~...)
+ones(n1,~n2,~n3,~...)\\
+fill(e,~n1,~n2,~n3,~...)
+linspace(x1,~x2,~n)
+\end{quote}
+
+\noindent See~\ref{sec:array-size}.
+
+\subsubsection*{Array concatenation}
+(\specref{10.4.2}\/)
+
+\begin{quote}\widespacing
+cat(k,~A,~B,~C,~...)
+\end{quote}
+
+\noindent This can be written as $[...]$ in the two dimensional
+case.
+
+%% \subsubsection*{Predefined array functions}
+%% (\specref{10.3})
+%% \begin{quote}
+%% \spaceskip=2em
+%% \sloppy\hyphenpenalty=10000\exhyphenpenalty=10000
+%% \let~=\enspace
+%% promote(A,n)
+%% \end{quote}
+
+\subsubsection*{Matrix and vector algebra functions}
+(\specref{10.3.5}\/)
+
+\begin{quote}\widespacing
+transpose(A)
+outerProduct(v1,~v2)
+symmetric(A)
+cross(x,~y)
+skew(x)
+\end{quote}
+
+\subsubsection*{Reduction functions and operators}
+(\specref{10.3.4}\/)
+
+\begin{quote}\widespacing
+
+min(A)
+min(x,~y)
+min(e(i,~...,~j)~for~i~in~u,~...,~j~in~v)
+max(A)
+max(x,~y)
+max(e(i,~...,~j)~for~i~in~u,~...,~j~in~v)
+sum(A)
+sum(e(i,~...,~j)~for~i~in~u,~...,~j~in~v)
+product(A)
+product(e(i,~...,~j)~for~i~in~u,~...,~j~in~v)
+
+\end{quote}
+
+\subsubsection*{pure}
+(\specref{12.3}\/)
+
+\begin{quote}\widespacing
+pure(...)
+\end{quote}
+
+\noindent See Section~\ref{pure-expression}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Predefined elements}
+
+\subsubsection*{Functions in types and records}
+
+\begin{quote}\widespacing
+
+equalityConstraint(x,~y)
+
+\end{quote}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Synchronous language}
+
+\subsubsection*{Clock class}
+
+\begin{quote}
+class Clock;
+\end{quote}
+
+\subsubsection*{Discrete states}
+(\specref{16.4}\/)
+
+\begin{quote}\widespacing
+
+previous(u)
+
+\end{quote}
+
+\subsubsection*{Base-clock conversion operators}
+(\specref{16.5.1}\/)
+
+\begin{quote}\widespacing
+
+sample(u,~c)
+hold(u)
+
+\end{quote}
+
+\subsubsection*{Sub-clock conversion operators}
+(\specref{16.5.2}\/)
+
+\begin{quote}\widespacing
+
+subSample(u,~factor)
+superSample(u,~factor)
+shiftSample(u,~shiftCounter,~resolution)
+backSample(u,~backCounter,~resolution)
+noClock(u)
+
+\end{quote}
+
+\subsubsection*{Other operators}
+(\specref{16.10}\/)
+
+\begin{quote}\widespacing
+
+firstTick(u)
+interval(u)
+
+\end{quote}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{State machines}
+
+\subsubsection*{Transitions}
+(\specref{17.1}\/)
+
+\begin{quote}\widespacing
+
+transition(from,~to,~condition,~immediate,~reset,~synchronize,~priority)
+initialState(state)
+activeState(state)
+ticksInState()
+timeInState()
+
+\end{quote}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Mandatory annotations (maybe)}
+
+\def\quotespace{\spaceskip=2em%
+\sloppy\hyphenpenalty=10000\exhyphenpenalty=10000}
+
+There are some annotations predefined (chapter 18): annotations for
+graphical representation, annotations for code generation (18.3),
+annotations for simulation experiments (18.4), annotations for
+functions (12.7, 12.8 and 12.9).  Some of them are likely mandatory to
+translators.
+
+\subsubsection*{Derivative and inverses}
+(\specref{12.7.1}, \specref{12.8}\/)
+
+\begin{quote}\spaceskip=2em
+derivative
+inverse
+\end{quote}
+
+These directives are placed in function body elements.
+
+\subsubsection*{(Redeclaration choices)}
+(\specref{7.3.4}\/)
+
+\begin{quote}\spaceskip=2em
+choices
+choice
+\end{quote}
+
+(?) The choices directive is associated to replaceables or modifiers,
+and is placed at replacable and non-replacable elements by
+short_class_definitons or declarations.
+
+\subsubsection*{Fortran interface}
+(\specref{12.9.1.2}\/)
+
+\begin{quote}\spaceskip=2em
+arrayLayout
+\end{quote}
+
+\subsubsection*{External libraries}
+(\specref{12.9.4}\/)
+
+\begin{quote}\spaceskip=2em
+Library
+Include
+IncludeDirectory
+LibraryDirectory
+\end{quote}
+
+\subsubsection*{Code generation}
+(\specref{18.3}\/)
+
+\begin{quote}\spaceskip=2em
+Evaluate
+HideResult
+Inline
+LateInline
+GenerateEvents
+smoothOrder
+\end{quote}
+
+$\mathit{Evaluate}$ and $\mathit{HideResult}$ affect component
+declarations.  They are attached to component declarations, class
+definitions, and a base class of class definitions.
+$\mathit{Evaluate}$ is ignored for non-parameter components.
+
+$\mathit{Inline}$, $\mathit{LateInline}$, $\mathit{GenerateEvents}$,
+and $\mathit{smoothOrder}$ are placed in elements of function
+definitions.
+
+$\mathit{smoothOrder}=n$ is placed in algorithm sections of functions.
+It takes optional argument $\mathit{normallyConstant}$.
+
+\subsubsection*{Simulation setting}
+(\specref{18.4}\/)
+
+\begin{quote}\spaceskip=2em
+experiment
+StartTime
+StopTime
+Interval
+Toleranc
+\end{quote}
+
+(?) $\mathit{experiment}$ is placed in class body elements.
+
+\subsubsection*{Singleton instances}
+(\specref{18.5}\/)
+
+\begin{quote}\spaceskip=2em
+singleInstance
+\end{quote}
+
+(?) $\mathit{singleInstance}$ is palced in class body elements.
+
+\subsubsection*{Diagnostics messages}
+(\specref{18.7}\/)
+
+\begin{quote}\spaceskip=2em
+missingInnerMessage
+obsolete
+unassignedMessage
+\end{quote}
+
+$\mathit{obsolete}$ applies to classes.
+
+\subsubsection*{Version setting}
+(\specref{18.8.2}\/)
+
+\begin{quote}\spaceskip=2em
+version
+conversion
+uses
+\end{quote}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\end{document}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+================================================================
+
+%% README.md Section
+
+# Baby-Modelica 3.4.0 (2020-01-29)
+
+Copyright (C) 2018-2021 RIKEN R-CCS
+
+__Baby-Modelica comes with ABSOLUTELY NO WARRANTY.__
+
+Baby-Modelica is a simple frontend (parser+flattener) for the Modelica
+language specification 3.4.  It parses the source code then performs
+simple syntactic transformations, and optionally dumps a flat model.
+Flattening a model is an essential part of Modelica, and it resolves
+all the features as an object-oriented language.  Flattening is
+indispensable even for simple tools, because parameters in a model are
+substituted multiple times by nested parameterization.  A generated
+flat model is hopefully to be re-readable by Modelica compilers.
+
+Current status is a pre-zero version, and we are working towards
+version zero.  The version number of Baby-Modelica is the last digits,
+appended to the version number of the Modelica language specification.
+
+Baby-Modelica is written in SML'97 (Standard ML) and developed mainly
+with Poly/ML (on SUNOS 5.11/amd64), but it may work with SML/NJ or
+MLton.  It uses a modified BYACC parser generator (not ml-yacc), which
+needs be obtained separately.
+
+See [https://www.modelica.org](https://www.modelica.org) for
+information of Modelica.
+
+If someone might be unfamiliar with SML, see
+[http://sml-family.org](http://sml-family.org).  Poly/ML is at
+[https://www.polyml.org](https://www.polyml.org), SML/NJ is at
+[https://smlnj.org](https://smlnj.org), and MLton is at
+[https://mlton.org](https://mlton.org).
+
+----
+
+## Source code files and directories
+
+See frontend/notes.pdf first, then start with frontend/bbm.sml.
+* [frontend/notes.pdf](frontend/notes.pdf): random implementation notes
+* frontend/bbm.sml: a list of the source code files
+
+The toplevel directories are as follows.
+* [frontend](frontend): the source code
+* [silly-models](silly-models): trivial code to check the specification
+* [code-examples](code-examples): code snippets from the specification
+
+----
+
+## A simple test run with Poly/ML or SML/NJ
+
+Set the environment variable "MODELICAPATH" to the library paths of
+the Modelica Standard Library.  The paths point to the directory
+containing such as "Modelica 3.2.3".  Use the MSL-3.2.3 (2019-01-23)
+for testing.
+
+Test with the following commands in the "frontend" directory.
+"bbm.sml" loads the needed source files.  Flatdumper dumps a flat
+model in "x.mo".
+
+```
+use "bbm.sml" ;
+builder.xreset () ;
+builder.xbuild "Modelica.Fluid.Examples.HeatingSystem" ;
+connector.xbind () ;
+connector.xconnect () ;
+flatdumper.xdump () ;
+valOf (classtree.xfetch1 "tank") ;
+valOf (classtree.xfetch1 "wall.G") ;
+valOf (classtree.xfetch1 "") ;
+valOf (classtree.xfetch1 ".Modelica") ;
+......
+```
+
+## Verbosity settings in PolyML
+
+* Printer setting:
+```
+PolyML.print_depth (1000) ;
+```
+
+* Backtrace setting:
+```
+PolyML.Compiler.debug := true ;
+open PolyML.Debug ;
+breakEx Match ;
+```
+
+(Reloading files (to recompile) is needed after enabling backtracing).
+
+## Verbosity settings in SML/NJ
+
+* Printer setting:
+```
+Control.Print.printDepth := 100 ;
+Control.Print.printLength := 10000 ;
+```
+
+* Backtrace setting:
+```
+CM.make "$smlnj-tdp/back-trace.cm" ;
+SMLofNJ.Internals.TDP.mode := true ;
+```
+
+(Reloading files (to recompile) is needed after enabling backtracing).
+
+----
+
+Baby-Modelica is distributed under the BSD 2-Clause License.
+
+================================================================
+
+%% Local Variables:
+%% indent-tabs-mode: nil
+%% paragraph-start: "\f\\|[ \t]*$\\|%%%%$"
+%% paragraph-separate: "[ \t\f]*$\\|%%%%$"
+%% End:
