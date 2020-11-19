@@ -1,5 +1,5 @@
 (* loader.sml -*-Coding: us-ascii-unix;-*- *)
-(* Copyright (C) 2018-2020 RIKEN R-CCS *)
+(* Copyright (C) 2018-2021 RIKEN R-CCS *)
 
 (* PARSER CALLER. *)
 
@@ -179,7 +179,7 @@ and record_class_body pkg (d0 as Defclass _) = (
 	val Defclass ((id, _), k0) = d0
     in
 	case k0 of
-	    Def_Body (mk, j, cs, (c_, n, x), ee0, aa, ww) => (
+	    Def_Body (mk, j, cs, (c_, n, x), cc, ee0, aa, ww) => (
 	    let
 		val _ = if (c_ = bad_tag) then () else raise Match
 		val _ = if (j = bad_subject) then () else raise Match
@@ -187,7 +187,7 @@ and record_class_body pkg (d0 as Defclass _) = (
 		val _ = if (x = bad_subject) then () else raise Match
 		val tag = (qualify_name (id, pkg))
 		val ee1 = (map (record_e tag) ee0)
-		val k1 = Def_Body (mk, j, cs, (tag, n, x), ee1, aa, ww)
+		val k1 = Def_Body (mk, j, cs, (tag, n, x), cc, ee1, aa, ww)
 		val d1 = Defclass ((id, pkg), k1)
 		val d2 = (store_to_loaded_classes false d1)
 	    in
@@ -202,12 +202,13 @@ and record_class_body pkg (d0 as Defclass _) = (
 		d1
 	    end)
 	  | Def_Primitive _ => raise Match
+	  | Def_Outer_Alias _ => raise Match
 	  | Def_Name _ => (
 	    Defclass ((id, pkg), k0))
 	  | Def_Scoped _ => raise Match
-	  | Def_Refine (kx, NONE, ts, q, (ss, mm), aa, ww) => (
+	  | Def_Refine (kx, NONE, ts, q, (ss, mm), cc, aa, ww) => (
 	    Defclass ((id, pkg), k0))
-	  | Def_Refine (kx, SOME _, ts, q, (ss, mm), aa, ww) => raise Match
+	  | Def_Refine (kx, SOME _, ts, q, (ss, mm), cc, aa, ww) => raise Match
 	  | Def_Extending (true, bx, kx) => raise Match
 	  | Def_Extending (false, bx, kx) => (
 	    let
@@ -285,6 +286,7 @@ and insert_package_directory_entries (pkg : class_tag_t) (path : string) = (
 		Def_Body _ => true
 	      | Def_Der _ => false
 	      | Def_Primitive _ => raise Match
+	      | Def_Outer_Alias _ => raise Match
 	      | Def_Name _ => false
 	      | Def_Scoped _ => raise Match
 	      | Def_Refine _ => false
@@ -367,6 +369,7 @@ and insert_package_directory_entries (pkg : class_tag_t) (path : string) = (
 		Def_Body _ => raise Match
 	      | Def_Der _ => raise Match
 	      | Def_Primitive _ => raise Match
+	      | Def_Outer_Alias _ => raise Match
 	      | Def_Name _ => raise Match
 	      | Def_Scoped _ => raise Match
 	      | Def_Refine _ => raise Match
@@ -480,6 +483,7 @@ fun load_displaced_body (k : definition_body_t) = (
 	Def_Body _ => k
       | Def_Der _ => k
       | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => k
       | Def_Scoped _ => raise Match
       | Def_Refine _ => k
@@ -509,7 +513,7 @@ fun fetch_or_load_class_in_root (tag : class_tag_t) : class_definition_t option 
 
 fun lookup_class_in_root (Id v) = (
     let
-	val _ = tr_load_vvv (";; - lookup_class_in_root("^ v ^")")
+	val _ = tr_load_vvv (";; - lookup_class_in_root ("^ v ^")")
 	val tag = (Ctag [v])
     in
 	case (fetch_or_load_class_in_root tag) of
@@ -561,6 +565,7 @@ fun fetch_displaced_class wantedstep (k : definition_body_t) = (
 	Def_Body _ => k
       | Def_Der _ => k
       | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => k
       | Def_Scoped _ => k
       | Def_Refine _ => k

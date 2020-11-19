@@ -1,5 +1,5 @@
 (* refiner.sml -*-Coding: us-ascii-unix;-*- *)
-(* Copyright (C) 2018-2020 RIKEN R-CCS *)
+(* Copyright (C) 2018-2021 RIKEN R-CCS *)
 
 (* MODIFIER APPLICATION. *)
 
@@ -303,22 +303,23 @@ fun merge_component_prefixes (a0, v0, y0) (a1, v1, y1) = (
    priority of the passed modifiers (by reversing the ordering), when
    the modifiers were ones attached to a replaced class. *)
 
-fun make_refining_class_choose_order reverse k0 mm1 aa1 ww1 = (
+fun make_refining_class_choose_order reverse k0 mm1 cc1 aa1 ww1 = (
     if ((null mm1) andalso (aa1 = Annotation [])
 	andalso (ww1 = Comment [])) then
 	k0
     else
 	let
 	    val kx = Def_Refine (k0, NONE, copy_type, no_component_prefixes,
-				 ([], mm1), aa1, ww1)
+				 ([], mm1), cc1, aa1, ww1)
 	in
 	    case k0 of
 		Def_Body _ => kx
 	      | Def_Der _ => raise (error_modifiers_to_der mm1)
 	      | Def_Primitive _ => raise Match
+	      | Def_Outer_Alias _ => raise Match
 	      | Def_Name _ => raise Match
 	      | Def_Scoped _ => kx
-	      | Def_Refine (x0, v, ts, q, (ss0, mm0), aa0, ww0) => (
+	      | Def_Refine (x0, v, ts, q, (ss0, mm0), cc0, aa0, ww0) => (
 		let
 		    val _ = if (not (class_is_refining x0)) then ()
 			    else raise Match
@@ -327,9 +328,10 @@ fun make_refining_class_choose_order reverse k0 mm1 aa1 ww1 = (
 				  (merge_modifiers ctx mm1 mm0)
 			      else
 				  (merge_modifiers ctx mm0 mm1)
+		    val ccx = (choose_non_nil cc1 cc0)
 		    val aax = (merge_annotations ctx aa0 aa1)
 		    val wwx = (merge_comments ctx ww0 ww1)
-		    val k1 = Def_Refine (x0, v, ts, q, (ss0, mmx), aax, wwx)
+		    val k1 = Def_Refine (x0, v, ts, q, (ss0, mmx), ccx, aax, wwx)
 		in
 		    k1
 		end)
@@ -337,7 +339,7 @@ fun make_refining_class_choose_order reverse k0 mm1 aa1 ww1 = (
 	      | Def_Replaced (x0, kold) => (
 		let
 		    val x1 = (make_refining_class_choose_order
-				  reverse x0 mm1 aa1 ww1)
+				  reverse x0 mm1 cc1 aa1 ww1)
 		in
 		    Def_Replaced (x1, kold)
 		end)
@@ -347,11 +349,11 @@ fun make_refining_class_choose_order reverse k0 mm1 aa1 ww1 = (
 	end)
 
 fun make_modified_class k0 mm1 aa1 ww1 = (
-    (make_refining_class_choose_order false k0 mm1 aa1 ww1))
+    (make_refining_class_choose_order false k0 mm1 NIL aa1 ww1))
 
-fun make_modified_class_for_replacing k0 mm1 = (
+fun make_modified_class_for_replacing k0 mm1 cc1 = (
     (make_refining_class_choose_order
-	 true k0 mm1 (Annotation []) (Comment [])))
+	 true k0 mm1 cc1 (Annotation []) (Comment [])))
 
 (* Checks if a class is proper to replace a replaceable. *)
 
@@ -360,6 +362,7 @@ fun assert_class_is_good_to_dispatch k = (
 	Def_Body _ => ()
       | Def_Der _ => ()
       | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => raise Match
       | Def_Scoped _ => ()
       | Def_Refine _ => ()
@@ -374,6 +377,7 @@ fun assert_class_is_good_to_modify k = (
 	Def_Body _ => raise Match
       | Def_Der _ => ()
       | Def_Primitive _ => ()
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => raise Match
       | Def_Scoped _ => ()
       | Def_Refine _ => ()
@@ -435,9 +439,9 @@ fun extract_redeclares (subj, kp) = (
 
 fun refining_is_initializers k0 = (
     case k0 of
-	Def_Refine (k1, v, ts, q, (ss, mm), Annotation aa, Comment ww) => (
+	Def_Refine (k1, v, ts, q, (ss, mm), cc, Annotation aa, Comment ww) => (
 	((ts = copy_type) andalso (q = no_component_prefixes)
-	 andalso (null aa) andalso (null ww)
+	 andalso (cc = NIL) andalso (null aa) andalso (null ww)
 	 andalso (not (class_is_refining k1))))
       | _ => raise Match)
 
@@ -452,9 +456,10 @@ fun switch_class_for_redeclaration state ctx k0 k1 = (
 	Def_Body _ => k1
       | Def_Der _ => k1
       | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => raise Match
       | Def_Scoped _ => k1
-      | Def_Refine (kx, v, ts, q, (ss, mm), aa, ww) => (
+      | Def_Refine (kx, v, ts, q, (ss, mm), cc, aa, ww) => (
 	let
 	    val _ = print "(AHO) DROP PREFIXES\n"
 	    val _ = if (null ss) then ()
@@ -470,7 +475,7 @@ fun switch_class_for_redeclaration state ctx k0 k1 = (
 		    else (warn_drop_annotations ())
 	    val _ = if (ww = Comment []) then ()
 		    else (warn_drop_comments ())
-	    val x1 = (make_modified_class_for_replacing k1 mm)
+	    val x1 = (make_modified_class_for_replacing k1 mm cc)
 	in
 	    x1
 	end)
@@ -528,17 +533,18 @@ fun attach_modifiers_to_body ctx k0 mm1 = (
 	      | Mod_Value e => (
 		Def_Primitive (p, e)))
 	  | _ => raise Match)
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => (
 	Def_Refine (k0, NONE, copy_type, no_component_prefixes, ([], mm1),
-		    Annotation [], Comment []))
+		    NIL, Annotation [], Comment []))
       | Def_Scoped _ => (
 	Def_Refine (k0, NONE, copy_type, no_component_prefixes, ([], mm1),
-		    Annotation [], Comment []))
-      | Def_Refine (kx, v, ts, q, (ss, mm0), aa, ww) => (
+		    NIL, Annotation [], Comment []))
+      | Def_Refine (kx, v, ts, q, (ss, mm0), cc, aa, ww) => (
 	let
 	    val mmx = (merge_modifiers ctx mm0 mm1)
 	in
-	    Def_Refine (kx, v, ts, q, (ss, mmx), aa, ww)
+	    Def_Refine (kx, v, ts, q, (ss, mmx), cc, aa, ww)
 	end)
       | Def_Extending _ => raise Match
       | Def_Replaced (x0, ko) => (
@@ -645,10 +651,10 @@ fun list_components kp = (
     let
 	val _ = if (step_is_at_least E3 kp) then () else raise Match
 
-	fun name (Binding (v, s_, _, (z, r, d, h))) = (
+	fun name (Naming (id, _, _, _, (z, r, d, h))) = (
 	    case d of
 		EL_Class _ => raise Match
-	      | EL_State (Defvar (v, q, k, c, a, w)) => [v])
+	      | EL_State (Defvar (_, q, k, c, a, w)) => [id])
 
 	fun faulting_cooker wantedstep (subj, kx) = raise Match
 	val bindings = (list_elements faulting_cooker false kp)
@@ -972,20 +978,21 @@ fun record_class_renaming k0 = (
     let
 	fun renaming subsubj k = (
 	    Def_Refine (k, SOME subsubj, copy_type, no_component_prefixes,
-			([], []), Annotation [], Comment []))
+			([], []), NIL, Annotation [], Comment []))
 
 	fun make_class_renaming subsubj k0 = (
 	    case k0 of
 		Def_Body _ => (*(renaming subsubj k0)*) raise Match
 	      | Def_Der _ => (renaming subsubj k0)
 	      | Def_Primitive _ => raise Match
+	      | Def_Outer_Alias _ => raise Match
 	      | Def_Name _ => raise Match
 	      | Def_Scoped _ => raise Match
-	      | Def_Refine (x0, v_, ts, q, (ss, mm), aa, ww) => (
+	      | Def_Refine (x0, v_, ts, q, (ss, mm), cc, aa, ww) => (
 		let
 		    val _ = if (v_ = NONE) then () else raise Match
 		in
-		    Def_Refine (x0, SOME subsubj, ts, q, (ss, mm), aa, ww)
+		    Def_Refine (x0, SOME subsubj, ts, q, (ss, mm), cc, aa, ww)
 		end)
 	      | Def_Extending (true, _, _) => (renaming subsubj k0)
 	      | Def_Extending (false, (kb, mm), x0) => k0
@@ -1043,17 +1050,17 @@ fun record_class_renaming k0 = (
 	k1
     end)
 
-(* Final-touches a modified class. *)
+(* Makes final-touches to a modified class. *)
 
 fun rectify_modified_class (k0, q1) (t1, p1) aa1 = (
     case k0 of
-	Def_Body (mk, subj, (t0, p0, q0), nm, ee, aa0, ww0) => (
+	Def_Body (mk, subj, (t0, p0, q0), nm, cc, ee, aa0, ww0) => (
 	let
 	    val ctx = k0
 	    val (tx, px) = (merge_type_prefixes (t0, p0) (t1, p1))
 	    val qx = (merge_component_prefixes q0 q1)
 	    val aax = (merge_annotations ctx aa0 aa1)
-	    val k1 = Def_Body (mk, subj, (tx, px, qx), nm, ee, aax, ww0)
+	    val k1 = Def_Body (mk, subj, (tx, px, qx), nm, cc, ee, aax, ww0)
 	    val k2 = if (class_is_main k0) then
 			 (record_class_renaming k1)
 		     else
@@ -1063,6 +1070,7 @@ fun rectify_modified_class (k0, q1) (t1, p1) aa1 = (
 	end)
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match

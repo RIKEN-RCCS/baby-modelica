@@ -1,11 +1,12 @@
 (* plain.sml -*-Coding: us-ascii-unix;-*- *)
-(* Copyright (C) 2018-2020 RIKEN R-CCS *)
+(* Copyright (C) 2018-2021 RIKEN R-CCS *)
 
 (* SIMPLE UTILITY FUNCTIONS. *)
 
 structure plain = struct
 
 val error_dimension_index_mismatch = Match
+val error_array_index = Match
 
 fun assert (x : bool) : unit = if (x) then () else raise Match
 
@@ -91,15 +92,15 @@ fun remove_duplicates eq [] = []
   | remove_duplicates eq (a :: t) = (
     (a :: (remove_duplicates eq (List.filter (fn x => not (eq (a, x))) t))))
 
-(* Partitions sets of duplicates with regard to a given equality.
-   Non-duplicating sets are singletons *)
+(* Partitions a list by groups with regard to a given equality.
+   Non-groups are singletons. *)
 
-fun list_duplicates eq [] = []
-  | list_duplicates eq (a :: t) = (
+fun list_groups eq [] = []
+  | list_groups eq (a :: tt) = (
     let
-	val (d, r) = (List.partition (fn x => eq (a, x)) t)
+	val (gg, rr) = (List.partition (fn x => eq (a, x)) tt)
     in
-	([(a :: d)] @ (list_duplicates eq r))
+	([(a :: gg)] @ (list_groups eq rr))
     end)
 
 (* Uniquifies with respect to eq and keeps the last one.  Slow. *)
@@ -113,13 +114,21 @@ fun list_diff sup sub = (
     (foldl (fn (e, residue) => (List.filter (fn x => (not (x = e))) residue))
 	   sup sub))
 
-(* Tests if all are equal with regard to a given equality.  It returns
-   SOME (SOME e) of a first item, SOME NONE if a list is empty, or
-   NONE if not. *)
+(* Tests if all are equal with regard to a given equality. *)
 
-fun list_all_equal eq [] = SOME NONE
-  | list_all_equal eq (e :: t) = (
-    if (List.all (fn x => (eq (x, e))) t) then SOME (SOME e) else NONE)
+fun list_all_equal eq ee = (
+    case ee of
+	[] => true
+      | (e :: tt) => (List.all (fn x => (eq (e, x))) tt))
+
+(* Returns a unique value if all are equal with regard to a given
+   equality.  It errs on an empty list.  It returns the first element
+   as (SOME e) or NONE. *)
+
+fun list_unique_value eq ee = (
+    case ee of
+	[] => raise Match
+      | e :: tt => (if (list_all_equal eq ee) then (SOME e) else NONE))
 
 (* Returns an escaped string enclosed by "...". *)
 
@@ -133,6 +142,18 @@ fun int_seq m n = (
     else
 	(m :: (int_seq (m + 1) n)))
 
+fun z_seq lb step (n :int) : int list = (
+    if (n <= 0) then
+	[]
+    else
+	lb :: (z_seq (lb + step) step (n - 1)))
+
+fun r_seq lb step (n : int): real list = (
+    if (n <= 0) then
+	[]
+    else
+	lb :: (r_seq (lb + step) step (n - 1)))
+
 (* Returns a list by calling f on each index in the dimension.  Note
    that an index is one-origin. *)
 
@@ -144,6 +165,8 @@ fun fill_dimension f index0 dim0 = (
 	     (map
 		  (fn i => (fill_dimension f (index0 @ [i + 1]) dim1))
 		  (int_seq 0 d)))))
+
+fun iterate_dimension f dim = (fill_dimension f [] dim)
 
 (* Partitions a list by n elements each.  It is required that the
    length of a list is multiple of n. *)
@@ -188,11 +211,15 @@ fun list_shortest ll = (
 			    (x, xlen)))
 		   (h, (length h)) tl))))
 
-(* Returns an offset for an index.  It is row-major.  An index is
-   1-origin.  Call it with offset=0.  ([i+1,j+1,k+1] in an [4,3,2]
-   array is (3*2*i+2*j+k).  It accepts an index shorter than a
-   dimension, in which case it returns a start offset of a
-   subarray. *)
+fun check_array_index dimension index = (
+    if (List.all (op >=) (ListPair.zip (dimension, index))) then ()
+    else raise error_array_index)
+
+(* Returns an offset for an index.  An array is row-major, and an
+   index is 1-origin.  Call it with offset=0.  (An offset of
+   [i+1,j+1,k+1] in a [4,3,2] array is (3*2*i+2*j+k).  It accepts an
+   index shorter than a dimension, in which case it returns a start
+   offset of a subarray. *)
 
 fun array_index dimension0 index0 offset = (
     case (dimension0, index0) of
@@ -203,7 +230,132 @@ fun array_index dimension0 index0 offset = (
       | (d :: dimension1, i :: index1) => (
 	(array_index dimension1 index1 ((d * offset) + (i - 1)))))
 
+(* Returns an array size for a dimension.  It returns 1 for []. *)
+
 fun array_size dimension = (
     (array_index dimension [] 1))
+
+(* Drops the first n dimensions. *)
+
+fun array_drop_dimensions dimension count = (
+    (List.drop (dimension, count)))
+
+(* Accesses an index-th row of an array.  It returns a pair of a
+   dimension and contents. *)
+
+fun array_access index (dim0, ee0) = (
+    let
+	val _ = (check_array_index dim0 index)
+	val dim1 = (List.drop (dim0, (length index)))
+	val size = (array_size dim1)
+	val offset = (array_index dim0 index 0)
+	val ee1 = (List.take ((List.drop (ee0, offset)), size))
+    in
+	(dim1, ee1)
+    end)
+
+(* Accesses a i-th row (1-origin) of an array.  It returns a pair of a
+   dimension and contents. *)
+
+fun array_access1__ i (dim0, ee0) = (
+    case dim0 of
+	[] => raise Match
+      | (d :: dim1) => (
+	let
+	    val size = (array_size dim1)
+	    val offset = ((i - 1) * size)
+	    val ee1 = (List.drop (ee0, offset))
+	    val ee2 = (List.take (ee1, size))
+	in
+	    (dim1, ee2)
+	end))
+
+fun list_prefix eq x y = (
+    ((length x) <= (length y)) andalso (List.all eq (ListPair.zip (x, y))))
+
+fun list_suffix eq x y = (
+    (list_prefix eq (List.rev x) (List.rev y)))
+
+(* Unions sets in a bag if they intersect.  It takes a list of lists
+   as a bag of sets.  Do not enter the empty set. *)
+
+fun make_unions eq bag = (
+    let
+	fun intersects eq uu vv = (
+	    (List.exists (fn y => (List.exists (fn x => (eq (x, y))) vv)) uu))
+
+	fun insert eq x ww = (
+	    if (List.exists (fn y => (eq (x, y))) ww) then ww else (x :: ww))
+
+	fun merge eq (uu, vv) = (
+	    (foldl (fn (x, ww) => (insert eq x ww)) vv uu))
+
+	fun merge_if_intersects eq x uu = (
+	    let
+		val (vv, others) = (List.partition (intersects eq x) uu)
+	    in
+		((foldl (merge eq) [] (x :: vv)) :: others)
+	    end)
+    in
+	(foldl (fn (x, uu) => (merge_if_intersects eq x uu)) [] bag)
+    end)
+
+(* Filters list elements by a list of booleans. *)
+
+fun list_select bitmap xx = (
+    (foldl (fn ((b, x), acc) => if b then x :: acc else acc)
+	   [] (ListPair.zip (bitmap, xx))))
+
+(* Repeats v in a list n times. *)
+
+fun list_repeat v n acc = (
+    if (n <= 0) then
+	acc
+    else
+	(list_repeat v (n - 1) (v :: acc)))
+
+(* Transposes a list of lists.  Element lists are truncated to the
+   shortest one. *)
+
+fun list_transpose ee = (
+    if (List.exists null ee) then
+	[]
+    else
+	let
+	    val hds = (map hd ee)
+	    val tls = (map tl ee)
+	in
+	    hds :: (list_transpose tls)
+	end)
+
+(* Sorts a list to make each cmp (ai,aj) true for (i<j).  It is stable
+   with (op <) but unstable with (op <=). *)
+
+fun list_sort cmp (ee : 'a list) = (
+    case ee of
+	[] => []
+      | p :: tl => (
+	let
+	    val (ll, hh) = (List.partition (fn e => cmp (e, p)) tl)
+	in
+	    ((list_sort cmp ll) @ [p] @ (list_sort cmp hh))
+	end))
+
+fun foldl_one_and_others_loop f acc dd ee = (
+    case ee of
+	[] => acc
+      | e :: tl => (
+	foldl_one_and_others_loop f (f (e, (dd @ tl), acc)) (dd @ [e]) tl))
+
+(* Calls f with (e,ee\e,acc) one (e) and the others (ee\e) with a
+   folding result (acc). *)
+
+fun foldl_one_and_others f acc ee = (
+    (foldl_one_and_others_loop f acc [] ee))
+
+(* Counts true results that f returns. *)
+
+fun list_count_true f ee = (
+    (foldl (fn (x, sum) => if (f x) then (sum + 1) else sum) 0 ee))
 
 end

@@ -1,5 +1,5 @@
 (* ast.sml -*-Coding: us-ascii-unix;-*- *)
-(* Copyright (C) 2018-2020 RIKEN R-CCS *)
+(* Copyright (C) 2018-2021 RIKEN R-CCS *)
 
 (* PARSER AST of Modelica-3.4. *)
 
@@ -18,38 +18,34 @@ datatype name_t = Name of string list
 datatype id_t = Id of string
 
 (* instantiation_t indicates a class is used as either a package or a
-   state variable.  A class is marked by PKG initially, then is
+   state variable.  A class is marked by PKG initially, then it is
    assigned with PKG/VAR at instantiation. *)
 
 datatype instantiation_t = PKG | VAR
 
 (* class_tag_t is a fully-qualified class name which refers to a
-   lexical definition of a class in files. *)
+   lexical position of a class in files. *)
 
 datatype class_tag_t = Ctag of string list
 
 (* A subject refers to a name rooted at either a package or a model.
-   Package-rooted names are ".P.P.P" and model-rooted names are
-   "v[i].v[i].v[i]" with subscripts optional.  It includes a constant
-   reference via packages "P.c[i]", and a package reference via
-   instances "v[i].P".  Note that a class-tag, in contrast, refers to
-   a class in lexical definitions. *)
+   The package root is the unnamed-enclosing-class.  Package-rooted
+   names are ".P.P.P" and model-rooted names are "v[i].v[i].v[i]" with
+   subscripts optional.  It includes a constant reference via packages
+   "P.c[i]", and a package reference via instances "v[i].P". *)
 
 datatype subject_t = Subj of instantiation_t * (id_t * int list) list
 
+(* part_name_t names a main/base part of a class.  A subject specifies
+   a main class, and a tag specifies a base part of it.  A part_name
+   is often used as a scope. *)
+
+type part_name_t = subject_t * class_tag_t
+type scope_t = subject_t * class_tag_t
+
+(* Real (R) or integer (Z). *)
+
 datatype number_type_t = R | Z
-
-(* primitive_type_t is stored in Def_Primitive.  Each corresponds to a
-   simple-type.  Even the simple-types have structures, that is, they
-   have attributes.  The attributes of them are described by the
-   corresponding primitive types.  Note that the primitive types also
-   represent values in constant folding. *)
-
-datatype primitive_type_t
-    = P_Number of number_type_t
-    | P_Boolean
-    | P_String
-    | P_Enum of class_tag_t
 
 (* The predefined operators.  Other overloaded operators are
    represented by functions.  It is used like Opr~Opr_add.  "ew"
@@ -83,12 +79,65 @@ datatype predefined_operator_t
     | Opr_ge
     | Opr_le
 
-(* part_name_t names a main/base part of a class.  A subject specifies
-   a main class, and a tag specifies a base part of it.  A part_name
-   is often used as a scope. *)
+(* Expressions.  NIL is an empty element in an output-expression-list.
+   Colon is a [:] in a subscript.  Otherwise is a truth for an
+   else-part condition (or a truth after simplification).  NIL, Colon,
+   and Otherwise always appear alone, but not in an expression.
+   Scoped is an expression in a scope.  Vref represents a component
+   reference which includes array indexing.  A first optional slot
+   indicates whether it is resolved.  Opr represents predefined
+   operators.  Closure is a partially applied function.  L_Number,
+   L_String, L_Bool, and L_Enum are literals.  L_Number has a slot
+   indicating Real or Integer.  Real literals are represented by
+   strings to make syntax trees eqtype in SML.  L_Enum is introduced
+   when enumerations are processed.  Reduction_Argument is an argument
+   list for reductions.  Note that arguments to Array_Constructor is
+   non-empty.  Pseudo_Split is an array indexing, that is introduced
+   at rewriting a non-each modifier on an array.  Component_Ref is a
+   component reference, that is introduced at rewriting a modifier of
+   class copying.  It is with an array dimension which is null for a
+   scalar component.  Instances refers to instances, and also it
+   internally refers to a function.  Iref is an iterator variable
+   reference.  Cref is a connector reference with the side
+   information.  Connector references are introduced to the arguments
+   to connect-equations (and the cardinality-operator) during binding.
+   Others, Array_fill, Array_diagonal, etc. are predefined
+   functions. *)
 
-type part_name_t = subject_t * class_tag_t
-type scope_t = subject_t * class_tag_t
+datatype expression_t
+    = NIL
+    | Colon
+    | Otherwise
+    | Scoped of expression_t * scope_t
+    | Vref of instantiation_t option * component_and_subscript_t list
+    | Opr of predefined_operator_t
+    | App of expression_t * expression_t list
+    | ITE of (expression_t * expression_t) list
+    | Der of expression_t list
+    | Pure of expression_t list
+    | Closure of name_t * expression_t list
+    | L_Number of number_type_t * string
+    | L_Bool of bool
+    | L_Enum of class_tag_t * id_t
+    | L_String of string
+    | Array_Triple of expression_t * expression_t * expression_t option
+    | Array_Constructor of expression_t list
+    | Array_Comprehension of expression_t * for_index_t list
+    | Array_Concatenation of expression_t list list
+    | Tuple of expression_t list
+    | Reduction_Argument of expression_t * for_index_t list
+    | Named_Argument of name_t * expression_t
+    | Pseudo_Split of expression_t * int list
+    | Component_Ref of expression_t * id_t
+    | Instances of int list * subject_t list
+    | Iref of id_t
+    | Cref of expression_t * (*outside*) bool
+    | Array_fill of expression_t * expression_t
+    | Array_diagonal of expression_t
+
+withtype for_index_t = id_t * expression_t
+
+and component_and_subscript_t = id_t * expression_t list
 
 datatype visibility_t = Protected | Public
 
@@ -99,6 +148,8 @@ datatype analogical_t = Flow | Stream | Effort
    integers is allowed. *)
 
 datatype variability_t = Constant | Parameter | Discrete | Continuous
+
+(* (Modeless may better be Acausal). *)
 
 datatype input_or_output_t = Input | Output | Modeless
 
@@ -122,20 +173,22 @@ type element_prefixes_t
 type modifier_prefixes_t
      = {Final : bool, Replaceable : bool, Each : bool}
 
-(* Implied is used at internally introducing modifiers.  See the
+datatype connector_type_t__ = ConnectorS__ of (*expandable*) bool
+type connector_status_t__ = connector_type_t__ option
+
+(* Implied is used by internally introduced modifiers.  See the
    copy_type definition. *)
 
 datatype class_kind_t
     = Bad_Kind
     | Implied
+    | Type
     | Class
     | Model
     | Block
-    | Type
     | Record
     | Operator_Record
-    | Connector
-    | Expandable_Connector
+    | Connector of (*expandable*) bool
     | Package
     | Function of (*pure*) bool
     | Operator
@@ -183,21 +236,34 @@ datatype cook_step_t = E0 | E1 | E2 | E3 | E4 | E5
 
 datatype redeclaration_source_t = In_Modifiers | In_Elements
 
-(* Equations. *)
+(* primitive_type_t is stored in Def_Primitive.  Each corresponds to a
+   simple-type.  Even the simple-types have structures, that is, they
+   have attributes.  The attributes of them are described by the
+   corresponding primitive types.  Note that the primitive types also
+   represent values in constant folding. *)
+
+datatype primitive_type_t
+    = P_Number of number_type_t
+    | P_Boolean
+    | P_String
+    | P_Enum of class_tag_t
+
+(* Equations.  Eq_Connect will have Cref (connectors) for the
+   arguments after syntaxing.  E_List is introduced temporarily. *)
 
 datatype equation_t
     = Eq_Eq of ((expression_t * expression_t)
 		* annotation_t * comment_t)
-    | Eq_Connect of ((expression_t * expression_t)
-		     * annotation_t * comment_t)
+    | Eq_Connect of ((expression_t * expression_t) * annotation_t * comment_t)
     | Eq_If of ((expression_t * equation_t list) list
-	      * annotation_t * comment_t)
+		* annotation_t * comment_t)
     | Eq_When of ((expression_t * equation_t list) list
 		  * annotation_t * comment_t)
     | Eq_For of ((for_index_t list * equation_t list)
 		 * annotation_t * comment_t)
     | Eq_App of ((expression_t * expression_t list)
 		 * annotation_t * comment_t)
+    (*| Eq_List of equation_t list * annotation_t * comment_t*)
 
 (* Statements.  Call has a form: "(v):=f(a)".  A comment on statements
    has a separate entry, while most comments are stored in syntax
@@ -250,28 +316,31 @@ and type_marker_t = ENUM | MAIN | BASE | SIMP
    class-tag slot is an original name of a body.  The second slot is a
    class name after potential renaming (for an instance).  The third
    slot is an enclosing class (for a package).  Field abbreviation is:
-   Def_Body(mk,j,cs,nm,ee,aa,ww).  Def_Der is a derivative definition.
-   Def_Body and Def_Der represent the classes after syntaxing.
-   Def_Name specifies a class name in the language.  Def_Scoped
-   replaces Def_Name by attaching scope information.  Def_Refine
-   represents class modifications, either from a short class
-   definition or from an extends-clause.  Def_Refine holds
+   Def_Body(mk,j,cs,nm,cc,ee,aa,ww).  Def_Der is a derivative
+   definition.  Def_Body and Def_Der represent the classes after
+   syntaxing.  Def_Primitive is primitive types.  Def_Outer_Alias is a
+   record left in the instance_tree to map an outer reference to an
+   inner.  Def_Name specifies a class name in the language.
+   Def_Scoped replaces Def_Name by attaching scope information.
+   Def_Refine represents class modifications, either from a short
+   class definition or from an extends-clause.  Def_Refine holds
    component_prefixes but it usually only uses a type_prefix part.
    The entire component_prefixes are needed at instantiation.  Its
-   field abbreviation is: Def_Refine(k,t,q,(ss,mm),a,w).
+   field abbreviation is: Def_Refine(k,t,q,(ss,mm),cc,aa,ww).
    Def_Extending represents an extends-redeclaration.  It is a pair of
-   a base (with modifiers) and a body.  The boolean slot is an
+   a base with modifiers and a body.  The boolean slot is an
    extended-flag indicating a base class is set, and it is true when
-   it replaces a replaceable.  It is used only for checking.
+   it replaces a replaceable.  It is used only for checking purpose.
    Def_Replaced is introduced by a redeclaration, and holds an
    original definition for information.  The first slot is the new
    definition.  Def_Primitive represents a value of a simple-type and
    holds its value.  Def_Displaced is a tag left in place of a
    definition body.  Its subject slot indicates an enclosing class, to
-   refer to an enclosing class that is modified.  Def_In_File is used
-   to indicate that a class is yet to be loaded from a file.  It is
-   only placed in the loaded_classes table.  Such entries are created
-   for file/directory entries when a "package.mo" is loaded.
+   refer to an enclosing class that is modified.  Def_In_File
+   indicates that a class is yet to be loaded from a file.  It is only
+   placed in the loaded_classes table.  Such entries are created for
+   file/directory entries when a "package.mo" is loaded.  It is a pair
+   of an outer reference and a matching inner reference.
    Def_Mock_Array is temporarily used to represent an array of
    instances, which is created on accessing the instance_tree. *)
 
@@ -280,18 +349,21 @@ and definition_body_t
       ((cook_step_t * instantiation_t * type_marker_t)
        * subject_t * class_specifier_t
        * (class_tag_t * subject_t * (*enclosing*) subject_t)
+       * ((*conditional*) expression_t)
        * element_t list * annotation_t * comment_t)
     | Def_Der of
       (class_tag_t * class_specifier_t
        * name_t * id_t list * annotation_t * comment_t)
     | Def_Primitive of
       (primitive_type_t * (*value*) expression_t)
+    | Def_Outer_Alias of instantiation_t * subject_t * subject_t
     | Def_Name of name_t
     | Def_Scoped of (name_t * scope_t)
     | Def_Refine of
       (definition_body_t
        * subject_t option * type_prefixes_t * component_prefixes_t
        * (subscripts_t * modifier_t list)
+       * (*conditional*) expression_t
        * annotation_t * comment_t)
     | Def_Extending of
       ((*extended*) bool * (definition_body_t * modifier_t list)
@@ -299,7 +371,7 @@ and definition_body_t
     | Def_Replaced of
       (definition_body_t
        * (visibility_t * element_prefixes_t
-	  * named_element_t * constraint_t option))
+	  * element_sum_t * constraint_t option))
     | Def_Displaced of class_tag_t * (*enclosing*) subject_t
     | Def_In_File
     | Def_Mock_Array of
@@ -390,63 +462,11 @@ and annotation_t = Annotation of modifier_t list
 (* A naming element in a class is either a class definition or a
    variable declaration. *)
 
-and named_element_t
+and element_sum_t
     = EL_Class of class_definition_t
     | EL_State of variable_declaration_t
 
-(* Expressions.  NIL is an empty element in an output-expression-list.
-   Colon is a [:] in a subscript.  Otherwise is a truth for an
-   else-part condition.  NIL, Colon, and Otherwise appear alone, and
-   not in an expression.  Scoped is an expression in a scope.  Vref
-   represents a component reference which includes array indexing.
-   Opr represends predefined operators.  L_Number, L_String, L_Bool,
-   and L_Enum are literals.  L_Number has a slot indicating Real or
-   Integer.  Real literals are represented by strings to make syntax
-   trees eqtype in SML.  L_Enum is introduced when enumerations are
-   processed.  Reduction_Argument is an argument list for reductions.
-   Note that arguments to Array_Constructor is non-empty.
-   Pseudo_Split is an array indexing, that is introduced at rewriting
-   a non-each modifier on an array.  Component_Ref is a component
-   reference, that is introduced at rewriting a modifier of class
-   copying.  It is with an array dimension which is null for a scalar
-   component.  Iref is an iterator variable reference.  Others,
-   Array_fill, Array_diagonal, etc. are predefined functions. *)
-
-and expression_t
-    = NIL
-    | Colon
-    | Otherwise
-    | Scoped of expression_t * scope_t
-    | Vref of (*resolved*) bool * component_and_subscript_t list
-    | Opr of predefined_operator_t
-    | App of expression_t * expression_t list
-    | ITE of (expression_t * expression_t) list
-    | Der of expression_t list
-    | Pure of expression_t list
-    | Closure of name_t * expression_t list
-    | L_Number of number_type_t * string
-    | L_Bool of bool
-    | L_Enum of class_tag_t * id_t
-    | L_String of string
-    | Array_Triple of expression_t * expression_t * expression_t option
-    | Array_Constructor of expression_t list
-    | Array_Comprehension of expression_t * for_index_t list
-    | Array_Concatenation of expression_t list list
-    | Tuple of expression_t list
-    | Reduction_Argument of expression_t * for_index_t list
-    | Named_Argument of name_t * expression_t
-    | Pseudo_Split of expression_t * int list
-    | Component_Ref of expression_t * id_t
-    | Instance of int list * definition_body_t list * definition_body_t option
-    | Iref of id_t
-    | Array_fill of expression_t * expression_t
-    | Array_diagonal of expression_t
-
-withtype for_index_t = id_t * expression_t
-
-and component_and_subscript_t = id_t * expression_t list
-
-and subscripts_t = expression_t list
+withtype subscripts_t = expression_t list
 
 and constraint_t = (definition_body_t * modifier_t list
 		    * annotation_t * comment_t)
@@ -454,17 +474,17 @@ and constraint_t = (definition_body_t * modifier_t list
 and enum_list_t = (id_t * annotation_t * comment_t) list
 
 type binding_element_t = (visibility_t * element_prefixes_t
-			  * named_element_t * constraint_t option)
+			  * element_sum_t * constraint_t option)
 
 (* An entry of an element list (definitions/declarations).  It is
    stored in the class_bindings table.  The identifier slot is a
-   variable/class name.  The subject slot is a composite name, which
-   is either a composition of a defining class and a name, or it is an
-   outer component, or it is a name of an imported package. *)
+   variable/class name.  The first subject slot is a composite name,
+   which is a composition of a defining class and a name.  The second
+   subject slot points to an inner when this element is an outer. *)
 
-datatype binding_t
-    = Binding of (id_t * subject_t * (*imported*) bool
-		  * binding_element_t)
+datatype naming_t
+    = Naming of (id_t * subject_t * subject_t option * (*imported*) bool
+		 * binding_element_t)
 
 (* ================================================================ *)
 
@@ -476,9 +496,9 @@ type constraint_no_comment_t = (definition_body_t * modifier_t list)
 
 type class_definition_list_t = (name_t * class_definition_t list)
 
-(* Parser stack elements.  It includes lexical tokens: identifiers,
-   keywords, reserved characters, operators, and relations.  They are
-   passed as VS_TOKEN from the lexer (including quoted-strings). *)
+(* vs_t is a parser stack element.  It includes lexical tokens:
+   identifiers, keywords, reserved characters, operators, and
+   relations.  They are passed as VS_TOKEN from the lexer. *)
 
 datatype vs_t
     = VS_NOTHING of unit
@@ -558,19 +578,20 @@ val copy_type : type_prefixes_t = (Implied, no_class_prefixes)
 val no_each_or_final : each_or_final_t = {Each=false, Final=false}
 
 (*val xxx_null_class = Defclass ((Id "", bad_tag), Def_Displaced bad_tag)*)
-
 (*fun syntax_error (s : string) = (raise (SyntaxError s))*)
+
 fun syntax_error (s : string) = (raise (Fail s))
 
 fun make_predefinition_body enum body aa ww = (
     Def_Body ((E0, PKG, enum),
 	      bad_subject, bad_class,
 	      (bad_tag, bad_subject, bad_subject),
+	      NIL,
 	      body, aa, ww))
 
 fun make_short_predefinition k io (ss, mm) aa ww = (
     Def_Refine (k, NONE, bad_type,
-		(Effort, Continuous, io), (ss, mm), aa, ww))
+		(Effort, Continuous, io), (ss, mm), NIL, aa, ww))
 
 fun name_append (Name ss) (Id s) = (Name (ss @ [s]))
 
@@ -592,7 +613,7 @@ fun qualify_name ((Id v), (Ctag pkg)) = (
 (* Combines two array subscripts in the row-major order, such as
    "T[s0]~a[s1]=>T[s1,s0]~a", or "T[s0][s1]=>T[s1,s0]". *)
 
-fun merge_subscripts s1 s0 = (s1 @ s0)
+fun merge_subscripts s0 s1 = (s1 @ s0)
 
 fun set_visibility z e = (
     case e of
@@ -641,13 +662,13 @@ fun set_class_prefixes (t1, p1) (Defclass ((v, g), k0)) = (
     let
 	fun set_prefixes (t1, p1) k = (
 	    case k of
-		Def_Body ((u, f, b), j, cs0, (c, n, x), ee, aa, ww) => (
+		Def_Body ((u, f, b), j, cs0, (c, n, x), cc, ee, aa, ww) => (
 		let
 		    val _ = if (cs0 = bad_class) then () else raise Match
 		    val (t0, p0, q) = cs0
 		    val cs1 = (t1, p1, q)
 		in
-		    Def_Body ((u, f, b), j, cs1, (c, n, x), ee, aa, ww)
+		    Def_Body ((u, f, b), j, cs1, (c, n, x), cc, ee, aa, ww)
 		end)
 	      | Def_Der (c, cs0, n, vv, aa, ww) => (
 		let
@@ -658,14 +679,15 @@ fun set_class_prefixes (t1, p1) (Defclass ((v, g), k0)) = (
 		    Def_Der (c, cs1, n, vv, aa, ww)
 		end)
 	      | Def_Primitive _ => raise Match
+	      | Def_Outer_Alias _ => raise Match
 	      | Def_Name _ => raise Match
 	      | Def_Scoped _ => raise Match
-	      | Def_Refine (kx, v, ts0, q, (ss, mm), a, w) => (
+	      | Def_Refine (kx, v, ts0, q, (ss, mm), cc, aa, ww) => (
 		let
 		    val _ = if (ts0 = bad_type) then () else raise Match
 		    val ts1 = (t1, p1)
 		in
-		    Def_Refine (kx, v, ts1, q, (ss, mm), a, w)
+		    Def_Refine (kx, v, ts1, q, (ss, mm), cc, aa, ww)
 		end)
 	      | Def_Extending (g, x, kx) => (
 		Def_Extending (g, x, (set_prefixes (t1, p1) kx)))
@@ -685,15 +707,16 @@ fun set_class_final (Defclass ((v, g), k0)) = (
 
 	fun set_body fix k = (
 	    case k of
-		Def_Body (mk, j, (t, p, q), (c, n, x), ee, aa, ww) => (
-		Def_Body (mk, j, (t, (fix p), q), (c, n, x), ee, aa, ww))
+		Def_Body (mk, j, (t, p, q), (c, n, x), cc, ee, aa, ww) => (
+		Def_Body (mk, j, (t, (fix p), q), (c, n, x), cc, ee, aa, ww))
 	      | Def_Der (c, (t, p, q), n, vv, aa, ww) => (
 		Def_Der (c, (t, (fix p), q), n, vv, aa, ww))
 	      | Def_Primitive _ => raise Match
+	      | Def_Outer_Alias _ => raise Match
 	      | Def_Name _ => raise Match
 	      | Def_Scoped _ => raise Match
-	      | Def_Refine (kx, v, (t, p), q, (ss, mm), aa, ww) => (
-		Def_Refine (kx, v, (t, (fix p)), q, (ss, mm), aa, ww))
+	      | Def_Refine (kx, v, (t, p), q, (ss, mm), cc, aa, ww) => (
+		Def_Refine (kx, v, (t, (fix p)), q, (ss, mm), cc, aa, ww))
 	      | Def_Extending (g, x, kx) => (
 		Def_Extending (g, x, (set_body fix kx)))
 	      | Def_Replaced _ => raise Match
@@ -712,38 +735,38 @@ fun set_class_final (Defclass ((v, g), k0)) = (
 fun make_component_clause
 	((q, n) : component_type_specifier_t)
 	(ss0 : subscripts_t)
-	((v, ss1, mm, c, a, w) : declaration_with_subscripts_t) = (
+	((v, ss1, mm, cc, aa, ww) : declaration_with_subscripts_t) = (
     let
-	val ssx = (merge_subscripts ss1 ss0)
+	val ssx = (merge_subscripts ss0 ss1)
 	val k0 = if ((null ssx) andalso (null mm)) then
 		     Def_Name n
 		 else
 		     Def_Refine (Def_Name n, NONE, copy_type,
 				 no_component_prefixes,
-				 (ssx, mm), Annotation [], Comment [])
+				 (ssx, mm), NIL, Annotation [], Comment [])
     in
-	Defvar (v, q, k0, c, a, w)
+	Defvar (v, q, k0, cc, aa, ww)
     end)
 
-fun attach_comment_to_equation q (a, w) = (
+fun attach_comment_to_equation q (aa, ww) = (
     case q of
-	Eq_Eq ((x, y), _, _) => Eq_Eq ((x, y), a, w)
-      | Eq_Connect ((x, y), _, _) => Eq_Connect ((x, y), a, w)
-      | Eq_If (c, _, _) => Eq_If (c, a, w)
-      | Eq_When (c, _, _) => Eq_When (c, a, w)
-      | Eq_For ((i, qq), _, _) => Eq_For ((i, qq), a, w)
-      | Eq_App ((e, ee), _, _) => Eq_App ((e, ee), a, w))
+	Eq_Eq ((x, y), _, _) => Eq_Eq ((x, y), aa, ww)
+      | Eq_Connect ((x, y), _, _) => Eq_Connect ((x, y), aa, ww)
+      | Eq_If (cc, _, _) => Eq_If (cc, aa, ww)
+      | Eq_When (cc, _, _) => Eq_When (cc, aa, ww)
+      | Eq_For ((rr, qq), _, _) => Eq_For ((rr, qq), aa, ww)
+      | Eq_App ((e, ee), _, _) => Eq_App ((e, ee), aa, ww))
 
-fun attach_comment_to_statement s (a, w) = (
+fun attach_comment_to_statement s (aa, ww) = (
     case s of
-	St_Break (_, _) => St_Break (a, w)
-      | St_Return (_, _) => St_Return (a, w)
-      | St_Assign (x0, x1, _, _) => St_Assign (x0, x1, a, w)
-      | St_Call (vv, f, ee, _, _) => St_Call (vv, f, ee, a, w)
-      | St_If (cc, _, _) => St_If (cc, a, w)
-      | St_For (ii, ss, _, _) => St_For (ii, ss, a, w)
-      | St_While (e, ss, _, _) => St_While (e, ss, a, w)
-      | St_When (cc, _, _) => St_When (cc, a, w))
+	St_Break (_, _) => St_Break (aa, ww)
+      | St_Return (_, _) => St_Return (aa, ww)
+      | St_Assign (x, y, _, _) => St_Assign (x, y, aa, ww)
+      | St_Call (vv, f, ee, _, _) => St_Call (vv, f, ee, aa, ww)
+      | St_If (cc, _, _) => St_If (cc, aa, ww)
+      | St_When (cc, _, _) => St_When (cc, aa, ww)
+      | St_For (rr, ss, _, _) => St_For (rr, ss, aa, ww)
+      | St_While (e, ss, _, _) => St_While (e, ss, aa, ww))
 
 (* Makes if-then-else, by simply concatenating an else-if part to
    reduce nesting. *)
@@ -753,32 +776,29 @@ fun make_ite cc0 elsepart = (
 	ITE cc1 => ITE (cc0 @ cc1)
       | _ => ITE (cc0 @ [(Otherwise, elsepart)]))
 
-(* Parses a string as a decimal integer. *)
+(* Parses a whole string as a decimal integer. *)
 
 fun string_is_int s = (
     let
 	val ss = (TextIO.openString s)
-	val v = case (TextIO.scanStream (Int.scan StringCvt.DEC) ss) of
-		    NONE => NONE
-		  | SOME v => (
-		    if (TextIO.endOfStream ss) then
-			SOME v
-		    else
-			NONE)
+	val x = (TextIO.scanStream (Int.scan StringCvt.DEC) ss)
+	val eos = (TextIO.endOfStream ss)
 	val _ = (TextIO.closeIn ss)
     in
-	v
+	case (x, eos) of
+	    (SOME v, true) => SOME v
+	  | _  => NONE
     end)
 
-(* Floating-point numbers (including integers) are readable by the SML
-   IEEE floating-point number reader. *)
+(* Makes a number literal (real or integer).  The IEEE floating-point
+   number reader of SML can read both reals and integers. *)
 
-fun check_literal_number s = (
+fun string_to_literal_number s = (
     case (IEEEReal.fromString s) of
-	SOME x_ => (
+	SOME _ => (
 	case (string_is_int s) of
 	    NONE => L_Number (R, s)
-	  | SOME v_ => L_Number (Z, s))
+	  | SOME _ => L_Number (Z, s))
       | NONE => (
 	raise (error_bad_literal_number s)))
 

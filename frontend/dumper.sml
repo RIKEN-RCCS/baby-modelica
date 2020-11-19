@@ -1,5 +1,5 @@
 (* dumper.sml -*-Coding: us-ascii-unix;-*- *)
-(* Copyright (C) 2018-2020 RIKEN R-CCS *)
+(* Copyright (C) 2018-2021 RIKEN R-CCS *)
 
 (* SMALL FUNCTIONS FOR TRACE PRINTING. *)
 
@@ -55,8 +55,9 @@ fun expression_to_string w = (
 	  | Otherwise => "otherwise"
 	  | Scoped (x1, scope) => ("(scoped "^ (expression_to_string x1) ^")")
 	  | Vref (_, []) => raise Match
-	  | Vref (false, rr) => (ref_to_string rr)
-	  | Vref (true, rr) => (ref_to_string rr)
+	  | Vref (NONE, rr) => (ref_to_string rr)
+	  | Vref (SOME ns, rr) => (
+	    (ref_to_string rr))
 	  | Opr p => (predefined_operator_to_string p)
 	  | App (f, aa) => (
 	    let
@@ -178,6 +179,7 @@ fun expression_to_string w = (
 	    in
 		("(Component_Ref "^ s0 ^", "^ s1 ^")")
 	    end)
+	  (*
 	  | Instance (d, kk, _) => (
 	    let
 		val class_name = (subject_to_string o subject_of_class)
@@ -195,12 +197,27 @@ fun expression_to_string w = (
 		      | (k :: _) => (
 			("(Instance ["^ ds ^"] "^ (class_name k) ^")"))
 	    end)
+	  *)
+	  | Instances ([], [subj]) => (
+	    ("(Instance "^ (subject_to_string subj) ^")"))
+	  | Instances ([], _) => raise Match
+	  | Instances (dim, subjs) => (
+	    let
+		val ds = ((String.concatWith ",")
+			      (map Int.toString dim))
+	    in
+		case subjs of
+		    [] => ("(Instance ["^ ds ^"])")
+		  | (k :: _) => (
+		    ("(Instance ["^ ds ^"] "^ (subject_to_string k) ^")"))
+	    end)
 	  | Iref v => (
 	    let
 		val sv = (id_to_string v)
 	    in
 		("(#iterator ("^ sv ^")")
 	    end)
+	  | Cref (x, b) => (expression_to_string x)
 	  | Array_fill (e, n) => (
 	    let
 		val se = (expression_to_string e)

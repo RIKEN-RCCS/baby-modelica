@@ -1,5 +1,5 @@
 (* finder.sml -*-Coding: us-ascii-unix;-*- *)
-(* Copyright (C) 2018-2020 RIKEN R-CCS *)
+(* Copyright (C) 2018-2021 RIKEN R-CCS *)
 
 (* COMPONENT NAME LOOKUP. *)
 
@@ -11,16 +11,16 @@ sig
     type definition_body_t
     type cook_step_t
     type cooker_t
-    type binding_t
+    type naming_t
 
     val find_class :
 	cooker_t -> (subject_t * definition_body_t) -> name_t
-	-> (subject_t * definition_body_t) option
+	-> definition_body_t option
     val list_elements :
-	cooker_t -> bool -> definition_body_t -> binding_t list
+	cooker_t -> bool -> definition_body_t -> naming_t list
     val find_name_initial_part :
 	cooker_t -> cook_step_t -> (subject_t * definition_body_t) -> id_t
-	-> binding_t option
+	-> naming_t option
 end = struct
 
 open ast
@@ -49,7 +49,7 @@ fun tr_find_vvv (s : string) = if false then (print (s ^"\n")) else ()
 
 (* Errs if a binding has an inner or outer. *)
 
-fun check_without_inner_or_outer (Binding (v, _, _, (z, r, cv, h))) = (
+fun check_without_inner_or_outer (Naming (v, _, _, _, (z, r, cv, h))) = (
     let
 	val {Inner, Outer, ...} = r
     in
@@ -67,28 +67,29 @@ fun find_predefined_variable v = (
 
 (* ================================================================ *)
 
-fun make_dummy_inner (cv0 : named_element_t) subj = (
+fun make_dummy_inner (cv0 : element_sum_t) subj = (
     let
 	val _ = (warn_no_inner cv0)
-	val v = (name_of_naming cv0)
-	val subject = (compose_subject subj v [])
+	val id = (name_of_element_union cv0)
+	val subject = (compose_subject subj id [])
 	val s = (subject_to_string subject)
-	val r = {Final=false, Replaceable=false,
-		 Inner=true, Outer=false}
-	val dummy = Binding (v, subject, false, (Public, r, cv0, NONE))
     in
 	case (HashTable.find dummy_inners s) of
 	    NONE => (
 	    let
+		val r = {Final=false, Replaceable=false,
+			 Inner=true, Outer=false}
+		val dummy = Naming (id, subject, NONE, false,
+				    (Public, r, cv0, NONE))
 		val _ = (HashTable.insert dummy_inners (s, dummy))
 	    in
-		dummy
+		subject
 	    end)
-	  | SOME (b as Binding (v, _, _, (_, _, cv1, _))) => (
+	  | SOME (Naming (_, _, _, _, (_, _, cv1, _))) => (
 	    if (not (classes_are_compatible cv0 cv1)) then
 		raise (error_incompatible_outers cv0 cv1)
 	    else
-		b)
+		subject)
     end)
 
 (* Gathers variable/class names in a class including its imported and
@@ -131,11 +132,11 @@ fun list_elements (cooker : cooker_t) exclude_imported kp = (
    comments of list_elements.  Note that the outer case handles the
    inner-outer case as well. *)
 
-and gather_names_in_class (cooker : cooker_t) (subjkp, kp) : binding_t list = (
+and gather_names_in_class (cooker : cooker_t) (subjkp, kp) : naming_t list = (
     let
 	val package = (class_is_package kp)
 
-	fun mark_imported (Binding (v, j, _, e)) = (Binding (v, j, true, e))
+	fun mark_imported (Naming (v, j, i, _, e)) = Naming (v, j, i, true, e)
 
 	fun list_names (subjkp, kp) e = (
 	    case e of
@@ -144,36 +145,48 @@ and gather_names_in_class (cooker : cooker_t) (subjkp, kp) : binding_t list = (
 	      | Element_Class (z, r, d, h) => (
 		let
 		    val Defclass ((v, g), k) = d
-		    val subsubj = (compose_subject subjkp v [])
+		    val subj = (compose_subject subjkp v [])
 		in
 		    if (not package) then
 			if (#Outer r) then
-			    [(look_for_inner cooker (EL_Class d) subjkp)]
+			    let
+				val inner = (look_for_inner
+						 cooker (EL_Class d) subjkp)
+			    in
+				[Naming (v, subj, SOME inner, false,
+					 (z, r, EL_Class d, h))]
+			    end
 			else
-			    [Binding (v, subsubj, false,
-				      (z, r, EL_Class d, h))]
+			    [Naming (v, subj, NONE, false,
+				     (z, r, EL_Class d, h))]
 		    else
 			if (#Outer r) then
 			    []
 			else
-			    [Binding (v, subsubj, false,
-				      (z, r, EL_Class d, h))]
+			    [Naming (v, subj, NONE, false,
+				     (z, r, EL_Class d, h))]
 		end)
 	      | Element_State (z, r, d, h) => (
 		let
 		    val Defvar (v, _, _, _, _, _) = d
-		    val subsubj = (compose_subject subjkp v [])
+		    val subj = (compose_subject subjkp v [])
 		in
 		    if (not package) then
 			if (#Outer r) then
-			    [(look_for_inner cooker (EL_State d) subjkp)]
+			    let
+				val inner = (look_for_inner
+						 cooker (EL_State d) subjkp)
+			    in
+				[Naming (v, subj, SOME inner, false,
+					 (z, r, EL_State d, h))]
+			    end
 			else
-			    [Binding (v, subsubj, false,
-				      (z, r, EL_State d, h))]
+			    [Naming (v, subj, NONE, false,
+				     (z, r, EL_State d, h))]
 		    else
 			if (declaration_is_constant d) then
-			    [Binding (v, subsubj, false,
-				      (z, r, EL_State d, h))]
+			    [Naming (v, subj, NONE, false,
+				     (z, r, EL_State d, h))]
 			else
 			    []
 		end)
@@ -205,8 +218,8 @@ and gather_names_in_class (cooker : cooker_t) (subjkp, kp) : binding_t list = (
 		      | SOME (id0, id1) => (
 			case (find_in_bindings id0 nn2) of
 			    NONE => raise (error_no_import_name id0)
-			  | SOME (Binding (_, j, i, e)) =>
-			    [Binding (id1, j, i, e)])
+			  | SOME (Naming (_, j, n, i, e)) =>
+			    [Naming (id1, j, n, i, e)])
 		end)
 	      | Element_Base (z, ci, a) => []
 	      | Base_List _ => []
@@ -223,87 +236,75 @@ and gather_names_in_class (cooker : cooker_t) (subjkp, kp) : binding_t list = (
 	vv1
     end)
 
-(* Returns a binding.  It returns a dummy binding when no inner is
-   found. *)
+(* Returns a matching inner for a class or variable name cv from the
+   class pointed by a subject.  It returns a dummy one when no inner
+   is found. *)
 
 and look_for_inner (cooker : cooker_t) cv (subj : subject_t) = (
     let
+	val id = (name_of_element_union cv)
 	val Subj (ns, _) = subj
 	val _ = if (ns = VAR) then () else raise Match
 	val (prefix, _) = (subject_prefix subj)
-	val n0 = (look_for_inner_loop cooker cv prefix)
-	val Binding (v, subsubj, i, (z, r, d, h)) = n0
-
-	(*val kx = surely (fetch_from_instance_tree var)*)
-	(*val _ = (check_cooked_at_least E3 kx)*)
-	(*val b1 = Binding (v, var, (z, (clear_inner r), d, h))*)
+	val inner = (look_for_inner_loop cooker cv prefix)
+	val newsubj = (compose_subject subj id [])
+	(*val Naming (id, subsubj, inner, i, e) = binding0*)
+	(*val _ = if (inner = NONE) then () else raise Match*)
+	(*val binding1 = Naming (id, newsubj, SOME subsubj, i, e)*)
 
 	val _ = tr_find (";; Match inner-outer ("^
-			 (subject_print_string subsubj) ^" for "^
-			 (subject_print_string (compose_subject subj v []) ^")"))
+			 (subject_print_string inner) ^" for "^
+			 (subject_print_string newsubj) ^")")
     in
-	n0
+	inner
     end)
 
 and look_for_inner_loop (cooker : cooker_t) cv (prefix0 : subject_t) = (
     let
-	fun search cooker cv subj = (
-	    case subj of
+	fun search cooker cv subj0 = (
+	    case subj0 of
 		Subj (PKG, _) => raise Match
-	      | Subj (VAR, []) => NONE
-	      | _ => (
-		let
-		    val _ = tr_find (";; look_for_inner ("^
-				     (id_to_string (name_of_naming cv))
-				     ^" in "^ (subject_print_string subj) ^")")
-		in
-		    case (look_for_inner_in_class cooker cv subj) of
-			SOME kx => SOME kx
-		      | NONE => (
+	      | Subj (VAR, _) => (
+		case (look_for_inner_in_class cooker cv subj0) of
+		    SOME subj1 => SOME subj1
+		  | NONE => (
+		    case subj0 of
+		        Subj (VAR, []) => NONE
+		      | Subj (VAR, _) => (
 			let
-			    val (prefix1, _) = (subject_prefix subj)
+			    val (prefix1, _) = (subject_prefix subj0)
 			in
 			    (search cooker cv prefix1)
 			end)
-		end))
+		      | Subj (PKG, _) => raise Match)))
     in
 	case (search cooker cv prefix0) of
-	    SOME kx => kx
+	    SOME inner => inner
 	  | NONE => (make_dummy_inner cv prefix0)
     end)
 
-and look_for_inner_in_class (cooker : cooker_t) cv0 subj = (
+and look_for_inner_in_class (cooker : cooker_t) cv0 subj0 = (
     let
-	val v = (name_of_naming cv0)
-	val k = surely (fetch_from_instance_tree subj)
-	val _ = if (class_is_instance k) then () else raise Match
-	val _ = (assert_match_subject subj k)
-	val bindings = (list_elements cooker true k)
+	fun inner id (Naming (x, _, _, _, (z, {Inner, ...}, d, r))) = (
+	    ((x = id) andalso (z = Public) andalso (Inner = true)))
 
-	fun inner (Binding (x, _, _, (z, {Inner, ...}, cv1, r))) = (
-	    ((v = x) andalso (z = Public) andalso (Inner = true)))
+	val _ = tr_find (";; look_for_inner ("^
+			 (id_to_string (name_of_element_union cv0))
+			 ^" in "^ (subject_print_string subj0) ^")")
+
+	val id = (name_of_element_union cv0)
+	val kp = surely (fetch_from_instance_tree subj0)
+	val _ = if (class_is_instance kp) then () else raise Match
+	val _ = (assert_match_subject subj0 kp)
+	val bindings = (list_elements cooker true kp)
     in
-	case (List.find inner bindings) of
+	case (List.find (inner id) bindings) of
 	    NONE => NONE
-	  | SOME (Binding (v1, subj1, i, e as (z, r, cv1, h))) => (
+	  | SOME (Naming (_, subj1, _, _, (z, r, cv1, h))) => (
 	    if (not (classes_are_compatible cv0 cv1)) then
 		raise (error_incompatible_outers cv0 cv1)
 	    else
-		let
-		    (*val subsubj = (compose_subject subj v)*)
-		in
-		    SOME (Binding (v1, subj1, i, e))
-		end)
-    end)
-
-fun look_for_inner_class (cooker : cooker_t) kp cv0 subj = (
-    let
-	val _ = if (not (class_is_package kp)) then ()
-		else raise (error_outer_in_package cv0 kp)
-    in
-	case (look_for_inner cooker cv0 subj) of
-	    Binding (_, _, _, (z, r, EL_Class d1, h)) => d1
-	  | Binding (_, _, _, (z, r, EL_State d1, h)) => raise Match
+		SOME subj1)
     end)
 
 (* ================================================================ *)
@@ -327,7 +328,7 @@ fun find_name_initial_part (cooker : cooker_t) step (subjkp_, kp) (id as Id s) =
 		    val e = (global_element dd)
 		    val subj1 = (predefined_reference id)
 		in
-		    SOME (Binding (id, subj1, false, e))
+		    SOME (Naming (id, subj1, NONE, false, e))
 		end)
 	      | NONE => (
 		case (lookup_class_in_root id) of
@@ -339,7 +340,7 @@ fun find_name_initial_part (cooker : cooker_t) step (subjkp_, kp) (id as Id s) =
 			val e = (global_element dd)
 				    (*val subjx = (class_reference_in_root v)*)
 		    in
-			SOME (Binding (id, subjx, false, e))
+			SOME (Naming (id, subjx, NONE, false, e))
 		    end))
 	else
 	    let
@@ -349,10 +350,7 @@ fun find_name_initial_part (cooker : cooker_t) step (subjkp_, kp) (id as Id s) =
 		val bindings = (list_elements cooker false kp)
 	    in
 		case (find_in_bindings id bindings) of
-		    SOME (n as Binding (_, _, _, (z, r, EL_Class d, h))) => (
-		    SOME n)
-		  | SOME (n as Binding (_, _, _, (z, r, EL_State d, h))) => (
-		    SOME n)
+		    SOME binding => SOME binding
 		  | NONE => (
 		    let
 			val k1 = (fetch_enclosing_class kp)
@@ -375,38 +373,46 @@ fun find_name_initial_part (cooker : cooker_t) step (subjkp_, kp) (id as Id s) =
 
 (* ================================================================ *)
 
-fun find_class_loop (cooker : cooker_t) kp enclosing0 (subj0, k0) nn0 = (
+(* Returns a name taking account of an inner-outer matching. *)
+
+fun true_subject (Naming (_, subj, inner, _, e)) = (
+    case inner of
+	NONE => subj
+      | SOME subjx => subjx)
+
+fun find_class_loop (cooker : cooker_t) kp enclosing0 (subjk0, k0) nn0 = (
     case nn0 of
-	[] => SOME (enclosing0, k0)
+	[] => SOME k0
       | (s :: tt) => (
 	let
 	    (*val _ = tr_find (";; AHO find_class_loop 0")*)
 	    (*val Defclass ((_, _), x0) = d0*)
-	    val k2 = (assemble_package_if_fresh cooker E3 (subj0, k0))
-	    val _ = (assert_match_subject subj0 k2)
+	    val k2 = (assemble_package_if_fresh cooker E3 (subjk0, k0))
+	    val _ = (assert_match_subject subjk0 k2)
 	    val id = (Id s)
 	    val bindings = (list_elements cooker true k2)
 	in
 	    case (find_in_bindings id bindings) of
 		NONE => raise (error_class_name_not_found (Name nn0) kp)
-	      | SOME (Binding (_, subsubj, _, (z, r, EL_Class d, h))) => (
+	      | SOME (name as Naming (_, _, _, _, (z, r, EL_Class dx, h))) => (
 		let
-		    val Defclass ((_, _), x0) = d
-		    val enclosing1 = subj0
+		    val subjx0 = (true_subject name)
+		    val Defclass ((_, _), x0) = dx
+		    val enclosing1 = subjk0
 		in
-		    (find_class_loop cooker kp enclosing1 (subsubj, x0) tt)
+		    (find_class_loop cooker kp enclosing1 (subjx0, x0) tt)
 		end)
-	      | SOME (Binding (v, _, _, (z, r, EL_State d, h))) => (
+	      | SOME (Naming (_, _, _, _, (z, r, EL_State d, h))) => (
 		raise (error_state_found_for_class (Name nn0) kp))
 	end))
 
 (* Looks for a class name in a class.  It processes intermediate
    classes as packages, but it does not process the one returned. *)
 
-fun find_class (cooker : cooker_t) (subj_, kp) nn = (
+fun find_class (cooker : cooker_t) (subjkp_, kp) nn = (
     let
 	val _ = if (step_is_at_least E3 kp) then () else raise Match
-	val _ = (assert_match_subject subj_ kp)
+	val _ = (assert_match_subject subjkp_ kp)
 	(*val kp = surely (fetch_from_instance_tree scope)*)
 	(*val extending = false*)
 	(*val step = if extending then E2 else E3*)
@@ -417,14 +423,15 @@ fun find_class (cooker : cooker_t) (subj_, kp) nn = (
 	  | Name (s :: t) => (
 	    case (find_name_initial_part cooker E3 (subj, kp) (Id s)) of
 		NONE => NONE
-	      | SOME (Binding (v, subsubj, _, (z, r, EL_Class d, h))) => (
+	      | SOME (name as Naming (_, _, _, _, (z, r, EL_Class dx, h))) => (
 		let
-		    val Defclass ((_, _), x0) = d
-		    val (enclosing, _) = (subject_prefix subsubj)
+		    val subjx0 = (true_subject name)
+		    val Defclass (_, x0) = dx
+		    val (enclosing, _) = (subject_prefix subjx0)
 		in
-		    (find_class_loop cooker kp enclosing (subsubj, x0) t)
+		    (find_class_loop cooker kp enclosing (subjx0, x0) t)
 		end)
-	      | SOME (Binding (v, _, _, (z, r, EL_State d, h))) => (
+	      | SOME (Naming (_, _, _, _, (z, r, EL_State dx, h))) => (
 		raise (error_state_found_for_class nn kp)))
     end)
 

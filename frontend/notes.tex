@@ -6,7 +6,7 @@
 \usepackage[b5paper,margin=1.5cm]{geometry}
 
 \title{\bf{}Baby-Modelica Implementation Notes}
-\author{Copyright (C) 2018-2020 RIKEN R-CCS}
+\author{Copyright (C) 2018-2021 RIKEN R-CCS}
 \date{Baby-Modelica 3.4.0, 2020-01-29}
 
 \usepackage[hidelinks]{hyperref}
@@ -34,6 +34,9 @@
 \def\quotelead{\refstepcounter{quoteno}{\bf{}Quote~\arabic{quoteno}}.}
 \newenvironment{qquote}{\begin{quote}\quotelead}%
 {\end{quote}\ignorespacesafterend}
+
+\newenvironment{specquote}[1]{\begin{qquote} (\specref{#1}\/) }%
+{\end{qquote}}
 
 \newenvironment{widequote}{%
 \list{}{\leftmargin=0mm\rightmargin=\leftmargin}%
@@ -103,11 +106,18 @@
 
 \subsection{Baby-Modelica}
 
-Baby-Modelica is a simple parser of the Modelica language
-specification~3.4.  Its intended use is to create data extraction
-tools for Modelica models.  Its parser can dump a flat model.  The
-version number is the last digits, appended to the version number of
-the Modelica language specification.
+Baby-Modelica is a simple frontend (parser+flattener) for the Modelica
+language specification 3.4.  It parses the source code then performs
+simple syntactic transformations, and optionally dumps a flat model.
+Flattening a model is an essential part of Modelica, and it resolves
+all the features as an object-oriented language.  Flattening is
+indispensable even for simple tools, because parameters in a model are
+substituted multiple times by nested parameterization.  A generated
+flat model is hopefully to be re-readable by Modelica compilers.
+
+Current status is a pre-zero version, and we are working towards
+version zero.  The version number of Baby-Modelica is the last digits,
+appended to the version number of the Modelica language specification.
 
 This random memo accompanies the source code.  We apologize if it is
 illegible.  This document often refers to the sections of
@@ -120,9 +130,9 @@ the_specification.
 \begin{itemize}
 
 \item The_implementation is written in SML~'97 (Standard ML).  The
-code is developed with Poly/ML and SML/NJ (on SunOS~5.11/amd64).
-Sometimes the code is twisted because SML does not allow forward
-references of names.
+code is developed mainly with Poly/ML (on SunOS~5.11/amd64), but it
+may work with SML/NJ or MLton.  Sometimes the code is twisted because
+SML does not allow forward references of names.
 
 \item The_implementation uses a modified BYACC parser generator (not
 ml-yacc), which can be obtained separately.
@@ -159,6 +169,18 @@ exception.  The definition of {ModelicaServices.Integer\_inf} in
 MSL~3.2.3 is in 32~bits, and it is no problem for 64~bit SML
 implementations.
 
+\item (* Array subscripts ":" to connector references are not
+handled. *).
+
+\item (* The code for expanding for-equations and finding implicit
+iterator ranges is not tested at all. *).
+
+\item The package Connectors cannot be extended.  It is handled
+nominally.
+
+\item (?) Translation-time constants cannot depend on variables in
+expandable_connectors.
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%
@@ -193,21 +215,20 @@ but it seems not).  There is an accompanying paper~\cite{paredis2010}.
 
 \section{Parsing}
 
+{Parsing} is simply done by a BYACC generated parser.
+
 %%%%%%%%%%%%%%%%
 
 \subsection{Code tips}
 
 \begin{itemize}
 
-\item The rules in {\it{}Modelica Concrete Syntax\/} in
+\item The rule set in {\it{}Modelica Concrete Syntax\/} defined in
 the_specification is used essentially verbatim.
 
 \item The keywords {\bf{}end} and {\bf{}initial} appearing in the
 {\it{}primary\/} expression of the syntax rules cause conflicts in
 BYACC\@.
-
-%% \item The_implementation internally introduces a $\mathrm{ENUM}$ kind
-%% and uses it in place of $\mathbf{type}$.
 
 \end{itemize}
 
@@ -238,9 +259,9 @@ returns an identifier for {\bf{}initial}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\section{Syntaxing}
+\section{Resolving}
 
-Syntaxing handles modifier applications in a model for elaboration.
+{Resolving} handles modifier applications in a model for elaboration.
 
 %%%%%%%%%%%%%%%%
 
@@ -251,7 +272,7 @@ Syntaxing handles modifier applications in a model for elaboration.
 \item The_implementation directly handles a short_class_definition as
 a class {\it{}refining\/} which represents modifier applications,
 although it is defined as an expansion to a class definition with an
-extends-clause in~\specref{4.5.1}.
+extends-clause in \specref{4.5.1}.
 
 \item Mutual extendings are ignored (not errors).
 
@@ -285,8 +306,8 @@ is a base of it.
 A class being named by a package/instance name is appropriate, because
 only classes used are need to be accessed.  Note that all class bodies
 (a list of elements) have names, with the exception of a body of an
-extends-redeclaration, where the base class name is used as a name for
-it.
+extends-redeclaration, for which the base class name is used as a name
+for it.
 
 %%%%%%%%%%%%%%%%
 
@@ -316,19 +337,19 @@ import n2 = pkg.n2;
 
 \subsubsection*{Modifier applications}
 
-The syntaxer associates an application of modifiers to a declaration
+The_syntaxer associates an application of modifiers to a declaration
 which is converted to a modification.  Association to a class
 definition $C$ is by temporarily creating a syntax element
-$\mathit{refine}(C, ...)$ with modifiers.
+$\mathit{refine}\,(C, ...)$ with modifiers.
 
 \subsubsection*{Redeclarations}
 
-The syntaxer handles a redeclaration by replacing a replaceable.
+The_syntaxer handles a redeclaration by replacing a replaceable.
 Similarly, it handles an extends-redeclaration by replacing a
 replaceable class and making it a base class.
 
 A class redefinition may need be applied to multiple occurrences of a
-replaceable in class elements, because the syntaxer delays merging
+replaceable in class elements, because the_syntaxer delays merging
 elements in a main and base classes.  See
 Rule~\ref{multiple-definitions}.
 
@@ -422,9 +443,9 @@ Fact~\ref{parameters}.
 
 \subsection{Instantiating by one big pass}
 
-Instantiating is a bit complex procedure.  It works top down in order
-to handle modifiers and inner-outer matching, while it is usually
-natural to work bottom up because each submodel only knows and
+{Instantiating} is a bit complex procedure.  It works top down in
+order to handle modifiers and inner-outer matching, while it is
+usually natural to work bottom up because each submodel only knows and
 accesses their components but does not care its users.  In addition,
 chains of dependency in name resolutions and simultaneous constant
 folding complicate the procedure.  That is, determining array
@@ -466,23 +487,9 @@ in searching $\mathit{Complex}$ in $\mathit{.Modelica}$, again.
 
 \subsection{Instances}
 
-The syntaxer does not distinguish classes and instances, and a class
+The_syntaxer does not distinguish classes and instances, and a class
 is an instance when it is associated to a state variable.  It is like
 classless languages as Self.
-
-%%%%%%%%%%%%%%%%
-
-\subsection{Handling inner/outer declarations}
-
-The syntaxer keeps inner/outer prefixes.  The syntaxer performs an
-inner-outer matching, when it makes a list of visible identifiers in
-an instance.
-
-The_implementation makes an alias declaration to an inner variable
-which is placed at a declaration of an outer variable.  It is used to
-retain the component relation of a connector (where a connector is
-declared) which determines the flow direction.  The aliases are
-removed after handling the connectors.
 
 %%%%%%%%%%%%%%%%
 
@@ -514,6 +521,19 @@ expressions.
 
 %%%%%%%%%%%%%%%%
 
+\subsection{Handling inner/outer declarations}
+
+The_syntaxer performs an inner-outer matching when it makes a list of
+visible names in an instance.  It leaves an alias for an outer
+variable pointing to an inner variable.  An alias is necessary to
+retain the component relation for a connector (a place where a
+connector is declared) which determines the flow direction.  Outer
+aliases are replaced after handling connectors.  Replacing an outer
+alias is performed by ignoring subscripts of a variable reference
+because they are irrelevant.
+
+%%%%%%%%%%%%%%%%
+
 \subsection{Record class identity}
 
 A record class needs identity for the purposes such as passing
@@ -523,8 +543,49 @@ may change the components of a class, and the_implementation treats
 redeclarations create a separate class but non-redeclarations do not
 create a new one.  The_implementation creates an identity by
 concatenating an identity of a package and a name given after
-redeclarations.
-See Fact~\ref{record-class-identity}.
+redeclarations.  See Fact~\ref{record-class-identity}.
+The_implementation does not identify functions this way, because
+modifications of values change the function.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Syntaxing}
+
+{Syntaxing} performs simple semantic transformations to make a flat
+model.  It rewrites connect_equations to equations.  In that
+rewriting, it expands if-equations and for-equations that include
+connect_equations.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Implicit Iterator Ranges}
+
+A range of an implicit iterator is taken as a subscript part of an
+expression that includes an iterator.  It checks the occurrence only
+but ignores the surrounding expressions if any.  See
+Section~\ref{sec:implicit-iterator-ranges}.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Expandable_connectors}
+
+Instantiation of expandable_connectors is delayed, while other (usual)
+classes are instantiated by descending the model hierarchy.  Expanding
+expandable_connectors is performed in steps starting from a connector
+at the shallowest position.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Connector operators}
+
+Operator applications on or related to connectors,
+$\mathrm{inStream}\,(v)$, $\mathrm{actualStream}\,(v)$, and
+$\mathrm{cardinality}\,(c)$ are replaced by new variables with some
+associated equations.  See a $\mathit{mix}$ variable in \specref{15}.
+Variables are suffixed by \verb|_mix_in_| for
+$\mathrm{inStream}\,(v)$, \verb|_actual_in_| for
+$\mathrm{actualStream}\,(v)$, and \verb|_cardinality_| for
+$\mathrm{cardinality}\,(c)$.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -587,7 +648,7 @@ See Rule~\ref{model-nesting} for the binary roles of a class.
 The scope is flat in most cases, spanning from the main (non-base)
 class to base classes where the class and variable names are distinct.
 But, class names and constants are visible via enclosing classes.  An
-enclosing class is defined to each class.
+enclosing class is defined to each (base) class.
 
 %%%%%%%%%%%%%%%%
 
@@ -956,32 +1017,35 @@ enclosing classes~(s0+s2).
 
 %%%%%%%%%%%%%%%%
 
-\subsection{A cycle in a lookup for importing/extending}
-\label{sec:lookup-cycle}
+\subsection{A short-cut in a lookup}\label{sec:lookup-cycle}
 
-Importing/extending a package defined in the class, or in nesting of
-sub-packages, is common.  Such a package reference, when it appears in
-a remaining part of a composite name, makes a circular dependency.  It
-is due to the rule for a lookup of a remaining part, in
+\subsubsection*{A cycle in a lookup for importing/extending}
+
+It is common to import/extend a package defined in the class or in its
+subpackages.  Such a package reference, when it appears in a remaining
+part of a composite name, may make a circular dependency.  It is due
+to the rule for a lookup of a remaining part, in
 Rule~\ref{lookup-imports} or Rule~\ref{lookup-bases}.
 
-Consider processing a package $M$ below.  A lookup of $M.I.P$ in $M$
-first finds $M$, and then a lookup continues for $I$ in $M$.  It may
-need to look into bases of $M$, because $I$ is a remaining part of the
-name.  However, it is problematic because resolving the bases of $M$
-is underway.
+Consider processing a toplevel package $M$ below.  A lookup of $M.I.P$
+in $M$ first finds $M$, and then a lookup continues for $I$ in $M$.
+It may need to look into bases of $M$, because $I$ is a remaining part
+of the name.  However, it is problematic because resolving the bases
+of $M$ is underway.
 %%%%
 \begin{quote}
 \begin{lstlisting}[aboveskip=-\baselineskip]
 package M
-    package I package P end P; end I;
+    package I
+        package P end P;
+    end I;
     extends M.I.P;
 end M;
 \end{lstlisting}
 \end{quote}
 %%%%
-Similar code can be found in MSL~3.2.3, where $M$ as Modelica, $I$ as
-Icon, and $P$ as Package.
+A similar code can be found in MSL~3.2.3, where $M$ as Modelica, $I$
+as Icon, and $P$ as Package.
 
 Similarly for importing, searching $C$ in $M.M.W$ may need to look
 into the imported definitions.
@@ -996,34 +1060,32 @@ end W;
 \end{lstlisting}
 \end{quote}
 %%%%
-Similar code can be found in MSL~3.2.3, where $M.M$ as Modelica.Media,
-$W$ as Water, and $C$ as ConstantPropertyLiquidWater.
+A similar code can be found in MSL~3.2.3, where $M.M$ as
+Modelica.Media, $W$ as Water, and $C$ as ConstantPropertyLiquidWater.
 
-The above observation implies a rule:
-%%%%
-\begin{QRULE}\label{lookup-cycle} A lookup of a remaining part of a
-composite name, that is for an importing/extending class, is
-restricted to declared elements (s0), when the lookup happens to be in
-the class in which it is originally started.\end{QRULE}
+\subsubsection*{A short-cut in a lookup for an element class}
 
-%%%%%%%%%%%%%%%%
-
-\subsection{A cycle in a lookup for an element class}
-
-\begin{QFACT}\label{lexical-enclosing} Lexically enclosing
+\begin{QRULE}\label{lexical-enclosing} Lexically enclosing
 classes (the relation that is not extended by importing and extending)
 cannot affect the enclosed class by modifications.  Thus, it is safe
-to use the textual definition for such classes.\end{QFACT}
+to use the textual definition for such classes.\end{QRULE}
 %%%%
-(Actually, redeclarations may change the elements of a base class, but
-they work on the textual definition of the base class).
+For example, consider the case $M$ extends $M.I.P$ above.  As $M.I$ is
+textually defined, it is not necessary to process $M$ first to take
+the definition of $M.I$.  Thus, it avoids a potential cycle in the
+definition.
 
-For example, although $\mathit{.Modelica}$ extends
-$\mathit{.Modelica.Icons.Package}$ but it is textually defined, it
-does not need to process $\mathit{.Modelica}$ first to take the
-definition of $\mathit{.Modelica.Icons}$.
+%%(Actually, redeclarations may change the elements of a base class, but
+%%they work on the textual definition of the base class).
 
 %%%%%%%%%%%%%%%%
+
+%% The above observation implies a rule:
+%%%%
+%% \begin{QRULE}\label{lookup-cycle} A lookup of a remaining part of a
+%% composite name, that is for an importing/extending class, is
+%% restricted to declared elements (s0), when the lookup happens to be in
+%% the class in which it is originally started.\end{QRULE}
 
 %% (*WRONG*)
 %% \subsection{A lookup of a redeclared name}
@@ -1309,8 +1371,10 @@ end M;
 
 \begin{QRULE}\label{modifier-precedence} A latter application of
 modifiers has a precedence.  The ordering is defined by a way how
-implementations should process modifications.\end{QRULE}
-
+implementations should look at the modifications.  A component
+declaration is considered latter than a modifier
+application.\end{QRULE}
+%%%%
 For example, $x0=10$ is effective over $X(\mathit{value}=20)$.
 %%%%
 \begin{quote}
@@ -1326,6 +1390,12 @@ model M
 end M;
 \end{lstlisting}
 \end{quote}
+
+\begin{qquote} (\specref{4.4.2}\/) The new environment is the result
+of merging $\bullet$\,the modification of enclosing class
+element-modification with the same name as the component
+$\bullet$\,the modification of the component declaration in that
+order.\end{qquote}
 
 %% Modifcations are handled from the outside to inside of the
 %% enclosing classes.  Modifcations to a class are handled from the
@@ -2195,7 +2265,8 @@ until the end of class elements.  It is public, when sections may be
 started with none of them.  That is, sections of equations and
 algorithms have no distinction of public/protected.
 
-(?) Check the visibility of import/extends-clauses and redeclarations.
+(?) (*CHECK*) Check the visibility of import/extends-clauses and
+redeclarations.
 
 %%%%%%%%%%%%%
 
@@ -2346,7 +2417,7 @@ $\mathbf{within}\;A$.
 
 \begin{quote}
 \begin{lstlisting}[aboveskip=-\baselineskip]
-(CHECK)
+(*CHECK*)
 /* File A: */
 package A = B(M(x=10));
 
@@ -2385,7 +2456,7 @@ ordered by the inclusion relation: $$\mathit{constant} \subset
 \mathit{parameter} \subset \mathit{discrete} \subset
 \mathit{continuous}\;.$$ Continuous means unconstrained, and declaring
 continuous integers is valid.  The ordering is used in class
-compatibility.  It is described in \specref{3.8} and \specref{6.3}.
+compatibility.  It is described in \specref{3.8}\/ and \specref{6.3}.
 
 \begin{QFACT}\label{parameters} The ordering strict.  However, it can
 be treated as $\mathit{parameter}=\mathit{constant}$ for translation
@@ -2423,45 +2494,218 @@ See \specref{3.8.3}\/ for discrete values.
 
 \subsection{Connectors}
 
-\subsubsection*{Nesting connectors}
+A connector is a type or a record that is marked to be used in
+connect_equations.
 
-A connect-equation connects variables including component connectors
+\subsubsection*{Sides of connectors}
+
+A side is an aspect of a connector whether it is connected in a
+declaring class.  An outside_connector is an internal connection in
+the declaring class, and the flow direction is considered reversed
+(the value is negated) for that connection.  An opposite is an
+inside_connector.  A connector is considered split to the
+inside/outside ones, but they share the same variables.  The side is
+taken into account in connect_equations but not in the {cardinality}
+operator.
+
+\begin{QFACT} Determination of a side of a connector must respect the
+place where the connector is declared, and inner/outer declarations
+are ignored for that.  An outside_connector is distinguished by the
+use of a connector that is declared and used in the class.  That is,
+the first part of a composite name is a declared connector.\end{QFACT}
+%%%%
+For example, $c$ in $\mathrm{connect}\,(c,...)$ is an
+outside_connector when it appears in the class declaring $c$.  And
+also, $c.m.d$ in $\mathrm{connect}\,(c.m.d,...)$ is an
+outside_connector when it appears in the class declaring $c$, where
+$m$ is a possibly empty list of components (connectors or
+non-connectors).  (*CHECK*) It is an outside_connector in the case
+when a non-connector intervenes like $c.m.d$.
+
+\subsubsection*{A connection_set}
+
+A connector is a record that may contain simple_types, records,
+operator_records, and connectors (but not models specifically).  A
+connect_equation connects variables including component connectors
 declared in the connector.
+
+A connection_set consists of tuples of a variable and its side.  The
+set is defined as a symmetric and transitive closure of a relation
+that contains the pairs in connect_equations.  The variables are
+simple_types or operator_records (overdetermined_records), and a
+record in a connector is broken down to its components, but an
+overdetermined_record (or every operator_record (?)) is treated as a
+single element.
+
+\subsubsection*{(?) Connect equations on arrays}
+(?) Array sizes are determined?
+
+\subsubsection*{Connection restrictions}
+
+Connect equations are fixed at translation-time.
+
+\begin{qquote} (\specref{9.3}\/) $\bullet$\,The connect_equations (and
+the special functions for overdetermined connectors) may only be used
+in equations and may not be used inside if-equations with
+non-parametric condition, or in when-equations. [For-equations always
+have parameter expressions for the array expression.]\end{qquote}
+
+\begin{qquote} (\specref{8.3.2}\/) The expression of a for-equation
+shall be a vector expression. ... The expression of a for-equation
+shall be a parameter expression.\end{qquote}
 
 \subsubsection*{Expandable_connectors}
 
-An expandable_connector will automatically include the names of
-variables which are used in connect-equations but are not declared in
-the connector definition.
+An expandable_connector is a set of connectors, and it is only
+connected to expandable_connectors.  A component will be included when
+it is used.  All components in an expandable_connector are implicitly
+considered as connectors.  An expandable_connector is first considered
+empty until a component (even a declared one) is included by using it
+explicitly.
 
-\subsubsection*{Internal_connections}
+A direct reference of a component in a connect equation signifies an
+addition of a component to an expandable_connector.  A reference is
+$m...m.c.d$, with $m$ a possibly empty component, $c$ an
+expandable_connector, and $d$ a component.
 
-An internal_connection is an aspect of a connector when it is accessed
-inside a declaring class.  The flow direction is considered reversed
-(a value is negated) for an internal_connection.  It is referred to as
-an {\it{}outside\/} connector in the_specification.
+%% A component will be included for the outside use of an
+%% expandable_connector even if it is not declared in the definition.
 
-Note that inner/outer declarations should be ignored for determination
-of an internal_connection.  However, implementations could mistake the
-determination when it dealt with an outer variable by simply aliasing
-it to an inner variable (it loses the declaring class).
+\begin{qquote} (\specref{9.1.3}\/) $\bullet$\,expandable connectors
+can only be connected to other expandable connectors.\end{qquote}
+
+\begin{qquote} (\specref{9.1.3}\/) $\bullet$\,All components in an
+expandable connector are seen as connector instances even if they are
+not declared as such\end{qquote}
+
+\begin{qquote} (\specref{9.1.3}\/) Before generating connection
+equations non-parameter scalar variables and non-parameter array
+elements declared in expandable connectors are marked as only being
+potentially present.\end{qquote}
+
+(*CHECK*) Declared components of an expandable_connector cannot be
+used in connect_equations unless they are connected to connectors not
+in some expandable_connectors.
+
+\subsubsection*{Stream_connectors}
+
+See \specref{15}.
+
+A stream_connector is a connector containing stream_variables.  A
+stream_connector contains a single scalar real flow_variable and some
+reals of (or arrays of) stream_variables.  The record components of a
+stream_variable are considered as stream_variables.
+
+$\mathrm{inStream}\,(v)$ and $\mathrm{actualStream}\,(v)$ take a
+stream_variable (which may be an array).
+
+\subsubsection*{Overdetermined_types/records}
+
+A type/record defining $\mathrm{equalityConstraint}\,(x,y)$ is called
+overdetermined_type/record.  The {Connections} class defines some
+predefined functions to reduce overdetermined constraints.
+
+\subsubsection*{(?) Operator_record components}
+
+(?) A connection component of an operator_record is used as an
+aggregate in generated equations with defined eqaulity, summation, or
+negation.
+
+\subsubsection*{Unconnected connectors}
+
+Flow variables are set to zero for unconnected connectors.
+Conditional connectors are unconnected if their conditions are false.
+See Section~\ref{conditional-component}.
+
+\subsubsection*{cardinality operator}
+
+The $\mathrm{cardinality}\,(c)$ operator returns the count of the uses
+of connect_equations on the inside part of the argument connector.  It
+is not the size of a connection set.  Cardinality of an embedded
+connector is counted, when it is indirectly used in connect_equations.
+For example, $\mathrm{cardinality}\,(c.d)$ counts an equation
+$\mathrm{connect}\,(c,\_)$.
+
+{cardinality} only appears in equation sections (only in assertions).
+{cardinality} does not take expandable_connectors, components of
+expandable_connectors, nor arrays of connectors.  {cardinality} is a
+translation-time constant.  However, $\mathrm{cardinality}\,(c)$
+cannot be replaced by a constant in general, because a connector
+reference is not a translation-time constant (array indices can be
+non-constants).
+
+The_clarification a bit differs from the_specification:
+%%%%
+\begin{specquote}{3.7.2} Returns the number of (inside and outside)
+occurrences of connector instance c in a connect-equation as an
+Integer number.  See also Section 3.7.2.3.\end{specquote}
+%%%%
+\begin{specquote}{3.7.2.3} The cardinality is counted after removing
+conditional_components.  and may not be applied to expandable
+connectors, elements in expandable connectors, or to arrays of
+connectors (but can be applied to the scalar elements of array of
+connectors).  The cardinality operator should only be used in the
+condition of assert and if-statements -- that do not contain connect
+(and similar operators -- see section 8.3.3).\end{specquote}
 
 %%%%%%%%%%%%%%%%
 
-\subsection{Conditional components}
+\subsection{Conditional_components}\label{conditional-component}
+
+A declaration may have a condition to enable/disable it.  A disabled
+non-connector component is unusable.  A conditional connector can be
+used only in connect_equations, and connect_equations with a disabled
+connector are considered removed.  Connectors in a disabled component
+are disabled.
+
+\subsubsection*{Conditional non-connectors}
+
+A disabled non-connector component is unusable.  Thus, usually,
+conditional non-connector components are used for the purpose to
+observe particular states in a simulation.
+
+\subsubsection*{Restrictions of conditional connectors}
+
+Conditional_components are only used in connections.
+%%%%
+\begin{specquote}{4.4.5} A component declared with a
+condition-attribute can only be modified and/or used in
+connections\end{specquote}
+%%%%
+\begin{specquote}{5.6.2} [Conditional_components can be used in
+connect-statements, and if the component is conditionally disabled the
+connect-statement is removed.]\end{specquote}
+%%%%
+Conditions of conditionals are translation-time constants.
+%%%%
+\begin{qquote} (\specref{4.4.5}\/) The expression must be a Boolean
+scalar expression, and must be a parameter-expression\end{qquote}
+%%%%
+Conditions of conditionals are retained after component
+redeclarations.
+%%%%
+\begin{qquote} (\specref{4.4.5}\/) A redeclaration of a component may
+not include a condition attribute; and the condition attribute is kept
+from the original declaration\end{qquote}
+%%%%
+Conditional_components cannot be used in modifiers of declarations.
+It is indicated by the example in \specref{4.4.5}.
+%%%%
+Conditional_components cannot have ":" as an array dimension.
+It is described in \specref{6.3}.
 
 \subsubsection*{Conditional declarations}
 
-\begin{QRULE}\label{scope-with-conditional-declaration} (?) A
-condition in a conditional declaration does not affect the scope.
-Particularly, a variable with a condition can be a target of
-modifications regardless of the condition.  \end{QRULE}
+\begin{QFACT}\label{scope-with-conditional-declaration} A condition of
+a conditional_component does not affect the scope.  Particularly, a
+variable with a condition can be a target of modifications regardless
+of the condition.\end{QFACT}
 
 Is the value of $x$ dependes on a condition?
 %%%%
 \begin{quote}
 \begin{lstlisting}[aboveskip=-\baselineskip]
-(CHECK)
+(*CHECK*)
 package A
     Real x=1;
     model M
@@ -2473,33 +2717,6 @@ end A;
 \end{quote}
 
 (* (?) Check if an inner is affected by its condition. *)
-
-Conditional components cannot have ":" as an array dimension.
-It is described in \specref{6.3}.
-
-\subsubsection*{Expressions for conditionals}
-
-Conditionals are translation-time constants.
-%%%%
-\begin{qquote} (\specref{4.4.5}\/) The expression must be a Boolean
-scalar expression, and must be a parameter-expression\end{qquote}
-
-Conditionals are effective after component redeclarations.
-%%%%
-\begin{qquote} (\specref{4.4.5}\/) A redeclaration of a component may
-not include a condition attribute; and the condition attribute is kept
-from the original declaration\end{qquote}
-
-Conditional components are only used in connections.
-%%%%
-\begin{qquote} (\specref{4.4.5}\/) A component declared with a
-condition-attribute can only be modified and/or used in
-connections\end{qquote}
-
-(?) The example in \specref{4.4.5}\/ indicates that: conditional
-components are not used in modifiers of declarations.
-
-\subsubsection*{(?) Conditional constants}
 
 %%%%%%%%%%%%%%%%
 
@@ -2541,7 +2758,7 @@ short-class definition does not influence its type, but is applied to
 components declared of this type or types derived from it; see also
 section 4.5.2.\end{qquote}
 
-(?) CHECK: The equality of functions is by textual (defined?).  The
+(?) (*CHECK*) The equality of functions is by textual (defined?).  The
 overloading resolution is based on a set of functions (requiring
 uniqueness), thus, the equality of functions needs be defined.
 
@@ -2601,10 +2818,10 @@ value.  (This rule does not apply to redeclarations.)
 
 \item The number of array dimensions in $A$ and $B$ must be the same.
 
-\item Conditional components are only compatible with conditional
+\item Conditional_components are only compatible with conditional
 components, where the conditions are semantically the same.
 
-\item Class kinds must satisfy kinds compatibility.
+\item Class_kinds must satisfy kinds compatibility.
 
 \item An enumeration is only compatible with an enumeration.  A
 compatible enumeration (except for enumeration(:)) must have the same
@@ -2648,58 +2865,68 @@ Function compatibility is defined in \specref{6.5}.
 
 %%%%%%%%%%%%%%%%
 
-\subsection{Class kinds}
+\subsection{Class_kinds}
 
-\subsubsection*{Class kinds}\label{sec:class-kinds}
-
-The table in \specref{4.6}\/ shows the class kinds.  Every kind is
+The table in \specref{4.6}\/ shows the class_kinds.  Every kind is
 syntactically the same as a class, but some restrictions on its
 contents apply to the class with regard to its kind.
+
+\subsubsection*{Class_kinds}\label{sec:class-kinds}
+
+The following is the copy of the table in \specref{4.6}.
 
 \begin{quote}
 \begin{description}
 
-\item[type] is one of the simple_types, arrays of a type, or one
-extending a type.
-
 \item[model] is a general collection of elements.
 
-\item[class] is a collection that contains extends-clauses, class
-definitions, and annotations.  Note that it is a synonym of
+\item[class] is a restricted collection that contains extends-clauses,
+class definitions, and annotations.  Note that it was a synonym of
 $\mathbf{model}$ by the old definition, and some_implementations
 accept other elements.  See Quote~\ref{quo:class-is-restricted}.
 
-\item[block] is restricted $\mathbf{model}$, whose connectors are
-directed by $\mathbf{input}$/$\mathbf{output}$.
-
-\item[record] is a record in a usual sense.  A component of a record
-is a type, a record, or an array of them.  It contains no
-equation/algorithm sections nor protected sections.
+\item[block] is a restricted {model}, whose connectors are directed by
+$\mathbf{input}$/$\mathbf{output}$.
 
 \item[package] contains similar elements as $\mathbf{record}$ that is
 restricted to contain constants/parameters but no variables.
+(*CHECK*) It can contain protected sections.
 
-\item[connector] contains the same elements as $\mathbf{record}$,
-which is allowed to use $\mathbf{connect}$ on it.
+\item[type] is one of the simple_types, arrays of a type, or one
+extending a type.
 
-\item[expandable_connector] is $\mathbf{connector}$.
+\item[record] is a record in a usual sense.  A component of a record
+is a type, a record, or an array of them.  It contains no
+equation/algorithm sections nor protected sections (but it can contain
+functions).
 
-\item[operator record] contains the same elements as
-$\mathbf{record}$, but with an operator-overloading.
+\item[operator_record] is a record, but is restricted for
+operator-overloading.  It can contain the same elements as records,
+but also it can contain operators.
 
 \item[operator] contains similar elements as $\mathbf{package}$, that
-is restricted to contain only functions as definitions.
+is restricted to contain only functions as definitions.  An operator
+is only defined in an operator_record.
 
-\item[operator_function] is $\mathbf{operator}$ with one function.
+\item[(operator_function)] is $\mathbf{operator}$ with one function.
 
-\item[function] is a function in a usual sense.  It can contain either
-one algorithm section or one external interface.  It does not contain
-equation sections nor initial algorithm sections.  It can contain
-component declarations (variables) of $\mathbf{type}$,
-$\mathbf{record}$, $\mathbf{operator~record}$, and
-$\mathbf{function}$.  Only functions can contain an external
-interface.  See (\specref{12.2}\/).  (?) Functions can contain only
-input/output variables.
+\item[connector] is either a {type} or a {record}, but it is allowed
+to connect on it.  It is actually a subkind of them.  The use of a
+keyword $\mathbf{connector}$ defines a record, when it is used in a
+long class definition.  It gives a connector-status to a type/record,
+when it is used in a short class definition.  Connector declarations
+are implicit in expandable_connectors.
+
+\item[expandable_connector] is a connector.
+
+\item[function] is a function in a usual sense.  It is syntactically a
+package (not an instance).  It can contain either one algorithm
+section or one external interface.  It does not contain equation
+sections nor initial algorithm sections.  It can contain component
+declarations (variables) of $\mathbf{type}$, $\mathbf{record}$,
+$\mathbf{operator~record}$, and $\mathbf{function}$.  Only functions
+can contain an external interface.  See (\specref{12.2}\/).  (?)
+Functions can contain only input/output variables.
 
 \end{description}
 \end{quote}
@@ -2745,7 +2972,7 @@ $\mathbf{expandable~connector}$, $\mathbf{function}$.  Conversely, the
 classes that do not contain states are: $\mathbf{package}$,
 $\mathbf{operator}$, and $\mathbf{operator~function}$.\end{QFACT}
 
-\subsubsection*{Extending and class kinds}
+\subsubsection*{Extending and class_kinds}
 
 The table in \specref{7.1.3}\/ shows the restrictions on derived vs.\@
 base class relations.  It shows that one class can extend some class.
@@ -2810,8 +3037,6 @@ kind can be extend by $\mathbf{class}$.
 %%%%
 \begin{QFACT}\label{kind1} It is required to check base classes
 respect the restriction.\end{QFACT}
-
-
 
 %%%%%%%%%%%%%%%%
 
@@ -2890,12 +3115,35 @@ annotations.
 
 \item [AssertionLevel] is an enumeration.
 
-\item [Connections] is a package.  It contains functions
-$\mathit{branch}$, $\mathit{root}$, $\mathit{potentialRoot}$,
-$\mathit{isRoot}$, and $\mathit{rooted}$.  It is described in
-\specref{9.4}.
+\item [Connections] is a package.
 
 \end{description}
+
+\subsubsection*{Connections}
+
+Connections is a package is used to remove overdetermined equations.
+It is described in \specref{9.4}.  A type/record defining
+$\mathit{equalityConstraint}\,(x,y)$ is called an
+overdetermined_type/record.  Connections works with
+overdetermined_types/records.  It contains equation_operators
+$\mathit{branch}$, $\mathit{root}$, and $\mathit{potentialRoot}$
+(appear as equations), and boolean-valued operators $\mathit{isRoot}$
+and $\mathit{rooted}$ (appear as functions).
+
+Connecting connectors may induce an undirected graph of
+overdetermined_types/records in connectors as nodes and equality as
+edges.  Such a graph may have cycles when the equations are
+overdetermined.  A graph is reduced to trees by removing some of the
+edges by replacing them with weaker contraints.  Operators in
+Connections are used to specify trees in the graph.
+
+$\mathit{branch}\,(m.c.r,m.c.r)$ makes an edge between
+overdetermined_types/records.  $\mathit{root}\,(m.c.r)$ specifies a root
+of a tree of overdetermined_types/records.
+$\mathbf{connect}\,(m.c,m.c)$ creates weak edges for the
+overdetermined_types/records in the connectors.  Some weak edges may
+be marked (as removed), and the equality of marked edges are replaced
+by $\mathit{equalityConstraint}\,(x,y)$ equations.
 
 %%%%%%%%%%%%%%%%
 
@@ -2929,15 +3177,20 @@ end M;
 \end{lstlisting}
 \end{quote}
 
-See also Section~\ref{class-equality}.  (* CHECK: Function calls may
-require stricter equality. *)
+See also Section~\ref{class-equality}.  (*CHECK*) Function calls may
+require stricter equality.
+
+\subsubsection*{Casting}
+
+A record constructor can take a class instance, and it is called
+casting.  See \specref{12.6.1}.
 
 \subsubsection*{equalityConstraint}
 
 A function $\mathit{equalityConstraint}$ can be defined in types and
 records.  $\mathit{equalityConstraint(...)}=0$ is added as equations,
 when it is defined (0 in the RHS is used for an array of zeros).
-See~\specref{9.4.1}.
+See \specref{9.4.1}.
 
 %%%%%%%%%%%%%%%%
 
@@ -3055,7 +3308,7 @@ Media/package.mo).
 \end{quote}
 
 A {fill} with a zero dimension can be used to create an empty array,
-such as $\mathrm{fill}("",0)$.
+such as $\mathrm{fill}\,("",0)$.
 
 \subsubsection*{Homogeneity of array elements}
 
@@ -3064,7 +3317,7 @@ the elements are similar, and the number of dimenions of them are the
 same, because redeclarations (in-element or in-modifier) cannot depend
 on an index, although the values of constants can be different, and
 the dimesion of arrays can be different.  The classes may have
-conditional components, but they are of similar classes even though
+conditional_components, but they are of similar classes even though
 they can be disabled.  This ensures the identity of promoting
 operators to arrays.  (?) Class similarity is defined by class
 compatibility.
@@ -3117,7 +3370,7 @@ for a scalar $A$ (See \specref{10.3.1}\/).
 
 Functions are defined to create certain arrays: {identity},
 {diagonal}, {zeros}, {ones}, {fill}, and {linspace}
-(See~\specref{10.3.3}\/).  Note that {identity}, {zeros} and {ones}
+(See \specref{10.3.3}\/).  Note that {identity}, {zeros} and {ones}
 return an integer array, and {linspace} returns a real array.
 
 Some can be easily defined by others.
@@ -3132,14 +3385,12 @@ Some can be easily defined by others.
 
 %%%%%%%%%%%%%%%%
 
-\subsection{Iterators of for}
+\subsection{Iterators of for}\label{sec:for-iterator}
 
 Iterators are used in for-equations, for-statements, reductions, and
-comprehensions.  An iterator ranges in Integer, Boolean, and
-enumeration, and the range is typically specified by a vector
-expression.  Range expressions of iterators are translation-time
-constants (parameters), but they can include iterators in the nested
-ranges.
+comprehensions.  An iterator ranges in Real, Integer, Boolean, and an
+enumeration, and its range is specified by a vector expression or by a
+type of Boolean or an enumeration.
 
 \subsubsection*{Range expressions of iterators}
 
@@ -3149,6 +3400,12 @@ nested ones.
 \begin{qquote} (\specref{11.2.2.3}\/) it can be expanded into the
 usual form by replacing each "," by 'loop for' and adding extra 'end
 for'.\end{qquote}
+
+Range expressions of for-equations are translation-time constants, and
+they can include iterators in the nested ranges.
+
+\begin{qquote} (\specref{8.3.2}\/) The expression of a for-equation
+shall be a parameter expression.\end{qquote}
 
 It is allowed to refer to an iterator in vector expressions in a
 single for-equation.
@@ -3162,24 +3419,25 @@ end for;
 \end{lstlisting}
 \end{quote}
 
-The following quotes might badly state an iterator variable is a
-parameter.
+The following quotes of the scope description might conflict with the
+handling by nesting iterators.
 
 \begin{qquote}\label{quo:iterator-scope} (\specref{8.3.2}\/) It is
 evaluated once for each for-equation, and is evaluated in the scope
 immediately enclosing the for-equation.\end{qquote}
 
-\begin{qquote} (\specref{8.3.2}\/) The expression of a for-equation
-shall be a parameter expression.\end{qquote}
-
-\subsubsection*{Implicit iterator ranges}
+\subsubsection*{Implicit iterator ranges}\label{sec:implicit-iterator-ranges}
 
 A range expression of an iterator is optional, and the range is
-inferred from the uses of an iterator.  Implicit iterator ranges are
-allowed in every {\it{}for}-iteration, that is, loops in equations and
-statements, reductions, and array constructors.  Implicit ranges are
-accepted for arrays with dimensions of Integer, Boolean, and
-enumeration.  See an example in \specref{4.8.5}.
+inferred from the uses of an iterator.  Implicit ranges are accepted
+for arrays with dimensions of Integer, Boolean, and enumeration.
+Implicit iterator ranges are allowed in any {\it{}for}-iteration in
+equations, statements, reductions, and array constructors.
+
+It is assumed that the range of an implicit iterator is inferred by
+the range of the subscript where an iterator occurs.
+
+See the example in \specref{4.8.5}.
 %%%%
 \begin{quote}
 \begin{lstlisting}[aboveskip=-\baselineskip]
@@ -3192,7 +3450,7 @@ end for;
 \end{lstlisting}
 \end{quote}
 
-See an example in \specref{11.2.2.3}.
+See the example in \specref{11.2.2.3}.
 %%%%
 \begin{quote}
 \begin{lstlisting}[aboveskip=-\baselineskip]
@@ -3484,19 +3742,19 @@ not for arrays.  Moreover, equality on class instances is not defined.
 \begin{qquote} (\specref{3.5}\/) Relational operators ... are only
 defined for scalar operands of simple types.\end{qquote}
 
-The ordering of elements of simple_types is defined in~\specref{3.5}.
+The ordering of elements of simple_types is defined in \specref{3.5}.
 On numbers, the arguments may be promoted from {Integer} to {Real}, if
 the types of the arguments differ.  Boolean is ordered as
 $\mathit{false}<\mathit{true}$.  A set of enumerators is ordered by
 the definition order.  The ordering in String is defined by the libc
-function $\mathit{strcmp}(x,y) \bowtie 0$ (replacing $\bowtie$ with a
+function $\mathit{strcmp}\,(x,y) \bowtie 0$ (replacing $\bowtie$ with a
 relational operator).
 
 \paragraph{Remark}
 
 The predefined operators are defined for the simple_types, although
-\specref{14.3} and \specref{14.4} refer to the predefined_types.  The
-predefined_types excluding the simple_types cannot have operators,
+\specref{14.3}\/ and \specref{14.4}\/ refer to the predefined_types.
+The predefined_types excluding the simple_types cannot have operators,
 because they are not operator records.
 
 \paragraph{Remark}
@@ -3609,6 +3867,36 @@ connectors, operator_records) and arrays of them, and functions.
 \begin{qquote} (\specref{12.2}\/) $\bullet$ A function may only
 contain components of the restricted classes type, record, operator
 record, and function; i.e. no model or block components.\end{qquote}
+
+\subsubsection*{(?) No results}
+
+An output of an empty array is used to return no values.  See an
+example in \specref{9.4.3.1}.
+
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+function equalityConstraint
+    input AC_Angle theta1;
+    input AC_Angle theta2;
+    output Real residue[0] "No constraints"
+    algorithm
+\end{lstlisting}
+\end{quote}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Equations}
+
+\subsubsection*{if-equation}
+
+Each branch of $\mathbf{if}$ is tested sequentially, and the first
+true branch is taken.
+
+\subsubsection*{for-equation}
+
+A range of $\mathbf{for}$ is a vector expression (real or integer)
+that is a translation-time constant, or types of Boolean or an
+enumeration.  See Section~\ref{sec:for-iterator}.
 
 %%%%%%%%%%%%%%%%
 
@@ -4271,7 +4559,7 @@ In addition to the syntactic keywords above, the type names are
 reserved and cannot be redefined (See Quote~\ref{quo:reserved-words}).
 These names have overloaded meanings.
 
-(* Check the status of "constructor". *)
+(*CHECK*) Check the status of "constructor".
 
 %%%%%%%%%%%%%%%%
 
@@ -4483,8 +4771,8 @@ values.
 (\specref{3.7}\/)
 
 Predefined functions are defined in the unnamed root, and it can be
-accessed with a preceding dot $.\mathit{abs}(v)$ for
-$\mathit{abs}(v)$.  Array constructor admits an iterator syntax
+accessed with a preceding dot $.\mathit{abs}\,(v)$ for
+$\mathit{abs}\,(v)$.  Array constructor admits an iterator syntax
 ($\mathrm{array}$).  Reductions admit a reduction syntax in addition
 to a function call syntax ($\mathrm{min}$, $\mathrm{max}$,
 $\mathrm{sum}$, and $\mathrm{product}$).  $\mathrm{der}$ and
@@ -4560,6 +4848,9 @@ getInstanceName()
 
 \noindent $\mathrm{der}\,(...)$ accepts only one argument, although it
 can accept a list of arguments by the syntax definition.
+
+inStream(v) and actualStream(v) introduce a new state variable and
+equations related to a given steam variable $v$.
 
 \subsubsection*{Event-related operators}
 (\specref{3.7.3}\/)
@@ -4911,41 +5202,49 @@ uses
 
 # Baby-Modelica 3.4.0 (2020-01-29)
 
-Copyright (C) 2018-2020 RIKEN R-CCS
+Copyright (C) 2018-2021 RIKEN R-CCS
 
-Baby-Modelica is a simple parser of the Modelica language
-specification 3.4.  Its intended use is to create data extraction
-tools for Modelica models.  The parser can dump a flat model.  A
-generated flat model is to be reloadable by Modelica compliers.
-Current status is a pre-zero version, we are working towards version
-zero.  The version number of Baby-Modelica is the last digits,
+__Baby-Modelica comes with ABSOLUTELY NO WARRANTY.__
+
+Baby-Modelica is a simple frontend (parser+flattener) for the Modelica
+language specification 3.4.  It parses the source code then performs
+simple syntactic transformations, and optionally dumps a flat model.
+Flattening a model is an essential part of Modelica, and it resolves
+all the features as an object-oriented language.  Flattening is
+indispensable even for simple tools, because parameters in a model are
+substituted multiple times by nested parameterization.  A generated
+flat model is hopefully to be re-readable by Modelica compilers.
+
+Current status is a pre-zero version, and we are working towards
+version zero.  The version number of Baby-Modelica is the last digits,
 appended to the version number of the Modelica language specification.
 
 Baby-Modelica is written in SML'97 (Standard ML) and developed mainly
-with Poly/ML (on SUNOS 5.11/amd64) and tested with SML/NJ.  It uses a
-modified BYACC parser generator (not ml-yacc), which needs be obtained
-separately.
+with Poly/ML (on SUNOS 5.11/amd64), but it may work with SML/NJ or
+MLton.  It uses a modified BYACC parser generator (not ml-yacc), which
+needs be obtained separately.
 
 See [https://www.modelica.org](https://www.modelica.org) for
 information of Modelica.
 
 If someone might be unfamiliar with SML, see
 [http://sml-family.org](http://sml-family.org).  Poly/ML is at
-[https://www.polyml.org](https://www.polyml.org) and SML/NJ is at
-[https://smlnj.org](https://smlnj.org).
+[https://www.polyml.org](https://www.polyml.org), SML/NJ is at
+[https://smlnj.org](https://smlnj.org), and MLton is at
+[https://mlton.org](https://mlton.org).
 
 ----
 
 ## Source code files and directories
 
+See frontend/notes.pdf first, then start with frontend/bbm.sml.
+* [frontend/notes.pdf](frontend/notes.pdf): random implementation notes
+* frontend/bbm.sml: a list of the source code files
+
 The toplevel directories are as follows.
 * [frontend](frontend): the source code
 * [silly-models](silly-models): trivial code to check the specification
 * [code-examples](code-examples): code snippets from the specification
-
-See frontend/notes.pdf first, then start with frontend/bbm.sml.
-* [frontend/notes.pdf](frontend/notes.pdf): random implementation notes
-* frontend/bbm.sml: a list of the source code files
 
 ----
 
@@ -4964,7 +5263,8 @@ model in "x.mo".
 use "bbm.sml" ;
 builder.xreset () ;
 builder.xbuild "Modelica.Fluid.Examples.HeatingSystem" ;
-postbinder.xbind () ;
+connector.xbind () ;
+connector.xconnect () ;
 flatdumper.xdump () ;
 valOf (classtree.xfetch1 "tank") ;
 valOf (classtree.xfetch1 "wall.G") ;
@@ -5007,12 +5307,12 @@ SMLofNJ.Internals.TDP.mode := true ;
 
 ----
 
-__Baby-Modelica comes with ABSOLUTELY NO WARRANTY.__
+Baby-Modelica is distributed under the BSD 2-Clause License.
 
 ================================================================
 
 %% Local Variables:
 %% indent-tabs-mode: nil
-%% paragraph-start: "^\f\\|[ \t]*$\\|%%%%$"
+%% paragraph-start: "\f\\|[ \t]*$\\|%%%%$"
 %% paragraph-separate: "[ \t\f]*$\\|%%%%$"
 %% End:

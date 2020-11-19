@@ -1,5 +1,5 @@
 (* message.sml -*-Coding: us-ascii-unix;-*- *)
-(* Copyright (C) 2018-2020 RIKEN R-CCS *)
+(* Copyright (C) 2018-2021 RIKEN R-CCS *)
 
 (* ERROR EXCEPTIONS/MESSAGES. *)
 
@@ -174,9 +174,9 @@ fun error_inner_outer_in_package v = Match
 
 fun error_unhandled_outer d = Match
 
-fun warn_no_inner (cv : named_element_t) = (
+fun warn_no_inner (cv : element_sum_t) = (
     print ("WARNING: No matching inner is found for "^
-	   (id_to_string (name_of_naming cv)) ^" in ?\n"))
+	   (id_to_string (name_of_element_union cv)) ^" in ?\n"))
 
 val error_undefined_variable = Match
 
@@ -212,8 +212,6 @@ fun warn_cycle_in_dimensions () = (
 
 val error_bad_array_dimension = Match
 
-val error_non_integer_value = Match
-
 val error_non_constant_array_dimension = Match
 
 val error_instance_reference_thru_package = Match
@@ -231,8 +229,6 @@ val error_subscripts_to_package = Match
 val error_name_not_found_in_package = Match
 
 val error_non_constant_in_package = Match
-
-val error_non_constant_value = Match
 
 val error_no_value_in_rhs = Match
 
@@ -309,5 +305,72 @@ val error_components_to_iterator = Match
 val error_subscripts_to_scalar = Match
 
 val error_split_array_dimension = Match
+
+val error_indexing_to_scalar = Match
+
+val error_no_instantiated_instance = Match
+
+val error_not_found_in_table = Fail "(internal) not found"
+
+fun error_duplicate_definitions d = (
+    Fail ("duplicate definitions ("^ (name_of_definition d) ^")"))
+
+val error_duplicate_inner_outer = Match
+
+val error_conditional_containing_connect = Match
+
+val error_non_boolean = Match
+
+val error_range_iterator = Match
+
+val error_non_scalar_literal = Match
+
+val error_not_vector = Match
+
+val error_range_on_array = Match
+
+val error_range_on_class = Match
+
+val error_bad_reference = Match
+
+val error_varying_iterator_range = Match
+
+val error_unknown_iterator_range = Match
+
+val error_when_contains_connectors = Match
+
+val error_connector_in_package = Match
+
+val error_mutual_expandable_connectors = Match
+
+val error_bad_dimension = Match
+
+val error_empty_array_connector = Match
+
+val error_nonunique_dimension = Match
+
+val error_bad_call_of_cardinality = Match
+
+val error_cardinality_in_declaration = Match
+
+val error_connector_is_not_record = Match
+
+val error_mismatch_connection_list = Match
+
+val error_mismatch_connector_arrays = Match
+
+val error_connect_rule_conflict = Match
+
+val error_connect_rule_disagree = Match
+
+val error_connect_record_disagree = Match
+
+val error_multiple_flow_variables = Match
+
+val error_missing_flow_variables = Match
+
+fun error_bad_intrinsic_call name = Match
+
+val error_conditional_is_not_determined = Match
 
 end

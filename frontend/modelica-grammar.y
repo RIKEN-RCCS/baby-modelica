@@ -1,5 +1,5 @@
 /* modelica-grammar.y  -*-Mode: Fundamental;-*- */
-/* Copyright (C) 2018-2020 RIKEN R-CCS */
+/* Copyright (C) 2018-2021 RIKEN R-CCS */
 
 %{
 
@@ -402,9 +402,9 @@ class_kind_
 	| BLOCK {
 		(Block, no_class_prefixes)}
 	| CONNECTOR {
-		(Connector, no_class_prefixes)}
+		(Connector false, no_class_prefixes)}
 	| EXPANDABLE CONNECTOR {
-		(Expandable_Connector, no_class_prefixes)}
+		(Connector true, no_class_prefixes)}
 	| TYPE {
 		(Type, no_class_prefixes)}
 	| PACKAGE {
@@ -630,16 +630,16 @@ language_specification
 
 external_function_call
 	: IDENT "(" ")" {
-		St_Call ([], Vref (false, [(Id $1, [])]), [],
+		St_Call ([], Vref (NONE, [(Id $1, [])]), [],
 			 Annotation [], Comment [])}
 	| IDENT "(" expression_list ")" {
-		St_Call ([], Vref (false, [(Id $1, [])]), $3,
+		St_Call ([], Vref (NONE, [(Id $1, [])]), $3,
 			 Annotation [], Comment [])}
 	| component_reference "=" IDENT "(" ")" {
-		St_Call ([$1], Vref (false, [(Id $3, [])]), [],
+		St_Call ([$1], Vref (NONE, [(Id $3, [])]), [],
 			 Annotation [], Comment [])}
 	| component_reference "=" IDENT "(" expression_list ")" {
-		St_Call ([$1], Vref (false, [(Id $3, [])]), $5,
+		St_Call ([$1], Vref (NONE, [(Id $3, [])]), $5,
 			 Annotation [], Comment [])}
 	;
 
@@ -1318,7 +1318,7 @@ expression_list_rows_
 
 primary
 	: UNSIGNED_NUMBER {
-		(check_literal_number $1)}
+		(string_to_literal_number $1)}
 	| STRING {
 		L_String $1}
 	| FALSE {
@@ -1369,22 +1369,22 @@ name
 
 component_reference
 	: IDENT {
-		Vref (false, [(Id $1, [])])}
+		Vref (NONE, [(Id $1, [])])}
 	| IDENT array_subscripts {
-		Vref (false,[(Id $1, $2)])}
+		Vref (NONE, [(Id $1, $2)])}
 	| "." IDENT {
-		Vref (false, [(Id ".", []), (Id $2, [])])}
+		Vref (NONE, [(Id "", []), (Id $2, [])])}
 	| "." IDENT array_subscripts {
-		Vref (false, [(Id ".", []), (Id $2, $3)])}
+		Vref (NONE, [(Id "", []), (Id $2, $3)])}
 	| component_reference "." IDENT {
 		case $1 of
 		    Vref (_, v) =>
-			Vref (false, (v ++ [(Id $3, [])]))
+			Vref (NONE, (v ++ [(Id $3, [])]))
 		  | _ => raise Match}
 	| component_reference "." IDENT array_subscripts {
 		case $1 of
 		    Vref (_, v) =>
-			Vref (false, (v ++ [(Id $3, $4)]))
+			Vref (NONE, (v ++ [(Id $3, $4)]))
 		  | _ => raise Match}
 	;
 

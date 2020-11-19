@@ -1,5 +1,5 @@
 (* classtree.sml -*-Coding: us-ascii-unix;-*- *)
-(* Copyright (C) 2018-2020 RIKEN R-CCS *)
+(* Copyright (C) 2018-2021 RIKEN R-CCS *)
 
 (* CLASS/INSTANCE TREES. *)
 
@@ -10,20 +10,26 @@ sig
     type definition_body_t
     type class_definition_t
     type subject_t
-    type binding_t
+    type naming_t
     type scope_t
     type instantiation_t
     type instance_node_t
     type component_slot_t
     type cook_step_t
     type cooker_t
+    type inner_outer_slot_t
+    type expression_t
 
     val class_tree : instance_node_t
     val instance_tree : instance_node_t
+    val package_root_node : instance_node_t
+    val model_root_node : instance_node_t
 
     val loaded_classes : (string, class_definition_t) HashTable.hash_table
-    val class_bindings : (string, binding_t list) HashTable.hash_table
-    val dummy_inners : (string, binding_t) HashTable.hash_table
+    val class_bindings : (string, naming_t list) HashTable.hash_table
+    val dummy_inners : (string, naming_t) HashTable.hash_table
+
+    val inner_outer_table : inner_outer_slot_t ref
 
     val fetch_from_loaded_classes :
 	class_tag_t -> class_definition_t option
@@ -34,6 +40,10 @@ sig
 	subject_t -> definition_body_t option
     val store_to_instance_tree :
 	subject_t -> definition_body_t -> definition_body_t
+
+    val instantiate_outer_alias :
+	instantiation_t -> subject_t -> subject_t -> definition_body_t
+    val substitute_outer_reference : expression_t -> expression_t
 
     val subject_to_instance_tree_path :
 	subject_t -> (instantiation_t * (id_t * int list) list)
@@ -66,12 +76,28 @@ sig
     val fetch_class_by_scope :
 	subject_t * class_tag_t -> subject_t * definition_body_t
 
-    val descend_instance_tree :
-	(id_t * int list) list -> instance_node_t -> instance_node_t option
+    val fetch_instance_tree_node : subject_t -> instance_node_t option
+    val descend_instance_tree_node :
+	id_t -> instance_node_t -> component_slot_t option
+
+    val traverse_tree :
+	(definition_body_t * 'a -> 'a) -> instance_node_t * 'a -> 'a
+
+    val access_node :
+	instance_node_t -> (definition_body_t * component_slot_t list)
+
+    val dereference_outer_alias : component_slot_t -> instance_node_t
+    val component_is_outer_alias : component_slot_t -> bool
+    val component_is_expandable : component_slot_t -> bool
+    val component_class : component_slot_t -> definition_body_t
 
     val clear_syntaxer_tables : unit -> unit
 
-    val component_class : component_slot_t -> definition_body_t
+    val enumerate_instances :
+	(subject_t * 'a list -> 'a list) -> id_t list
+	-> 'a list -> 'a list
+
+    val dummy_scope : unit -> scope_t
 
     val assert_stored_in_instance_tree :
 	subject_t * definition_body_t -> unit
@@ -108,14 +134,13 @@ val loaded_classes : (string, class_definition_t) HashTable.hash_table = (
    subject.  (It is keyed by an instance name (subject_t) and a
    CTAG). *)
 
-val class_bindings : (string, binding_t list) HashTable.hash_table = (
+val class_bindings : (string, naming_t list) HashTable.hash_table = (
     HashTable.mkTable (table_size_hint, Match))
 
 (* The dummy_inners table records an inner created for an unmatched
-   outer.  It is a mapping from a variable to a binding.  It is keyed
-   by a composite of names and subscripts (subject_t). *)
+   outer.  Keys are subjects. *)
 
-val dummy_inners : (string, binding_t) HashTable.hash_table = (
+val dummy_inners : (string, naming_t) HashTable.hash_table = (
     HashTable.mkTable (table_size_hint, Match))
 
 fun clear_table t = (
@@ -161,6 +186,7 @@ fun fetch_from_loaded_classes (tag : class_tag_t) = (
 		    Def_Body _ => SOME d
 		  | Def_Der _ => raise Match
 		  | Def_Primitive _ => raise Match
+		  | Def_Outer_Alias _ => raise Match
 		  | Def_Name _ => raise Match
 		  | Def_Scoped _ => raise Match
 		  | Def_Refine _ => raise Match
@@ -176,6 +202,7 @@ fun fetch_from_loaded_classes (tag : class_tag_t) = (
 (* ================================================================ *)
 
 type instance_node_t = common.instance_node_t
+type component_slot_t = common.component_slot_t
 
 (* The class_tree is rooted by the unnamed-enclosing-class, and stores
    packages.  It stores packages at step=E0-E5.  It is the same as the
@@ -193,12 +220,55 @@ val class_tree : instance_node_t =
 val instance_tree : instance_node_t =
       (the_model_subject, ref Def_In_File, ref [])
 
-(* Accesses a component at an index.  An access with index=[] means
-   either as a scalar or as an array.  The returned node has empty
-   components for an array (accessing components are forbidden for an
-   array). *)
+val package_root_node = class_tree
+val model_root_node = instance_tree
 
-fun access_component subj (Slot (v, dim, ee, dummy)) index = (
+fun assert_inner_outer (outer, inner) = (
+    let
+	val (prefix0, (id0, ss0)) = (subject_prefix outer)
+	val (prefix1, (id1, ss1)) = (subject_prefix inner)
+	val _ = if (subject_is_prefix prefix1 prefix0)
+		then () else raise Match
+	val _ = if (null ss0) then () else raise Match
+	val _ = if (null ss1) then () else raise Match
+	val _ = if (id0 = id1) then () else raise Match
+    in
+	()
+    end)
+
+fun component_is_outer_alias (Slot (id, dim, nodes, dummy)) = (
+    case nodes of
+	[] => false
+      | [(_, kx, cx)] => (
+	case (! kx) of
+	    Def_Outer_Alias _ => true
+	  | _ => false)
+      | _ => false)
+
+(* Tests if subcomponents are expandable connectors.  It returns false
+   if nodes is empty, though it does not matter. *)
+
+fun component_is_expandable (Slot (id, dim, nodes, dummy)) = (
+    let
+	fun check (subj, kx, cx) = (class_is_connector true (! kx))
+    in
+	(List.exists check nodes)
+    end)
+
+fun outer_alias_of_component (Slot (id, dim, nodes, dummy)) = (
+    case nodes of
+	[] => raise Match
+      | [(_, kx, cx)] => (
+	case (! kx) of
+	    Def_Outer_Alias (vc, outer, inner) => inner
+	  | _ => raise Match)
+      | _ => raise Match)
+
+(* Accesses a component in the instance_tree at an index.  An access
+   with index=[] means either as a scalar or as an array.  An array is
+   returned as a dummy node containing a Def_Mock_Array. *)
+
+fun access_component subj (Slot (v, dim, ee, dummy)) (index : int list) = (
     case (index, dim) of
 	([], []) => (
 	let
@@ -206,7 +276,8 @@ fun access_component subj (Slot (v, dim, ee, dummy)) index = (
 	    val node = (hd ee)
 	    val (subjx, kx, _) = node
 	    val kp = (! kx)
-	    val _ = if (subjx = subj) then () else raise Match
+	    val _ = if (subject_equal_sans_subscript subj subjx) then ()
+		    else raise Match
 	    val _ = if (step_is_less E1 kp) then ()
 		    else (assert_match_subject_sans_subscript subj kp)
 	in
@@ -219,7 +290,8 @@ fun access_component subj (Slot (v, dim, ee, dummy)) index = (
 	in
 	    (subj, ref (Def_Mock_Array (dim, array, dummy)), ref [])
 	end)
-      | (_, []) => raise error_array_index_to_scalar
+      | (_, []) => raise error_indexing_to_scalar
+      (*
       | (_, _) => (
 	let
 	    val i = (array_index dim index 0)
@@ -227,42 +299,80 @@ fun access_component subj (Slot (v, dim, ee, dummy)) index = (
 	    val node = (List.nth (ee, i))
 	in
 	    node
-	end))
-
-(* Accesses an instance_tree node by an element of a subject.  It may
-   return a node or NONE. *)
-
-fun descend_instance_tree_step (v, index) (node0 : instance_node_t) = (
-    case node0 of
-	(subj, kx, cx) => (
+	end)
+      *)
+      | (_, _) => (
 	let
-	    val components = (! cx)
+	    val (dim1, ee1) = (array_access index (dim, ee))
 	in
-	    case (List.find (fn (Slot (x, _, _, _)) => (x = v)) components) of
-		NONE => NONE
-	      | SOME (slot as Slot (v_, _, array, _)) => (
-		let
-		    val subjx = (compose_subject subj v [])
-		in
-		    SOME (access_component subjx slot index)
-		end)
+	    (access_component subj (Slot (v, dim1, ee1, dummy)) [])
 	end))
+
+fun find_component id components = (
+    (List.find (fn (Slot (x, _, _, _)) => (x = id)) components))
+
+(* Descends the instance_tree by one step. *)
+
+fun descend_instance_tree_node id (node0 : instance_node_t) = (
+    let
+	val (subj, kx, cx) = node0
+	val components = (! cx)
+    in
+	case (find_component id components) of
+	    NONE => NONE
+	  | SOME slot => SOME slot
+    end)
+
+(* Accesses an instance_tree node by a part of a subject.  It may
+   return an instance_tree node or NONE. *)
+
+fun descend_instance_tree_step__ (id, index) (node0 : instance_node_t) = (
+    let
+	val (subj, kx, cx) = node0
+	val components = (! cx)
+    in
+	case (find_component id components) of
+	    NONE => NONE
+	  | SOME slot => (
+	    let
+		val subjx = (compose_subject subj id [])
+	    in
+		SOME (access_component subjx slot index)
+	    end)
+    end)
 
 (* Finds an instance or an array of instances, by descending an
-   instance_tree.  It returns a temporarily created dummy node, when
-   it returns an array of instances. *)
+   instance_tree.  It may return a temporarily created dummy node,
+   when it returns an array of instances.  It trails an inner-outer
+   alias. *)
 
 fun descend_instance_tree path0 (node0 : instance_node_t) = (
     case path0 of
 	[] => SOME node0
-      | ((v, ss) :: path1) => (
+      | ((id, index) :: path1) => (
 	let
-	    val node1 = (descend_instance_tree_step (v, ss) node0)
+	    val (subj, kx, cx) = node0
+	    val components = (! cx)
 	in
-	    case node1 of
+	    case (find_component id components) of
 		NONE => NONE
-	      | SOME node1x => (
-		(descend_instance_tree path1 node1x))
+	      | SOME slot => (
+		if (component_is_outer_alias slot) then
+		    let
+			val inner = (outer_alias_of_component slot)
+			val (Subj (_, path2), _) = (subject_prefix inner)
+			val newpath = path2 @ path0
+			val root = instance_tree
+		    in
+			(descend_instance_tree path1 root)
+		    end
+		else
+		    let
+			val subjx = (compose_subject subj id [])
+			val node1 = (access_component subjx slot index)
+		    in
+			(descend_instance_tree path1 node1)
+		    end)
 	end))
 
 (* Checks if constraints of hierarchy in the instance_tree (actually
@@ -270,9 +380,8 @@ fun descend_instance_tree path0 (node0 : instance_node_t) = (
 
 fun assert_package_constraints node = (
     let
-	val (_, kx, componentsx) = node
+	val (_, kx, cx) = node
 	val k = (! kx)
-	val components = componentsx
 	val package = (class_is_package k)
 	val _ = if (not package) then ()
 		else if (step_is_at_least E0 k) then ()
@@ -287,23 +396,47 @@ fun subject_to_instance_tree_path subj = (
       | Subj (VAR, path) => (VAR, path)
       | Subj (PKG, path) => (PKG, path))
 
-(* Fetchs an instance in the instance_tree. *)
+fun fetch_instance_tree_node subj : instance_node_t option = (
+    let
+	val (ns, path) = (subject_to_instance_tree_path subj)
+	val root = if (ns = PKG) then class_tree else instance_tree
+    in
+	(descend_instance_tree path root)
+    end)
+
+(* Fetchs an instance in the instance_tree.  It trails an inner-outer
+   alias, thus, it never returns an inner-outer alias. *)
 
 fun fetch_from_instance_tree subj : definition_body_t option = (
-    let
-	val (tree, path) = (subject_to_instance_tree_path subj)
-	val root = if (tree = PKG) then class_tree else instance_tree
-	val node = (descend_instance_tree path root)
-    in
-	case node of
-	    NONE => NONE
-	  | SOME (_, kx, components) => (
+    case (fetch_instance_tree_node subj) of
+	NONE => NONE
+      | SOME (_, kx, cx) => (
+	let
+	    val k0 = (! kx)
+	in
+	    SOME k0
+	end))
+
+(* Follows an inner-outer alias node.  Note that it returns a node
+   above one pointed by an alias. *)
+
+fun dereference_outer_alias (slot as Slot (id, dim, nodes, dummy)) = (
+    case nodes of
+	[] => raise Match
+      | [(_, kx, cx)] => (
+	case (! kx) of
+	    Def_Outer_Alias (vc, outer, inner) => (
 	    let
-		val k0 = (! kx)
+		val (tree, path) = (subject_to_instance_tree_path inner)
+		val root = if (tree = PKG) then class_tree else instance_tree
+		val (prefix, (aliasid, ss)) = (split_last path)
+		val _ = if (id = aliasid) then () else raise Match
+		val upnode = (descend_instance_tree prefix root)
 	    in
-		SOME k0
+		surely upnode
 	    end)
-    end)
+	  | _ => raise Match)
+      | _ => raise Match)
 
 (* Stores a package, an instance, or an array of instances.  It
    requires index=[] in the last part of the subject to collectively
@@ -411,6 +544,8 @@ fun store_to_instance_tree subj kp = (
 		  | Def_Primitive (P_Enum _ , e) => (
 		    (store_scalar upnode node id (subj, kp)))
 		  | Def_Primitive (_ , e) => raise Match
+		  | Def_Outer_Alias _ => (
+		    (store_scalar upnode node id (subj, kp)))
 		  | Def_Name _ => raise Match
 		  | Def_Scoped _ => raise Match
 		  | Def_Refine _ => (
@@ -439,12 +574,12 @@ fun unwrap_array_of_instances k = (
 
 fun clear_instance_tree () = (
     let
-	val (_, kx, components) = class_tree
-	val _ = kx := the_root_class
-	val _ = components := []
-	val (_, kx, components) = instance_tree
-	val _ = kx := Def_In_File
-	val _ = components := []
+	val (_, kx0, cx0) = class_tree
+	val _ = kx0 := the_root_class
+	val _ = cx0 := []
+	val (_, kx1, cx1) = instance_tree
+	val _ = kx1 := Def_In_File
+	val _ = cx1 := []
     in () end)
 
 fun assert_stored_in_instance_tree (subj, k) = (
@@ -463,6 +598,140 @@ fun main_class kp = (
 	in
 	    km
 	end)
+
+(* ================================================================ *)
+
+datatype inner_outer_slot_t
+    = Entry of name_t * name_t
+    | Alist of (string * inner_outer_slot_t) list
+
+(* The inner_outer_table table records a mapping from an outer to an
+   inner.  It records variable references with subscripts dropped.
+   Note that an inner is a prefix of an outer, when the last part
+   which is identical is dropped. *)
+
+val inner_outer_table = ref (Alist [])
+
+fun clear_inner_outer_table () = (
+    inner_outer_table := (Alist []))
+
+fun make_singleton_slot e path = (
+    (foldr (fn (k, s) => Alist [(k, s)]) e path))
+
+fun insert_outer_loop e slot0 path0 = (
+    case (slot0, path0) of
+	(Entry _, []) => (
+	let
+	    val _ = if (e = slot0) then ()
+		    else raise error_duplicate_inner_outer
+	in
+	    slot0
+	end)
+      | (Alist _, []) => raise Match
+      | (Entry _, v :: path1) => raise Match
+      | (Alist alist0, v :: path1) => (
+	let
+	    val (entry, others)
+		= (List.partition (fn (s, _) => (s = v)) alist0)
+	in
+	    case entry of
+		[] => (
+		let
+		    val s = (make_singleton_slot e path1)
+		    val alist1 = ((v, s) :: others)
+		in
+		    Alist alist1
+		end)
+	      | [(_, slot1)] => (
+		let
+		    val s = (insert_outer_loop e slot1 path1)
+		    val alist1 = ((v, s) :: others)
+		in
+		    Alist alist1
+		end)
+	      | _ => raise Match
+	end))
+
+fun assert_prefix_but_last x y = (
+    let
+	val (x1, x2) = (split_last x)
+	val (y1, y2) = (split_last y)
+    in
+	if ((list_prefix (op =) x1 y1) andalso x2 = y2) then ()
+	else raise Match
+    end)
+
+fun record_inner_outer outer inner = (
+    let
+	fun subject_path (Subj (ns, path)) = (
+	    let
+		val _ = if (ns = VAR) then () else raise Match
+	    in
+		(map (fn (Id s, _) => s) path)
+	    end)
+
+	val opath = (subject_path outer)
+	val ipath = (subject_path inner)
+	val _ = (assert_prefix_but_last ipath opath)
+	val e = Entry (Name opath, Name ipath)
+	val new = (insert_outer_loop e (! inner_outer_table) opath)
+	val _ = inner_outer_table := new
+    in
+	()
+    end)
+
+(* Inserts an alias instance to record an inner-outer matching in the
+   class_tree/instance_tree.  An outer reference will be substituted
+   by an inner reference, but it is delayed until processing
+   connectors (connectors need to distinguish internal connections).
+   It temporarily instantiates an outer reference as an alias. *)
+
+fun instantiate_outer_alias var outer inner = (
+    let
+	val _ = (assert_inner_outer (outer, inner))
+	val k = Def_Outer_Alias (var, outer, inner)
+	val _ = (store_to_instance_tree outer k)
+	val _ = (record_inner_outer outer inner)
+    in
+	k
+    end)
+
+fun substitute_outer_loop slot0 (prefix0, suffix0) = (
+    case (slot0, suffix0) of
+	(Entry (Name outer, Name inner), _) => (
+	let
+	    val (prefix1, (id, ss)) = (split_last prefix0)
+	    val prefix2 = (List.take (prefix1, ((length inner) - 1)))
+	    val path = (prefix2 @ [(id, ss)] @ suffix0)
+	    val _ = tr_tree (";; substitute_outer ("^
+			     (name_to_string (Name outer)) ^", "^
+			     (name_to_string (Name inner)) ^")")
+	in
+	    (substitute_outer_loop (! inner_outer_table) ([], path))
+	end)
+      | (Alist alist, []) => (prefix0 @ suffix0)
+      | (Alist alist, (Id v, ss) :: suffix1) => (
+	case (List.partition (fn (s, _) => (s = v)) alist) of
+	    ([], _) => (prefix0 @ suffix0)
+	  | ([(_, slot1)], _) => (
+	    let
+		val prefix1 = prefix0 @ [(Id v, ss)]
+	    in
+		(substitute_outer_loop slot1 (prefix1, suffix1))
+	    end)
+	  | _ => raise Match))
+
+fun substitute_outer_reference w0 = (
+    case w0 of
+	Vref (_, []) => raise Match
+      | Vref (NONE, _) => raise Match
+      | Vref (SOME ns, rr0) => (
+	let
+	    val rrx = (substitute_outer_loop (! inner_outer_table) ([], rr0))
+	in
+	    Vref (SOME ns, rrx)
+	end)
+      | _ => w0)
 
 (* ================================================================ *)
 
@@ -651,7 +920,7 @@ fun component_class (Slot (v, dim, nodes, dummy)) = (
     if (dim = []) then
 	let
 	    val _ = if ((length nodes) = 1) then () else raise Match
-	    val (subj, kx, components) = (hd nodes)
+	    val (subj, kx, cx) = (hd nodes)
 	in
 	    (! kx)
 	end
@@ -695,7 +964,89 @@ fun clear_syntaxer_tables () = (
 	val _ = (clear_table dummy_inners)
 	val _ = (clear_table class_bindings)
 	val _ = (clear_instance_tree ())
+	val _ = (clear_inner_outer_table ())
     in () end)
+
+(* ================================================================ *)
+
+(* Accesses an instance-tree node and returns an instance and a list
+   of components.  Each component is Slot(v,d,a,_), where ID "v", a
+   dimension "d", and an array of nodes "a". *)
+
+fun access_node node0 = (
+    let
+	val (subj, kx, cx) = node0
+	val kp = (! kx)
+	val c0 = (! cx)
+	val components = (List.filter (not o component_is_outer_alias) c0)
+
+	val _ = if ((cook_step kp) <> E0) then () else raise Match
+	val _ = if ((class_is_package kp) orelse (step_is_at_least E5 kp))
+		then () else raise Match
+	val _ = if (null components) then ()
+		else if (not (class_is_simple_type kp)) then ()
+		else if (class_is_enum kp) then ()
+		else raise error_attribute_access_to_simple_type
+    in
+	(kp, components)
+    end)
+
+(* Calls f on each instance (with a folding argument) in the
+   class_tree/instance_tree. *)
+
+fun traverse_tree f (node0, acc0) = (
+    let
+	val (kp, components) = (access_node node0)
+	val acc1 = (f (kp, acc0))
+	val acc2 = (foldl (fn (Slot (v, dim, nodes, _), accx) =>
+			      (foldl (traverse_tree f) accx nodes))
+			  acc1 components)
+    in
+	acc2
+    end)
+
+(* ================================================================ *)
+
+fun enumerate_in_node f path0 (node, acc) = (
+    let
+	val (subj, kx, cx) = node
+	(*val components = (! cx)*)
+	val (kp, components) = (access_node node)
+    in
+	case path0 of
+	    [] => f (subj, acc)
+	  | (id :: path1) => (
+	    case (find_component id components) of
+		NONE => raise Match
+	      | SOME (slot as (Slot (id_, dim, nodes, dummy))) => (
+		let
+		    val _ = if (not (component_is_outer_alias slot))
+			    then () else raise Match
+		in
+		    (foldl (enumerate_in_node f path1) acc nodes)
+		end))
+    end)
+
+(* Enumerates all instances with a given pseudo variable.  That is,
+   given a.b.c, it enumerates a[i].b[j].c[k] for all array indices
+   (i,j,k).  It folds by calling f (subj,acc). *)
+
+fun enumerate_instances f path acc = (
+    (enumerate_in_node f path (instance_tree, acc)))
+
+(* ================================================================ *)
+
+(* Returns a scope of the model.  It is used to make a properly scoped
+   expression by wrapping literal constants. *)
+
+fun dummy_scope () = (
+    let
+	val (_, kx, _) = instance_tree
+	val model = (! kx)
+	val tag = (tag_of_body model)
+    in
+	(the_model_subject, tag)
+    end)
 
 (* ================================================================ *)
 

@@ -1,5 +1,5 @@
 (* folder.sml -*-Coding: us-ascii-unix;-*- *)
-(* Copyright (C) 2018-2020 RIKEN R-CCS *)
+(* Copyright (C) 2018-2021 RIKEN R-CCS *)
 
 (* CONSTANT FOLDER FOR DECLARATIONS.  Constant-folding works on
    expressions after binding, which resolves variable names to a fully
@@ -12,29 +12,34 @@ sig
     type definition_body_t
     type class_definition_t
     type expression_t
+    type id_t
 
-    val fold_constants_in_expression :
-	definition_body_t -> bool
+    val fold_constants :
+	definition_body_t -> bool -> (id_t * expression_t) list
 	-> expression_t -> expression_t
 
-    val simplify_ite : expression_t -> expression_t
-
-    val value_of_instance :
-	expression_t -> definition_body_t -> expression_t
+    val explicitize_range : expression_t -> expression_t list
 end = struct
 
 open plain
 open ast
 (*open small0*)
 open small1
+open expression
 
 val simple_type_attribute = simpletype.simple_type_attribute
+
+val simplify_ite = walker.simplify_ite
+val expression_is_literal = expression.expression_is_literal
 
 (*val unary_operator = operator.unary_operator*)
 (*val binary_operator = operator.binary_operator*)
 (*val relational_operator = operator.relational_operator*)
-val fold_constants_on_operator = operator.fold_constants_on_operator
+val fold_operator_application = operator.fold_operator_application
 val fold_pseudo_split = operator.fold_pseudo_split
+val bool_order = operator.bool_order
+val enumerator_order = operator.enumerator_order
+val take_enumarator_element = simpletype.take_enumarator_element
 
 val expression_to_string = dumper.expression_to_string
 
@@ -91,12 +96,13 @@ fun primitive_type_is_string p = (
 	P_String => true
       | _ => false)
 
-(* Takes a value of a class (kp) for an original variable reference
-   (x0).  It takes a value-attribute of a simple-type. *)
+(* Takes a value of a class (kp) for an original reference (w0).  It
+   takes a value-attribute of a simple-type.  Or, it converts a
+   function reference to an Instances expression. *)
 
-fun value_of_instance x0 kp = (
+fun value_of_instance w0 kp = (
     case kp of
-	Def_Body (mk, j, cs, (c, n, x), ee, aa, ww) => (
+	Def_Body (mk, subj, cs, nm, cc, ee, aa, ww) => (
 	if (not (class_is_simple_type kp)) then
 	    let
 		val _ = if (class_is_package kp) then
@@ -106,7 +112,10 @@ fun value_of_instance x0 kp = (
 			    if (step_is_at_least E5 kp) then ()
 			    else raise Match
 	    in
-		Instance ([], [kp], NONE)
+		if (class_is_package kp) then
+		    w0
+		else
+		    Instances ([], [subj])
 	    end
 	else
 	    let
@@ -114,7 +123,7 @@ fun value_of_instance x0 kp = (
 		val v = (simple_type_attribute kp (Id "value"))
 	    in
 		if (v = NIL) then
-		    x0
+		    w0
 		else
 		    v
 	    end)
@@ -124,103 +133,24 @@ fun value_of_instance x0 kp = (
 	    val vv = (map (value_of_instance NIL) array)
 	in
 	    if ((array_size dim) = 0) then
-		Instance (dim, array, dummy)
+		(*w0*)
+		Instances ([0], [])
 	    else if (List.exists (fn v => (v = NIL)) vv) then
-		Instance (dim, array, dummy)
+		(*w0*)
+		Instances (dim, (map subject_of_class array))
 	    else
 		(make_explicit_array dim vv)
 	end)
-      | Def_Der _ => x0
+      | Def_Der _ => w0
       | Def_Primitive (P_Enum tag_, L_Enum (tag, v)) => L_Enum (tag, v)
       | Def_Primitive _ => raise Match
       | _ => raise Match)
 
-(* Tests if it is a constant after constant folding. *)
-
-fun expression_is_constant__ w = (
-    let
-	fun check variability initialvalue = (
-	    case variability of
-		Continuous => (expression_is_constant__ initialvalue)
-	      | Discrete => (expression_is_constant__ initialvalue)
-	      | Parameter => (
-		if (not (expression_is_constant__ initialvalue)) then
-		    raise error_no_value_to_constant
-		else
-		    true)
-	      | Constant => (
-		if (not (expression_is_constant__ initialvalue)) then
-		    raise error_no_value_to_constant
-		else
-		    true))
-    in
-	case w of
-	    NIL => false
-	  | Colon => raise Match
-	  | Otherwise => raise Match
-	  | Scoped _ => raise Match
-	  | Vref (_, []) => raise Match
-	  | Vref (false, _) => raise Match
-	  | Vref (true, (r0 as (Id n, s) :: t)) => (
-	    false)
-	  | Opr _ => raise Match
-	  | App (x0, a0) => false
-	  | ITE c0 => false
-	  | Der a0 => false
-	  | Pure a0 => (List.all expression_is_constant__ a0)
-	  | Closure (n, a0) => false
-	  | L_Number x => true
-	  | L_Bool x => true
-	  | L_Enum _ => raise Match
-	  | L_String s => true
-	  | Array_Triple (x0, y0, z0) => (
-	    case z0 of
-		NONE => (
-		(List.all expression_is_constant__ [x0, y0]))
-	      | SOME z1 => (
-		(List.all expression_is_constant__ [x0, y0, z1])))
-	  | Array_Constructor a0 => (List.all expression_is_constant__ a0)
-	  | Array_Comprehension (x0, u0) => false
-	  | Array_Concatenation a0 => (
-	    (List.all (List.all expression_is_constant__) a0))
-	  | Tuple a0 => (List.all expression_is_constant__ a0)
-	  | Reduction_Argument (x0, u0) => false
-	  | Named_Argument (n, x0) => (expression_is_constant__ x0)
-	  | Pseudo_Split (x0, s) => (expression_is_constant__ x0)
-	  | Component_Ref _ => raise NOTYET
-	  | Instance _ => raise NOTYET
-	  | Iref v => raise NOTYET
-	  | Array_fill (x, n) => ((expression_is_constant__ x)
-				  andalso (expression_is_constant__ n))
-	  | Array_diagonal x => (expression_is_constant__ x)
-    end)
-
-fun simplify_ite w0 = (
-    case w0 of
-	ITE cc0 => (
-	let
-	    val cc1 = foldr
-			  (fn (c, tail) =>
-			      case (c, tail) of
-				  ((Otherwise, v), []) => [(Otherwise, v)]
-				| ((Otherwise, v), _) => raise Match
-				| ((L_Bool true, v), _) => [(Otherwise, v)]
-				| ((L_Bool false, v), _) => tail
-				| (_, _) => (c :: tail))
-			  [] cc0
-	    val ite1 = case ITE cc1 of
-			   ITE [(Otherwise, v)] => v
-			 | ITE ((Otherwise, v) :: _) => raise Match
-			 | ITE _ => ITE cc1
-			 | _ => raise Match
-	in
-	    ite1
-	end)
-      | _ => raise Match)
-
 fun value_of_reference w0 = (
     case w0 of
-	Vref (true, _) => (
+	Vref (_, []) => raise Match
+      | Vref (NONE, _) => raise Match
+      | Vref (SOME _, _) => (
 	let
 	    val subj = (reference_as_subject w0)
 	in
@@ -230,14 +160,14 @@ fun value_of_reference w0 = (
 	end)
       | _ => raise Match)
 
-(* Returns a pair of an expression and a class.  It does not repeat
-   simplifying, to allow binding routines to resolve variable
-   references. *)
+(* Simplifies an expression.  It does not repeat simplifying when
+   oneshot=true.  An environment holds bindings of iterator variables,
+   or it is null and ignored.  It assumes entries in an environment
+   are already simplified. *)
 
-fun fold_expression ctx needliteral w0 = (
+fun fold_expression ctx oneshot env w0 = (
     let
-	val walk_x = (fold_expression ctx needliteral)
-	val walk_x = (fold_expression ctx needliteral)
+	val walk_x = (fold_expression ctx oneshot env)
 	val walk_n_x = (fn (n, x) => (n, (walk_x x)))
 	val walk_x_x = (fn (x, y) => ((walk_x x), (walk_x y)))
 	val walk_x_option = (Option.map walk_x)
@@ -251,14 +181,14 @@ fun fold_expression ctx needliteral w0 = (
 	  | Otherwise => Otherwise
 	  | Scoped _ => raise Match
 	  | Vref (_, []) => raise Match
-	  | Vref (false, _) => raise Match
-	  | Vref (true, rr0) => (
+	  | Vref (NONE, _) => raise Match
+	  | Vref (SOME _, _) => (
 	    let
-		val (w1, literals) = (fold_subscripts_in_reference ctx w0)
+		val (w1, literals) = (fold_subscripts ctx oneshot env w0)
 	    in
 		if (not literals) then
 		    w1
-		else if (w0 <> w1) then
+		else if (w0 <> w1 andalso oneshot) then
 		    (* DO NOT REPEAT FOLDING. *)
 		    w1
 		else
@@ -271,11 +201,11 @@ fun fold_expression ctx needliteral w0 = (
 		val xx1 = (map walk_x xx0)
 		val w1 = App (f1, xx1)
 	    in
-		if (w0 <> w1) then
+		if (w0 <> w1 andalso oneshot) then
 		    (* DO NOT REPEAT FOLDING. *)
 		    w1
 		else
-		    (fold_constants_on_operator (f1, xx1))
+		    (fold_operator_application (f1, xx1))
 	    end)
 	  | ITE cc0 => (
 	    let
@@ -367,47 +297,160 @@ fun fold_expression ctx needliteral w0 = (
 		val x1 = (walk_x x0)
 		val w1 = Pseudo_Split (x1, ss)
 	    in
-		if (w0 <> w1) then
+		if (w0 <> w1 andalso oneshot) then
 		    (* DO NOT REPEAT FOLDING. *)
 		    w1
 		else
 		    (fold_pseudo_split w1)
 	    end)
 	  | Component_Ref _ => w0
-	  | Instance (dim, kk, _) => w0
-	  | Iref _ => w0
+	  (*| Instance (dim, kk, _) => w0*)
+	  | Instances _ => w0
+	  | Iref id => (
+	    if (null env) then
+		w0
+	    else
+		case (List.find (fn (v, x) => (v = id)) env) of
+		    NONE => raise Match
+		  | SOME (_, NIL) => w0
+		  | SOME (_, x) => x)
+	  | Cref (x0, b) => (
+	    let
+		val x1 = (walk_x x0)
+		val w1 = Cref (x1, b)
+	    in
+		w1
+	    end)
 	  | Array_fill (x, n) => w0
 	  | Array_diagonal x => w0
     end)
 
-(* Tries to fold constants in array indices, and returns a reference
-   and a boolean indicating indices are all literals. *)
+(* Tries to simplify array subscripts.  It returns a variable
+   reference and a boolean indicating indices are all literals. *)
 
-and fold_subscripts_in_reference ctx w0 = (
+and fold_subscripts ctx oneshot env w0 = (
     case w0 of
 	Vref (_, []) => raise Match
-      | Vref (false, _) => raise Match
-      | Vref (true, rr0) => (
+      | Vref (NONE, _) => raise Match
+      | Vref (SOME ns, rr0) => (
 	let
 	    fun mapr f (x0, x1) = (x0, f x1)
-	    val convert = (fold_expression ctx true)
+	    val convert = (fold_expression ctx oneshot env)
 	    val rr1 = (map (mapr (map convert)) rr0)
 	    val ok = (List.all ((List.all expression_is_literal) o #2) rr1)
 	in
-	    (Vref (true, rr1), ok)
+	    (Vref (SOME ns, rr1), ok)
 	end)
       | _ => raise Match)
 
-fun fold_constants_in_expression kp needliteral w0 = (
+(* Simplifies an expression.  It does not repeat simplifying when
+   oneshot=true.  It is to give a chance that the resolver routines to
+   assure referenced variables are instantiated in the build-phase.
+   An environment holds iterator bindings of for-equations. *)
+
+fun fold_constants kp oneshot env w0 = (
     let
-	(*val _ = if (step_is_at_least E4 kp) then () else raise Match*)
+	val _= if ((not oneshot) orelse (null env)) then () else raise Match
 	val ctx = {k = kp}
-	val w1 = (fold_expression ctx needliteral w0)
+	val w1 = (fold_expression ctx oneshot env w0)
 	val _ = tr_expr_vvv (";; fold_constants ("^
 			     (expression_to_string w0) ^"=>"^
 			     (expression_to_string w1) ^")")
     in
 	w1
+    end)
+
+(* ================================================================ *)
+
+(* Converts a (constant) iterator range to an L_Number list. *)
+
+fun explicitize_range w = (
+    let
+	fun literal_is_real w = (
+	    case w of
+		L_Number (ty, s) => (ty = R)
+	      | L_Bool _ => false
+	      | L_Enum _ => false
+	      | _ => raise error_non_scalar_literal)
+
+	fun z_scalar_literal w = (
+	    case w of
+		L_Number (_, s) => w
+	      | L_Bool _ => (z_literal (bool_order w))
+	      | L_Enum _ => (z_literal (enumerator_order w))
+	      | _ => raise error_non_scalar_literal)
+
+	fun r_scalar_literal w = (
+	    case w of
+		L_Number (_, s) => w
+	      | L_Bool _ => (r_literal (Real.fromInt (bool_order w)))
+	      | L_Enum _ => (r_literal (Real.fromInt (enumerator_order w)))
+	      | _ => raise error_non_scalar_literal)
+
+	fun range_by_type k = (
+	    case k of
+		Def_Mock_Array _ => raise error_range_on_array
+	      | _ => (
+		if (class_is_boolean k) then
+		    (map z_literal [0, 1])
+		else if (class_is_enumeration_definition k) then
+		    case (take_enumarator_element k) of
+			NONE => raise error_enum_unspecified
+		      | SOME [] => raise Match
+		      | SOME vv => (
+			(map z_literal (z_seq 1 1 (length vv))))
+		else
+		    raise error_range_on_class))
+    in
+	if (not (expression_is_literal w)) then
+	    raise error_range_iterator
+	else
+	    case w of
+		Array_Triple triple => (
+		case (triple_value triple) of
+		    (R, s0, s1, s2) => (
+		    let
+			val lb = (r_value s0)
+			val step = (r_value s1)
+			val ub = (r_value s2)
+			val n = (floor ((ub - lb) / step)) + 1
+		    in
+			if ((step > 0.0 andalso lb > ub)
+			    orelse (step < 0.0 andalso lb < ub)) then
+			    []
+			else
+			    (map r_literal (r_seq lb step n))
+		    end)
+		  | (Z, s0, s1, s2) => (
+		    let
+			val lb = (z_value s0)
+			val step = (z_value s1)
+			val ub = (z_value s2)
+			val n = ((ub - lb) div step) + 1
+		    in
+			if ((step > 0 andalso lb > ub)
+			    orelse (step < 0 andalso lb < ub)) then
+			    []
+			else
+			    (map z_literal (z_seq lb step n))
+		    end))
+	      | Array_Constructor ee => (
+		if (List.exists literal_is_real ee) then
+		    (map r_scalar_literal ee)
+		else
+		    (map z_scalar_literal ee))
+	      | Array_Comprehension (x, rr) => raise NOTYET
+	      | Array_Concatenation _ => raise error_not_vector
+	      (*| Instance ([], [k], NONE) => (range_by_type k)*)
+	      (*| Instance (_, _, _) => raise error_range_on_array*)
+	      | Instances ([], [subj]) => (
+		let
+		    val k = surely (fetch_from_instance_tree subj)
+		in
+		    (range_by_type k)
+		end)
+	      | Instances (_, _) => raise error_range_on_array
+	      | _ => raise Match
     end)
 
 end

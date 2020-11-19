@@ -1,5 +1,5 @@
 (* flatdumper.sml -*-Coding: us-ascii-unix;-*- *)
-(* Copyright (C) 2018-2020 RIKEN R-CCS *)
+(* Copyright (C) 2018-2021 RIKEN R-CCS *)
 
 (* DUMPER OF A FLAT MODEL. *)
 
@@ -7,36 +7,19 @@
    needed to remove the references to them. *)
 
 structure flatdumper
-
-(*
 : sig
-    type id_t
-    type class_tag_t
-    type cook_step_t
-    type class_definition_t
-    type variable_declaration_t
-    type definition_body_t
-    type expression_t
-    type binding_t
-    type subject_t
-    type ctx_t
-    type binder_t
-    val dump_flat_model : unit -> unit
     val xdump : unit -> unit
-end
-*)
-
-= struct
+end = struct
 
 open plain
 open ast
 open small0
 
-val descend_instance_tree = classtree.descend_instance_tree
-val instance_tree = classtree.instance_tree
-val class_tree = classtree.class_tree
+val package_root_node = classtree.package_root_node
+val model_root_node = classtree.model_root_node
 val subject_to_instance_tree_path = classtree.subject_to_instance_tree_path
 val extract_base_classes = classtree.extract_base_classes
+val traverse_tree = classtree.traverse_tree
 
 val simple_type_attribute = simpletype.simple_type_attribute
 val type_of_simple_type = simpletype.type_of_simple_type
@@ -98,8 +81,12 @@ fun expression_to_string w = (
 	  | Otherwise => "Otherwise"
 	  | Scoped (x1, scope) => raise Match
 	  | Vref (_, []) => raise Match
-	  | Vref (false, rr) => raise Match
-	  | Vref (true, rr) => (ref_to_string rr)
+	  | Vref (NONE, rr) => raise Match
+	  | Vref (SOME ns, rr0) => (
+	    if (ns = PKG) then
+		(ref_to_string ((Id "", []) :: rr0))
+	    else
+		(ref_to_string rr0))
 	  | Opr p => (predefined_operator_to_string p)
 	  | App (f, aa) => (
 	    let
@@ -221,6 +208,7 @@ fun expression_to_string w = (
 	    in
 		("(Component_Ref "^ s0 ^", "^ s1 ^")")
 	    end)
+	  (*
 	  | Instance (d, kk, _) => (
 	    let
 		val class_name = (subject_to_string o subject_of_class)
@@ -238,7 +226,23 @@ fun expression_to_string w = (
 		      | (k :: _) => (
 			("(Instance ["^ ds ^"] "^ (class_name k) ^")"))
 	    end)
+	  *)
+	  | Instances ([], [subj]) => (
+	    ("(Instance "^ (subject_to_string subj) ^")"))
+	  | Instances ([], _) => raise Match
+	  | Instances (dim, subjs) => (
+	    let
+		val _ = if (not (null dim)) then () else raise Match
+		val ds = ((String.concatWith ",")
+			      (map Int.toString dim))
+	    in
+		case subjs of
+		    [] => ("(Instance ["^ ds ^"])")
+		  | (subj :: _) => (
+		    ("(Instance ["^ ds ^"] "^ (subject_to_string subj) ^")"))
+	    end)
 	  | Iref v => (id_to_string v)
+	  | Cref (e, b) => (expression_to_string e)
 	  | Array_fill (e, n) => (
 	    let
 		val se = (expression_to_string e)
@@ -256,26 +260,6 @@ fun expression_to_string w = (
 
 (* ================================================================ *)
 
-val package_root_node = class_tree
-val model_root_node = instance_tree
-
-(* Calls f like foldl on each node in the class_tree/instance_tree. *)
-
-fun traverse_tree f (node0, acc0) = (
-    let
-	val (subj, kx, cx) = node0
-	val kp = (! kx)
-
-	val _ = if ((cook_step kp) <> E0) then () else raise Match
-
-	val acc1 = (f (kp, acc0))
-	val components = (! cx)
-    in
-	(foldl (fn (Slot (v, dim, nodes, dummy), accx) =>
-		   (foldl (traverse_tree f) accx nodes))
-	       acc1 components)
-    end)
-
 (* Packages are processed to step=E3, but some packages which are
    named but unused remain at step=E0 (.Modelica.Icons.Package). *)
 
@@ -291,7 +275,10 @@ fun collect_variables root = (
 		let
 		    val subj = (subject_of_class kp)
 		in
-		    if (class_is_enumerator_definition kp) then
+		    if (class_is_outer_alias kp) then
+			(* THIS WILL BE REMOVED. *)
+			acc
+		    else if (class_is_enumerator_definition kp) then
 			acc
 		    else if (class_is_package kp) then
 			acc
@@ -316,11 +303,11 @@ fun collect_variables root = (
 
 fun collect_enumerations root = (
     let
-	fun class_is_enumeration_definition k = (
-	    (class_is_enum k) andalso (class_is_package k))
-
 	fun collect (kp, acc) = (
-	    if (class_is_enumerator_definition kp) then
+	    if (class_is_outer_alias kp) then
+		(* THIS WILL BE REMOVED. *)
+		acc
+	    else if (class_is_enumerator_definition kp) then
 		acc
 	    else if (step_is_less E3 kp) then
 		acc
@@ -345,7 +332,10 @@ fun collect_records root = (
 	    (kind_is_record k) andalso (class_is_package k))
 
 	fun collect (kp, acc) = (
-	    if (class_is_enumerator_definition kp) then
+	    if (class_is_outer_alias kp) then
+		(* THIS WILL BE REMOVED. *)
+		acc
+	    else if (class_is_enumerator_definition kp) then
 		acc
 	    else if (step_is_less E3 kp) then
 		acc
@@ -368,12 +358,15 @@ fun collect_functions root = (
     let
 	fun partial k = (
 	    case k of
-		Def_Body (mk, j, (t, {Partial, ...}, q), nm, ee, aa, ww) => (
+		Def_Body (mk, j, (t, {Partial, ...}, q), nm, cc, ee, aa, ww) => (
 		Partial)
 	      | _ => raise Match)
 
 	fun collect (kp, acc) = (
-	    if (class_is_enumerator_definition kp) then
+	    if (class_is_outer_alias kp) then
+		(* THIS WILL BE REMOVED. *)
+		acc
+	    else if (class_is_enumerator_definition kp) then
 		acc
 	    else if (step_is_less E3 kp) then
 		acc
@@ -427,18 +420,22 @@ fun collect_equations initial () = (
 	(* Include equations in simple-types. *)
 
 	fun collect (kp, acc) = (
-	    let
-		val (bases, _) = (extract_base_classes false kp)
-		val subj = (subject_of_class kp)
-		val tag = (tag_of_body kp)
-		val classes = [(tag, kp)] @ bases
-		val ee = (foldl eqn1 [] classes)
-	    in
-		if (not (null ee)) then
-		    acc @ [(subj, ee)]
-		else
-		    acc
-	    end)
+	    if (class_is_outer_alias kp) then
+		(* THIS WILL BE REMOVED. *)
+		acc
+	    else
+		let
+		    val (bases, _) = (extract_base_classes false kp)
+		    val subj = (subject_of_class kp)
+		    val tag = (tag_of_body kp)
+		    val classes = [(tag, kp)] @ bases
+		    val ee = (foldl eqn1 [] classes)
+		in
+		    if (not (null ee)) then
+			acc @ [(subj, ee)]
+		    else
+			acc
+		end)
 
 	val node = model_root_node
 	val eqns = (traverse_tree collect (node, []))
@@ -472,16 +469,17 @@ fun declaraton_of_real k = (
 	val truth_value = L_Bool true
 	val false_value = L_Bool false
 	val stateselect_default
-	    = Vref (true, [(Id "", []), (Id "StateSelect", []),
-			   (Id "default", [])])
-	val inf = Vref (true,
-			[(Id "", []), (Id "Modelica", []),
-			 (Id "Constants", []), (Id "inf", [])])
+	    = Vref (SOME PKG,
+		    [(Id "StateSelect", []), (Id "default", [])])
+	val inf
+	    = Vref (SOME PKG,
+		    [(Id "Modelica", []),
+		     (Id "Constants", []), (Id "inf", [])])
 	val min_default = App (Opr Opr_neg, [inf])
 	val max_default = App (Opr Opr_id, [inf])
     in
 	case k of
-	    Def_Body ((u, f, b), subj, (t, p, q), (c, n, x), ee, aa, ww) => (
+	    Def_Body ((u, f, b), subj, (t, p, q), (c, n, x), cc, ee, aa, ww) => (
 	    let
 		val (analogical, variability, modality) = q
 
@@ -541,6 +539,84 @@ fun declaraton_of_real k = (
 	    end)
 	  | Def_Der _ => ""
 	  | Def_Primitive _ => raise Match
+	  | Def_Outer_Alias _ => raise Match
+	  | Def_Name _ => raise Match
+	  | Def_Scoped _ => raise Match
+	  | Def_Refine _ => raise Match
+	  | Def_Extending _ => raise Match
+	  | Def_Replaced _ => raise Match
+	  | Def_Displaced _ => raise Match
+	  | Def_In_File => raise Match
+	  | Def_Mock_Array _ => raise Match
+    end)
+
+fun declaraton_of_integer k = (
+    let
+	fun quote x = (expression_to_string x)
+
+	fun opt_slot k v preset = (
+	    if (v = preset orelse v = NIL) then ""
+	    else (k ^"="^ (quote v)))
+
+	val empty_string = L_String ""
+	val real_zero = L_Number (Z, "0")
+	val truth_value = L_Bool true
+	val false_value = L_Bool false
+	val inf = Vref (SOME PKG,
+			[(Id "Modelica", []), (Id "Constants", []),
+			 (Id "Integer_inf", [])])
+	val min_default = App (Opr Opr_neg, [inf])
+	val max_default = App (Opr Opr_id, [inf])
+    in
+	case k of
+	    Def_Body ((u, f, b), subj, (t, p, q), (c, n, x), cc, ee, aa, ww) => (
+	    let
+		val (analogical, variability, modality) = q
+
+		val value_ = (simple_type_attribute k (Id "value"))
+		val quantity_ = (simple_type_attribute k (Id "quantity"))
+		val min_ = (simple_type_attribute k (Id "min"))
+		val max_ = (simple_type_attribute k (Id "max"))
+		val start_ = (simple_type_attribute k (Id "start"))
+		val fixed_ = (simple_type_attribute k (Id "fixed"))
+
+		val fixed_default =
+		      if ((variability_order variability)
+			  <= (variability_order Parameter)) then
+			  truth_value
+		      else
+			  false_value
+
+		val vs = (variability_to_string variability)
+		val ts = "Integer"
+		val ms = ("("^
+			  (String.concatWith
+			       ", "
+			       (List.filter
+				    (fn x => (x <> ""))
+				    [(opt_slot "quantity" quantity_
+					       empty_string),
+				     (opt_slot "min" min_ min_default),
+				     (opt_slot "max" max_ max_default),
+				     (opt_slot "start" start_ real_zero),
+				     (opt_slot "fixed" fixed_ fixed_default)]))
+			  ^")")
+		val ns = (subject_to_string subj)
+		val xs = if (value_ <> NIL) then
+			     "= "^ (quote value_)
+			 else
+			     ""
+		val ss = ((String.concatWith
+			       " "
+			       (List.filter (fn x => (x <> ""))
+					    [vs, ts, ms, ns, xs]))
+			  ^";")
+	    in
+		ss
+	    end)
+	  | Def_Der _ => ""
+	  | Def_Primitive _ => raise Match
+	  | Def_Outer_Alias _ => raise Match
 	  | Def_Name _ => raise Match
 	  | Def_Scoped _ => raise Match
 	  | Def_Refine _ => raise Match
@@ -555,7 +631,7 @@ fun dump_variable s k = (
     let
 	val sx = case (type_of_simple_type k) of
 		     P_Number R => (declaraton_of_real k)
-		   | P_Number Z => ""
+		   | P_Number Z => (declaraton_of_integer k)
 		   | P_Boolean => ""
 		   | P_String => ""
 		   | P_Enum tag =>  ""
@@ -574,7 +650,7 @@ fun dump_enumeration s k = (
 	      | _ => false)
     in
 	case k of
-	    Def_Body (mk, j, (t, p, q), nm, ee, aa, ww) => (
+	    Def_Body (mk, j, (t, p, q), nm, cc, ee, aa, ww) => (
 	    let
 		val tag = (tag_of_body k)
 		val name = (subject_to_string (subject_of_class k))
@@ -602,7 +678,7 @@ fun dump_record s k = (
 	      | _ => false)
     in
 	case k of
-	    Def_Body (mk, j, (t, p, q), nm, ee, aa, ww) => (
+	    Def_Body (mk, j, (t, p, q), nm, cc, ee, aa, ww) => (
 	    let
 		val tag = (tag_of_body k)
 		val name = (subject_to_string (subject_of_class k))
@@ -628,7 +704,7 @@ fun dump_function s k = (
 	      | _ => false)
     in
 	case k of
-	    Def_Body (mk, j, (t, p, q), nm, ee, aa, ww) => (
+	    Def_Body (mk, j, (t, p, q), nm, cc, ee, aa, ww) => (
 	    let
 		val tag = (tag_of_body k)
 		val name = (subject_to_string (subject_of_class k))
@@ -653,13 +729,20 @@ fun dump_equation s q = (
 	fun dump_conditional key s ((e, qq), start) = (
 	    case e of
 		Otherwise => (
-		let
-		    val _ = if (not start) then () else raise Match
-		    val _ = (TextIO.output (s, "else\n"))
-		    val _ = (app (dump_equation s) qq)
-		in
-		    false
-		end)
+		if (not start) then
+		    let
+			(*val _ = if (not start) then () else raise Match*)
+			val _ = (TextIO.output (s, "else\n"))
+			val _ = (app (dump_equation s) qq)
+		    in
+			false
+		    end
+		else
+		    let
+			val _ = (app (dump_equation s) qq)
+		    in
+			false
+		    end)
 	      | _ => (
 		let
 		    val _ = if (start) then
@@ -685,16 +768,32 @@ fun dump_equation s q = (
 	    in
 		()
 	    end)
-	  | Eq_Connect ((e0, e1), aa, ww) => (
+	  | Eq_Connect ((Cref (e0, side0), Cref (e1, side1)), aa, ww) => (
 	    let
 		val _ = (TextIO.output
-			     (s, ("connect ("^
+			     (s, ("/*connect ("^
 				  (expression_to_string e0)
+				  (*^(if side0 then "(+)" else "(-)")*)
 				  ^", "^
-				  (expression_to_string e1) ^")\n")))
+				  (expression_to_string e1)
+				  (*^(if side1 then "(+)" else "(-)")*)
+				  ^")*/\n")))
 	    in
 		()
 	    end)
+	  | Eq_Connect ((e0, e1), aa, ww) =>
+	    (*raise Match*)
+	      (
+		let
+		    val _ = (TextIO.output
+				 (s, ("/*connect ("^
+				      (expression_to_string e0)
+				      ^", "^
+				      (expression_to_string e1)
+				      ^")*/\n")))
+		in
+		    ()
+		end)
 	  | Eq_If (cc, aa, ww) => (
 	    let
 		val _ = (foldl (dump_conditional "if" s) true cc)
@@ -723,7 +822,6 @@ fun dump_equation s q = (
 	    end)
 	  | Eq_App ((f, ee), aa, ww) => (
 	    let
-
 		val _ = (TextIO.output (s, (expression_to_string f)))
 		val _ = (TextIO.output (s, "("))
 		val _ = (TextIO.output
@@ -774,7 +872,7 @@ fun dump_flat_model () = (
 
 	fun class_is_constant k = (
 	    case k of
-		Def_Body (mk, j, (t, p, q), nm, ee, aa, ww) => (
+		Def_Body (mk, j, (t, p, q), nm, cc, ee, aa, ww) => (
 		let
 		    val (lg, vc, io) = q
 		in

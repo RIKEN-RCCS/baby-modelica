@@ -1,5 +1,5 @@
 (* small0.sml -*-Coding: us-ascii-unix;-*- *)
-(* Copyright (C) 2018-2020 RIKEN R-CCS *)
+(* Copyright (C) 2018-2021 RIKEN R-CCS *)
 
 (* SMALL FUNCTIONS FOR ELABORATION (first half). *)
 
@@ -17,69 +17,6 @@ fun tr_tree (s : string) = if true then (print (s ^"\n")) else ()
 fun tr_tree_vvv (s : string) = if false then (print (s ^"\n")) else ()
 
 (* ================================================================ *)
-
-(* Converts a literal constant to an int value. *)
-
-fun literal_to_int w = (
-    case w of
-	L_Number (_, s) => (
-	case (string_is_int s) of
-	    NONE => raise error_non_integer_value
-	  | SOME v => v)
-      | _ => raise error_non_constant_value)
-
-(* (Note Real.fromString parses the prefix of s) *)
-
-fun r_value s = (
-    case (Real.fromString s) of
-	SOME x => x
-      | NONE => raise Match)
-
-fun z_value s = (
-    case (Int.fromString s) of
-	SOME x => x
-      | NONE => raise Match)
-
-fun r_literal x = (
-    L_Number (R, (Real.toString x)))
-
-fun z_literal x = (
-    L_Number (Z, (Int.toString x)))
-
-(* Tests if a class is a simple-type, that is, Real, Integer, Boolean,
-   String, enumerations, types extending them, and arrays of them. *)
-
-fun class_is_simple_type k = (
-    let
-	fun tag_is_simple_type tag = (
-	    case tag of
-		Ctag [""] => raise Match
-	      | Ctag [] => false
-	      | Ctag ["Real"] => true
-	      | Ctag ["Integer"] => true
-	      | Ctag ["Boolean"] => true
-	      | Ctag ["String"] => true
-	      | _ => false)
-    in
-	case k of
-	    Def_Body (mk, j, cs, (tag, n, x), ee, aa, ww) => (
-	    let
-		val _ = if (step_is_at_least E3 k) then () else raise Match
-	    in
-		(class_is_enum k) orelse (tag_is_simple_type tag)
-	    end)
-	  | Def_Der _ => false
-	  | Def_Primitive _ => true
-	  | Def_Name _ => raise Match
-	  | Def_Scoped _ => raise Match
-	  | Def_Refine (kx, v, ts, q, (ss, mm), aa, ww) => (
-	    (class_is_simple_type kx))
-	  | Def_Extending _ => raise Match
-	  | Def_Replaced _ => raise Match
-	  | Def_Displaced (tag, _) => (tag_is_simple_type tag)
-	  | Def_In_File => raise Match
-	  | Def_Mock_Array _ => raise Match
-    end)
 
 fun make_file_path basepath (Name ss) =
     (foldl (fn (r, l) => (l ^ "/" ^ r)) basepath ss)
@@ -137,12 +74,13 @@ fun definition_body (Defclass ((v, g), b)) = b
 
 fun innate_tag k = (
     case k of
-	Def_Body (mk, j, cs, (tag, n, x), ee, aa, ww) => tag
+	Def_Body (mk, j, cs, (tag, n, x), cc, ee, aa, ww) => tag
       | Def_Der (tag, cs, n, vv, aa, ww) => tag
       | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => raise Match
       | Def_Scoped _ => raise Match
-      | Def_Refine (kx, v, ts, q, (ss, mm), aa, ww) => (innate_tag kx)
+      | Def_Refine (kx, v, ts, q, (ss, mm), cc, aa, ww) => (innate_tag kx)
       | Def_Extending (_, x, kx) => (innate_tag kx)
       | Def_Replaced (kx, _) => (innate_tag kx)
       | Def_Displaced (tag, _) => tag
@@ -151,9 +89,10 @@ fun innate_tag k = (
 
 fun tag_of_body k = (
     case k of
-	Def_Body (mk, j, cs, (tag, n, x), ee, aa, ww) => tag
+	Def_Body (mk, j, cs, (tag, n, x), cc, ee, aa, ww) => tag
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
@@ -165,9 +104,10 @@ fun tag_of_body k = (
 
 fun body_elements (k : definition_body_t) = (
     case k of
-	Def_Body (mk, j, cs, nm, ee, aa, ww) => ee
+	Def_Body (mk, j, cs, nm, cc, ee, aa, ww) => ee
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
@@ -183,10 +123,11 @@ fun class_elements (Defclass ((v, g), k)) = (body_elements k)
 
 fun replace_body_elements (k : definition_body_t) ee = (
     case k of
-	Def_Body (mk, j, cs, nm, ee_, aa, ww) => (
-	Def_Body (mk, j, cs, nm, ee, aa, ww))
+	Def_Body (mk, j, cs, nm, cc, ee_, aa, ww) => (
+	Def_Body (mk, j, cs, nm, cc, ee, aa, ww))
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
@@ -195,6 +136,24 @@ fun replace_body_elements (k : definition_body_t) ee = (
       | Def_Displaced _ => raise Match
       | Def_In_File => raise Match
       | Def_Mock_Array _ => raise Match)
+
+fun assert_match_subject_name id subj = (
+    let
+	val (prefix, (v, ss)) = (subject_prefix subj)
+	val _ = if (v = id) then () else raise Match
+    in
+	()
+    end)
+
+(* Checks a variable declaration has no subscripts by nature. *)
+
+fun assert_no_subscript_to_subject subj = (
+    let
+	val (prefix, (v, ss)) = (subject_prefix subj)
+	val _ = if (null ss) then () else raise Match
+    in
+	()
+    end)
 
 fun assert_match_subject subj k = (
     if (subj = (subject_of_class k)) then () else raise Match)
@@ -211,6 +170,10 @@ fun drop_last_subscript_of_subject subj = (
 	    (compose_subject prefix v [])
 	end)
 
+fun subject_equal_sans_subscript subj0 subj1 = (
+    ((drop_last_subscript_of_subject subj0)
+     = (drop_last_subscript_of_subject subj1)))
+
 (* Checks the subjects ignoring the subscripts of an instance k. *)
 
 fun assert_match_subject_sans_subscript subj0 k = (
@@ -226,7 +189,7 @@ fun assert_match_subject_sans_subscript subj0 k = (
 (* Tests if the subjects are in the inner-outer relation -- true if
    subj1 is the prefix of subj0.  (IT IGNORES SUBSCRIPTS). *)
 
-fun subject_is_prefix (subj0, subj1) = (
+fun subject_is_prefix__ (subj0, subj1) = (
     let
 	fun prefix (cc0, cc1) = (
 	    case (cc0, cc1) of
@@ -243,10 +206,7 @@ fun subject_is_prefix (subj0, subj1) = (
 	    (ns0 = ns1) andalso (prefix (cc0, cc1)))
     end)
 
-(* Tests the prefix relation with the same name part.  It is true for
-   "model.tank.system" and "model.system". *)
-
-fun subject_is_inner_outer (subj0, subj1) = (
+fun subject_is_inner_outer__ (subj0, subj1) = (
     case (subj0, subj1) of
 	(Subj (ns0, cc0), Subj (ns1, cc1)) => (
 	let
@@ -254,10 +214,24 @@ fun subject_is_inner_outer (subj0, subj1) = (
 	    val (tt1, s1) = (split_last cc1)
 	in
 	    if (s0 = s1) then
-		(subject_is_prefix (Subj (ns0, tt0), Subj (ns1, tt1)))
+		(subject_is_prefix__ (Subj (ns0, tt0), Subj (ns1, tt1)))
 	    else
 		false
 	end))
+
+(* Tests the prefix relation with the same name part.  It is true for
+   "model.tank.system" and "model.system". *)
+
+fun subject_is_inner_outer (subj0, subj1) = (
+    let
+	val (prefix0, (id0, ss0)) = (subject_prefix subj0)
+	val (prefix1, (id1, ss1)) = (subject_prefix subj1)
+    in
+	if ((id0, ss0) = (id1, ss1)) then
+	    (subject_is_prefix prefix0 prefix1)
+	else
+	    false
+    end)
 
 fun outer_but_not_inner (q : element_prefixes_t) = (
     (#Outer q) andalso (not (#Inner q)))
@@ -322,9 +296,10 @@ fun class_is_encapsulated k = (
 	fun check (t, {Encapsulated, ...}, _) = Encapsulated
     in
 	case k of
-	    Def_Body (mk, j, cs, nm, ee, aa, ww) => (check cs)
+	    Def_Body (mk, j, cs, nm, cc, ee, aa, ww) => (check cs)
 	  | Def_Der (c, cs, n, vv, aa, ww) => (check cs)
 	  | Def_Primitive _ => raise Match
+	  | Def_Outer_Alias _ => raise Match
 	  | Def_Name _ => raise Match
 	  | Def_Scoped _ => raise Match
 	  | Def_Refine _ => raise Match
@@ -334,17 +309,6 @@ fun class_is_encapsulated k = (
 	  | Def_In_File => raise Match
 	  | Def_Mock_Array _ => raise Match
     end)
-
-(* Bound variables start with "" for globals *)
-
-fun reference_is_bound x0 = (
-    case x0 of
-	Vref (_, []) => raise Match
-      | Vref (false, (Id "", []) :: _) => true
-      | Vref (false, (Id "", _) :: _) => raise Match
-      | Vref (false, (Id s, _) :: _) => false
-      | Vref (true, _) => true
-      | _ => raise Match)
 
 (* Tests if modifiers is empty or a single value. *)
 
@@ -404,12 +368,12 @@ fun classes_are_compatible cv0 cv1 = (
 	true
     end)
 
-fun binding_is_public (Binding (v, _, _, (z, r, d, h))) = (z = Public)
+fun binding_is_public (Naming (_, _, _, _, (z, r, dx, h))) = (z = Public)
 
-fun binding_is_imported (Binding (v, _, i, (z, r, d, h))) = i
+fun binding_is_imported (Naming (_, _, _, i, (z, r, dx, h))) = i
 
-fun binding_is_class (Binding (v, _, _, (z, r, d, h))) = (
-    case d of
+fun binding_is_class (Naming (_, _, _, _, (z, r, dx, h))) = (
+    case dx of
 	EL_Class _ => true
       | EL_State _ => false)
 
@@ -430,9 +394,10 @@ fun body_is_declaration_form k = (
 	Def_Body _ => raise Match
       | Def_Der _ => false
       | Def_Primitive _ => true
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => true
       | Def_Scoped _ => true
-      | Def_Refine (kx, v, ts, q, (ss, mm), aa, ww) => (
+      | Def_Refine (kx, v, ts, q, (ss, mm), cc, aa, ww) => (
 	(body_is_declaration_form kx))
       | Def_Extending _ => false
       | Def_Replaced _ => false
@@ -448,17 +413,14 @@ fun body_is_declaration_form k = (
 
 (* It does not matter about variable declarations at step=E3. *)
 
-fun drop_duplicate_declarations step (bindings : binding_t list) = (
+fun drop_duplicate_declarations step (bindings : naming_t list) = (
     let
-	fun eq (Binding (v0, subj0_, _, e0), Binding (v1, subj1_, _, e1)) = (
-	    if (v0 <> v1) then
-		false
-	    else
-		true)
+	fun eq (Naming (v0, _, _, _, _), Naming (v1, _, _, _, _)) = (
+	    (v0 = v1))
 
 	fun unify (b0, b1) = (
 	    case (b0, b1) of
-		(Binding (v0, subj0_, _, e0), Binding (v1, subj1_, _, e1)) => (
+		(Naming (v0, _, _, _, e0), Naming (v1, _, _, _, e1)) => (
 		case (e0, e1) of
 		    ((_, _, EL_Class d0, _), (_, _, EL_Class d1, _)) => (
 		    if ((tag_of_definition d0) = (tag_of_definition d1)) then
@@ -477,7 +439,7 @@ fun drop_duplicate_declarations step (bindings : binding_t list) = (
 	fun unify_by_pairs ([]) = raise Match
 	  | unify_by_pairs (b :: bb) = (foldl unify b bb)
 
-	val bb0 = (list_duplicates eq bindings)
+	val bb0 = (list_groups eq bindings)
 	val bb1 = (map unify_by_pairs bb0)
     in
 	bb1
@@ -493,6 +455,7 @@ fun body_is_unmodifiable k = (
 	Def_Body _ => false
       | Def_Der _ => true
       | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => raise Match
       | Def_Scoped _ => false
       | Def_Refine _ => false
@@ -509,6 +472,7 @@ fun body_is_extending k = (
 	Def_Body _ => false
       | Def_Der _ => false
       | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => false
       | Def_Scoped _ => false
       | Def_Refine _ => false
@@ -518,8 +482,8 @@ fun body_is_extending k = (
       | Def_In_File => raise Match
       | Def_Mock_Array _ => raise Match)
 
-fun find_in_bindings v bindings = (
-    (List.find (fn Binding (x, _, _, _) => v = x) bindings))
+fun find_in_bindings id bindings = (
+    (List.find (fn Naming (x, _, _, _, _) => x = id) bindings))
 
 fun assert_cook_step step k = (
     if ((cook_step k) = step) then () else raise Match)
@@ -562,16 +526,6 @@ fun extract_bases_in_main_class (k0 : definition_body_t) = (
 	    (NONE, k1)
 	else
 	    (SOME bases, k1)
-    end)
-
-fun class_is_main_class k = (
-    let
-	val _ = if (class_is_body k) then () else raise Match
-	val _ = if (step_is_at_least E3 k) then () else raise Match
-    in
-	case (extract_bases_in_main_class k) of
-	    (NONE, k_) => false
-	  | (SOME bases, k_) => true
     end)
 
 end

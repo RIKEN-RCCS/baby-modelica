@@ -1,5 +1,5 @@
 (* operator.sml -*-Coding: us-ascii-unix;-*- *)
-(* Copyright (C) 2018-2020 RIKEN R-CCS *)
+(* Copyright (C) 2018-2021 RIKEN R-CCS *)
 
 (* PREDEFINED OPERATORS. *)
 
@@ -19,23 +19,29 @@ sig
 	-> expression_t
     *)
 
-    val fold_constants_on_operator :
-	(expression_t * expression_t list) -> expression_t
+    val fold_operator_application :
+	expression_t * expression_t list -> expression_t
 
     val obtain_array_dimension :
 	expression_t -> int list * bool
 
     val fold_pseudo_split :
 	expression_t -> expression_t
+
+    val bool_order : expression_t -> int
+    val enumerator_order : expression_t -> int
 end = struct
 
 open ast plain
 open small1
+open expression
 
 fun tr_expr (s : string) = if true then (print (s ^"\n")) else ()
 fun tr_expr_vvv (s : string) = if false then (print (s ^"\n")) else ()
 
 val take_enumarator_element = simpletype.take_enumarator_element
+
+val expression_is_literal = expression.expression_is_literal
 
 datatype operator_type_t
     = ARITHMETIC_UOP | ARITHMETIC_BOP
@@ -76,6 +82,7 @@ fun operator_is_boolean f = ((operator_type f) = BOOLEAN_UOP
 fun operator_is_relational f = ((operator_type f) = RELATIONAL_OP)
 fun operator_is_concat f = ((operator_type f) = STRING_CONCAT_OP)
 
+(*
 fun global_function_name k = (
     case k of
 	Def_Body (mk, j, cs, (tag, n, x), ee, aa, ww) => (
@@ -83,8 +90,21 @@ fun global_function_name k = (
 	    Ctag [name] => SOME name
 	  | _ => NONE)
       | _ => NONE)
+*)
 
-fun empty_global_function name = (
+(*
+fun global_function_name k = (
+    case k of
+	Instances ([], [Subj (ns, [(Id name, [])])]) => SOME name
+      | _ => NONE)
+*)
+
+fun global_function_name f = (
+    case f of
+	Vref (SOME PKG, [(Id name, [])]) => SOME name
+      | _ => NONE)
+
+fun empty_global_function__ name = (
     let
 	val subj = Subj (PKG, [(Id name, [])])
 	val tag = Ctag [name]
@@ -94,6 +114,7 @@ fun empty_global_function name = (
 		  (Function false, no_class_prefixes,
 		   no_component_prefixes),
 		  (tag, the_root_subject, the_root_subject),
+		  NIL,
 		  [Base_List [], Base_Classes []],
 		  Annotation [], Comment [])
     end)
@@ -104,183 +125,14 @@ fun empty_global_function name = (
 fun r_equal x y = (
     (r_literal x) = (r_literal y))
 
-(* Returns a zero-origin integer indicating the order of a boolean. *)
-
-fun bool_order x = (
-    case x of
-	L_Bool false => 0
-      | L_Bool true => 1
-      | _ => raise Match)
-
-(* Returns a boolean at a zero-origin index. *)
-
-fun bool_nth i = (
-    case i of
-	0 => L_Bool false
-      | 1 => L_Bool true
-      | _ => raise Match)
-
-fun bool_size x y = (
-    let
-	val lb = (bool_order x)
-	val ub = (bool_order y)
-	val z = (ub - lb + 1)
-    in
-	(Int.max (0, z))
-    end)
-
-(* Returns a zero-origin integer indicating the order of an
-   enumerator. *)
-
-fun enumerator_order x = (
-    case x of
-	L_Enum (tag, v) => (
-	let
-	    val subj = (tag_to_subject tag)
-	    val kp = surely (fetch_from_instance_tree subj)
-	in
-	    case (take_enumarator_element kp) of
-		NONE => raise error_enum_unspecified
-	      | SOME [] => raise Match
-	      | SOME vv => (
-		case (list_index (fn (k, a, w) => (v = k)) vv 0) of
-		    NONE => raise Match
-		  | SOME index => index)
-	end)
-      | _ => raise Match)
-
-fun enumerator_compare x y = (
-    let
-	val ix = (enumerator_order x)
-	val iy = (enumerator_order y)
-    in
-	(ix - iy)
-    end)
-
-(* Returns an enumerator at a zero-origin index. *)
-
-fun enumerator_nth x i = (
-    case x of
-	L_Enum (tag, v) => (
-	let
-	    val subj = (tag_to_subject tag)
-	    val kp = surely (fetch_from_instance_tree subj)
-	in
-	    case (take_enumarator_element kp) of
-		NONE => raise error_enum_unspecified
-	      | SOME [] => raise Match
-	      | SOME vv => (
-		let
-		    val (k, a, w) = (List.nth (vv, i))
-		in
-		    L_Enum (tag, k)
-		end)
-	end)
-      | _ => raise Match)
-
-fun enumerator_size x y = (
-    let
-	val lb = (enumerator_order x)
-	val ub = (enumerator_order y)
-	val z = (ub - lb + 1)
-    in
-	(Int.max (0, z))
-    end)
-
-fun triple_nth x y z (index : int list) = (
-    case index of
-	[] => raise Match
-      | [i0] => (
-	case (x, y, z) of
-	    (L_Number (Z, sx), L_Number (Z, sy), L_Number (Z, sz)) => (
-	    let
-		val i = (i0 - 1)
-		val lb = (z_value sx)
-		val ub = (z_value sy)
-		val s = (z_value sz)
-		val _ = if (i >= 0 andalso i < ((ub + s - lb) div s)) then ()
-			else raise error_out_of_range
-		val v = (lb + (s * i))
-	    in
-		(z_literal v)
-	    end)
-	  | (L_Number (_, sx), L_Number (_, sy), L_Number (_, sz)) => (
-	    let
-		val i = (Real.fromInt (i0 - 1))
-		val lb = (r_value sx)
-		val ub = (r_value sy)
-		val s = (r_value sz)
-		val _ = if (i >= 0.0 andalso i < ((ub + s - lb) / s)) then ()
-			else raise error_out_of_range
-		val v = (lb + (s * i))
-	  in
-	      (r_literal v)
-	  end)
-	  | _ => raise error_bad_triple)
-      | _ => raise error_dimensions_mismatch)
-
-fun triple_size x y z = (
-    case (x, y, z) of
-	(L_Number (Z, sx), L_Number (Z, sy), L_Number (Z, sz)) => (
-	let
-	    val lb = (z_value sx)
-	    val ub = (z_value sy)
-	    val s = (z_value sz)
-	    val z = ((ub + s - lb) div s)
-	in
-	    (Int.max (0, z))
-	end)
-      | (L_Number (_, sx), L_Number (_, sy), L_Number (_, sz)) => (
-	let
-	    val lb = (r_value sx)
-	    val ub = (r_value sy)
-	    val s = (r_value sz)
-	    val z = (Real.floor ((ub + s - lb) / s))
-	in
-	    (Int.max (0, z))
-	end)
-      | _ => raise error_bad_triple)
-
-fun range_nth x y (index : int list) = (
-    case index of
-	[] => raise Match
-      | [i0] => (
-	case (x, y) of
-	    (L_Number (Z, _), L_Number (Z, _)) => (
-	    (triple_nth x y (L_Number (Z, "1")) index))
-	  | (L_Bool v0, L_Bool v1) => (
-	    let
-		val i = (i0 - 1)
-		val lb = (bool_order x)
-		val ub = (bool_order y)
-		val _ = if (i >= 0 andalso i < (ub - lb + 1)) then ()
-			else raise error_out_of_range
-	    in
-		(bool_nth i)
-	    end)
-	  | (L_Enum (tag0, _), L_Enum (tag1, _)) => (
-	    let
-		val _ = if (tag0 = tag1) then ()
-			else raise error_different_enumerations
-		val i = (i0 - 1)
-		val lb = (enumerator_order x)
-		val ub = (enumerator_order y)
-		val _ = if (i >= 0 andalso i < (ub - lb + 1)) then ()
-			else raise error_out_of_range
-	    in
-		(enumerator_nth x (lb + i))
-	    end)
-	  | _ => raise error_bad_triple)
-      | _ => raise error_dimensions_mismatch)
-
 fun expression_is_true x = (*AHO*) raise Match
 fun expression_is_integer x = (*AHO*) false
 fun expression_is_constant x = (*AHO*) false
 
 (* Calculates the dimension of an (array) expression.  It returns a
-   pair (dim,true) if completely known, with dim=[] indicating a
-   scalar, or a pair (dim,false) if partially known, with dim=[]
-   indicating completely unknown.  IT SHOULD ACCEPT A VAST SET OF
+   pair (dim,true) if completely known or a pair (dim,false) if
+   partially known, where ([],true) indicates a scalar and ([],false)
+   indicates completely unknown.  IT SHOULD ACCEPT A VAST SET OF
    EXPRESSIONS, BUT CURRENTLY, IT ONLY ACCEPTS A SMALL SET.  It should
    accept user-defined functions, constructors of arrays and matrices
    {"{}", "[]"}, predefined functions {array, identity, diagonal,
@@ -296,8 +148,8 @@ fun obtain_array_dimension w : int list * bool = (
       | Otherwise => raise Match
       | Scoped _ => raise Match
       | Vref (_, []) => raise Match
-      | Vref (false, _) => raise Match
-      | Vref (true, _) => ([], false)
+      | Vref (NONE, _) => raise Match
+      | Vref (SOME _, _) => ([], false)
       | Opr _ => raise Match
       | App _ => ([], false)
       | ITE cc => (
@@ -320,9 +172,15 @@ fun obtain_array_dimension w : int list * bool = (
 	    ([], false)
 	else
 	    case (x, y, zo) of
-		(L_Number _, L_Number _, _) => (
+		(L_Number _, L_Number _, NONE) => (
 		let
-		    val z = (getOpt (zo, L_Number (Z, "1")))
+		    val z = L_Number (Z, "1")
+		in
+		    ([(triple_size x z y)], true)
+		end)
+	      | (L_Number _, L_Number _, SOME (L_Number _)) => (
+		let
+		    val z = (valOf zo)
 		in
 		    ([(triple_size x y z)], true)
 		end)
@@ -374,8 +232,19 @@ fun obtain_array_dimension w : int list * bool = (
 		(dim1, true)
 	    end))
       | Component_Ref _ => raise NOTYET
-      | Instance (dim, kk, _) => (dim, true)
+      (*| Instance (dim, kk, _) => (dim, true)*)
+      | Instances ([], [subj]) => (
+	let
+	    val k = surely (fetch_from_instance_tree subj)
+	in
+	    case k of
+		Def_Mock_Array (dim, array, dummy) => (dim, true)
+	      | _ => ([], true)
+	end)
+      | Instances ([], _) => raise Match
+      | Instances (dim, subjs) => (dim, true)
       | Iref v => raise NOTYET
+      | Cref _ => raise Match
       | Array_fill (e, n) => (
 	if (not (expression_is_literal n)) then
 	    ([], false)
@@ -396,10 +265,10 @@ fun obtain_array_dimension w : int list * bool = (
 
 fun predefined_size_a a = (
     let
-	val body = (empty_global_function "size")
-	val f = Instance ([], [body], NONE)
-	fun app x = App (f, [x])
-	val original = (app a)
+	(*val body = (empty_global_function "size")*)
+	(*val f = Instance ([], [body], NONE)*)
+	val f = Instances ([], [Subj (PKG, [(Id "size", [])])])
+	val original = App (f, [a])
 	val (dim, fully) = (obtain_array_dimension a)
 	val ee = (map z_literal dim)
     in
@@ -411,10 +280,10 @@ fun predefined_size_a a = (
 
 fun predefined_size_a_i a i = (
     let
-	val body = (empty_global_function "size")
-	val f = Instance ([], [body], NONE)
-	fun app x = App (f, [x, i])
-	val original = (app a)
+	(*val body = (empty_global_function "size")*)
+	(*val f = Instance ([], [body], NONE)*)
+	val f = Instances ([], [Subj (PKG, [(Id "size", [])])])
+	val original = App (f, [a, i])
     in
 	if (not (expression_is_literal i)) then
 	    original
@@ -449,9 +318,10 @@ fun predefined_diagonal v = (
 
 fun fold_on_global_function (name, args) = (
     let
-	val body = (empty_global_function name)
-	val f = Instance ([], [body], NONE)
-	val rawvalue = App (f, args)
+	(*val body = (empty_global_function name)*)
+	(*val f = Instance ([], [body], NONE)*)
+	val f = Instances ([], [Subj (PKG, [(Id name, [])])])
+	val original = App (f, args)
     in
 	case name of
 	    "size" => (
@@ -467,12 +337,12 @@ fun fold_on_global_function (name, args) = (
 	    case args of
 		[v] => (predefined_diagonal v)
 	      | _ => raise error_bad_syntax)
-	  | _ => rawvalue
+	  | _ => original
     end)
 
-fun fold_constants_on_operator (f, args) = (
+fun fold_operator_application (f, args) = (
     let
-	val rawvalue = App (f, args)
+	val original = App (f, args)
 	val pow = Math.pow
     in
 	case f of
@@ -542,26 +412,26 @@ fun fold_constants_on_operator (f, args) = (
 			  | Opr_le => L_Bool (cc <= 0)
 			  | _ => raise Match
 		    end)
-		  | _ => rawvalue
+		  | _ => original
 	    else if (operator_is_boolean n) then
 		case n of
 		    Opr_not => (
 		    case args of
 			[L_Bool x] => L_Bool (not x)
-		      | _ => rawvalue)
+		      | _ => original)
 		  | Opr_and => (
 		    case args of
 			[L_Bool x, L_Bool y] => L_Bool (x andalso y)
-		      | _ => rawvalue)
+		      | _ => original)
 		  | Opr_ior => (
 		    case args of
 			[L_Bool x, L_Bool y] => L_Bool (x orelse y)
-		      | _ => rawvalue)
+		      | _ => original)
 		  | _ => raise Match
 	    else if (operator_is_concat n) then
 		case args of
 		    [L_String sx, L_String sy] => L_String (sx ^ sy)
-		  | _ => rawvalue
+		  | _ => original
 	    else if (operator_is_unary n) then
 		case args of
 		    [L_Number (Z, sx)] => (
@@ -588,7 +458,7 @@ fun fold_constants_on_operator (f, args) = (
 			  | Opr_neg_ew => (r_literal (~ x))
 			  | _ => raise Match
 		    end)
-		  | _ => rawvalue
+		  | _ => original
 	    else if (operator_is_binary n) then
 		case args of
 		    [L_Number (Z, sx), L_Number (Z, sy)] => (
@@ -627,14 +497,22 @@ fun fold_constants_on_operator (f, args) = (
 			  | Opr_expt_ew => (r_literal (pow (x, y)))
 			  | _ => raise Match
 		    end)
-		  | _ => rawvalue
+		  | _ => original
 	    else
 		raise Match)
-	  | Instance ([], [kp], NONE) => (
-	    case (global_function_name kp) of
-		NONE => rawvalue
-	      | SOME v => (fold_on_global_function (v, args)))
-	  | _ => rawvalue
+	  (*
+	  | Instances _ => (
+	    case (global_function_name f) of
+		NONE => original
+	      | SOME name => (fold_on_global_function (name, args)))
+	  *)
+	  | Vref (_, []) => raise Match
+	  | Vref (NONE, _) => raise Match
+	  | Vref (SOME _, _) => (
+	    case (global_function_name f) of
+		NONE => original
+	      | SOME name => (fold_on_global_function (name, args)))
+	  | _ => original
     end)
 
 (* ================================================================ *)
@@ -645,13 +523,17 @@ fun subarray_of_instances (index : int list) (dim0, kk0, dummy) = (
 		else raise error_bad_index
 	val _ = if (ListPair.all (fn (i, d) => (i <= d)) (index, dim0)) then ()
 		else raise error_bad_index
-	val dim1 = (List.drop (dim0, (length index)))
-	(*val size = (foldl (fn (a, m) => (m * a)) 1 dim1)*)
+	(*
+	val dim1 = (array_drop_dimensions dim0 (length index))
 	val size = (array_size dim1)
 	val offset = (array_index dim0 index 0)
 	val kk1 = (List.take ((List.drop (kk0, offset)), size))
+	*)
+	val (dim1, kk1) = (array_access index (dim0, kk0))
+	val subjs = (map subject_of_class kk1)
     in
-	(Instance (dim1, kk1, dummy))
+	(*Instance (dim1, kk1, dummy)*)
+	Instances (dim1, subjs)
     end)
 
 fun fold_pseudo_split w0 = (
@@ -663,8 +545,8 @@ fun fold_pseudo_split w0 = (
 	  | Otherwise => raise Match
 	  | Scoped _ => raise Match
 	  | Vref (_, []) => raise Match
-	  | Vref (false, _) => raise Match
-	  | Vref (true, _) => w0
+	  | Vref (NONE, _) => raise Match
+	  | Vref (SOME _, _) => w0
 	  | Opr _ => raise Match
 	  | App _ => w0
 	  | ITE _ => w0
@@ -709,11 +591,28 @@ fun fold_pseudo_split w0 = (
 	  | Reduction_Argument _ => raise Match
 	  | Named_Argument (n, x) => raise Match
 	  | Pseudo_Split (x, ss) => (
-	    (Pseudo_Split (x, (merge_subscripts ss index))))
+	    (Pseudo_Split (x, (merge_subscripts index ss))))
 	  | Component_Ref _ => raise NOTYET
-	  | Instance (dim, kk, dummy) => (
-	    (subarray_of_instances index (dim, kk, dummy)))
+          (*| Instance (dim, kk, dummy) => ( *)
+	  (*(subarray_of_instances index (dim, kk, dummy)))*)
+          | Instances ([], [subj]) => (
+	    let
+		val k = surely (fetch_from_instance_tree subj)
+	    in
+		case k of
+		    Def_Mock_Array (dim, array, dummy) => (
+		    (subarray_of_instances index (dim, array, dummy)))
+		  | _ => raise error_split_to_scalar
+	    end)
+          | Instances ([], _) => raise Match
+          | Instances (dim, subjs) => (
+	    let
+		val array = (map (surely o fetch_from_instance_tree) subjs)
+	    in
+		(subarray_of_instances index (dim, array, NONE))
+	    end)
 	  | Iref v => raise error_split_to_scalar
+	  | Cref _ => raise Match
 	  | Array_fill _ => w0
 	  | Array_diagonal _ => w0)
       | _ => raise Match)

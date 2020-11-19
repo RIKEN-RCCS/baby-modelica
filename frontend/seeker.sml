@@ -1,5 +1,5 @@
 (* seeker.sml -*-Coding: us-ascii-unix;-*- *)
-(* Copyright (C) 2018-2020 RIKEN R-CCS *)
+(* Copyright (C) 2018-2021 RIKEN R-CCS *)
 
 (* LOOKUP FOR IMPORT/EXTENDS-CLAUSES.  It searches in classes that are
    half-syntaxed (step=E0-E2), while other routines are used for
@@ -34,7 +34,6 @@ val assert_stored_in_instance_tree = classtree.assert_stored_in_instance_tree
 val lookup_class_in_root = loader.lookup_class_in_root
 val fetch_enclosing_class = loader.fetch_enclosing_class
 
-val find_class = finder.find_class
 val list_elements = finder.list_elements
 
 datatype seek_mode_t = Seek_Export | Seek_Base
@@ -126,6 +125,7 @@ fun lookup_in_declared (cooker : cooker_t) ctx fullaccess kp id = (
 				Def_Body _ => raise Match
 			      | Def_Der _ => SOME (subsubj, k0)
 			      | Def_Primitive _ => raise Match
+			      | Def_Outer_Alias _ => raise Match
 			      | Def_Name _ => raise Match
 			      | Def_Scoped _ => SOME (subsubj, k0)
 			      | Def_Refine _ => SOME (subsubj, k0)
@@ -183,13 +183,13 @@ fun lookup_in_main_and_bases (cooker : cooker_t) ctx kp id = (
 	    in
 		case (find_in_bindings id bindings) of
 		    NONE => raise (error_name_not_found id kp)
-		  | SOME (Binding (v, subsubj, _, (z, r, EL_Class d, h))) => (
+		  | SOME (Naming (_, subj, _, _, (z, r, EL_Class dx, h))) => (
 		    let
-			val Defclass ((_, pkg), k0) = d
+			val Defclass (_, k0) = dx
 		    in
-			SOME (enclosing, (subsubj, k0))
+			SOME (enclosing, (subj, k0))
 		    end)
-		  | SOME (Binding (v, subsubj, _, (z, r, EL_State d, h))) => (
+		  | SOME (Naming (_, subj, _, _, (z, r, EL_State dx, h))) => (
 		    raise (error_name_is_state id kp))
 	    end
 	else
@@ -242,7 +242,7 @@ fun lookup_composite_loop (cooker : cooker_t) ctx enclosing0 (subj0, k0) nn = (
 	end))
 
 (* Looks for a class of an import-clause.  It takes a class at
-   step=E1.  It returns a pair of an enclosing class and a name.  It
+   step=E1.  It returns a pair of a defining class and a name.  It
    looks for the first part of a name, and then continues.  A context
    is the class a lookup starts, which is used for diagnostics
    messages. *)
