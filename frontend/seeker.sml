@@ -242,7 +242,7 @@ fun lookup_composite_loop (cooker : cooker_t) ctx enclosing0 (subj0, k0) nn = (
 	end))
 
 (* Looks for a class of an import-clause.  It takes a class at
-   step=E1.  It returns a pair of an enclosing class and a name.  It
+   step=E1.  It returns a pair of a defining class and a name.  It
    looks for the first part of a name, and then continues.  A context
    is the class a lookup starts, which is used for diagnostics
    messages. *)

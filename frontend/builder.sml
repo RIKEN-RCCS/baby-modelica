@@ -448,7 +448,7 @@ fun traverse_with_instantiation (subj, d0) = (
 		let
 		    val _ = (assert_match_subject_sans_subscript subj kx)
 		    val cooker = assemble_package
-		    val bindings = (list_elements cooker false kx)
+		    val bindings = (list_elements cooker true kx)
 		    val (classes, states) =
 			  (List.partition binding_is_class bindings)
 		    val fx = traverse_with_instantiation

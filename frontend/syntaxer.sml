@@ -77,22 +77,22 @@ fun make_base_list subj bases = (
    Actually, this shortcutting is sometimes necessary to avoid a
    potential cycle. *)
 
-fun fetch_element_class cooker (enclosing, id) : definition_body_t = (
+fun fetch_element_class cooker (defining, id) : definition_body_t = (
     let
-	val subj = (compose_subject enclosing id [])
+	val subj = (compose_subject defining id [])
 	val tagopt = (subject_to_tag subj)
     in
 	case (Option.join (Option.map fetch_from_loaded_classes tagopt)) of
 	    SOME d => (
 	    let
 		val Defclass (_, k0) = d
-		val k2 = (assign_enclosing k0 enclosing)
+		val k2 = (assign_enclosing k0 defining)
 	    in
 		k2
 	    end)
 	  | NONE => (
 	    let
-		val kp = surely (fetch_from_instance_tree enclosing)
+		val kp = surely (fetch_from_instance_tree defining)
 		val _ = if (step_is_at_least E3 kp) then () else raise Match
 		(*val (id, pkg) = (tag_prefix tag)*)
 		val bindings = (list_elements cooker false kp)
@@ -951,8 +951,8 @@ and cook_imports (kp : definition_body_t) = (
 		SOME _ => ()
 	      | NONE => (
 		let
-		    val (enclosing, (id, _)) = (subject_prefix subj)
-		    val x0 = (fetch_element_class cooker (enclosing, id))
+		    val (defining, (id, _)) = (subject_prefix subj)
+		    val x0 = (fetch_element_class cooker (defining, id))
 		    val _ = (store_to_instance_tree subj x0)
 		in
 		    ()
@@ -963,9 +963,9 @@ and cook_imports (kp : definition_body_t) = (
 		Import_Clause (z, cn, idxid, a, w) => (
 		case (find_import_class cooker kp cn) of
 		    NONE => raise (error_class_name_not_found cn kp)
-		  | SOME (enclosing, id) => (
+		  | SOME (defining, id) => (
 		    let
-			val subj = (compose_subject enclosing id [])
+			val subj = (compose_subject defining id [])
 			val tag = surely (subject_to_tag subj)
 			val _ = (ensure_fetch cooker subj)
 		    in
@@ -1010,14 +1010,14 @@ and cook_base pkg kp siblings (e, acc) = (
 	  | Extends_Clause (z, (name, mm), aa0) => (
 	    case (find_base_class cooker kp name) of
 		NONE => raise (error_class_name_not_found name kp)
-	      | SOME (enclosing, id) => (
+	      | SOME (defining, id) => (
 		let
 		    (*val _ = if (null ss) then () else raise Match*)
 		    val _ = (assert_modifiers_are_scoped mm)
 		    (*val _ = (assert_expressions_are_scoped ss)*)
 
 		    val subj = (subject_of_class kp)
-		    val k0 = (fetch_element_class cooker (enclosing, id))
+		    val k0 = (fetch_element_class cooker (defining, id))
 		    val k1 = (make_modified_class k0 mm aa0 (Comment []))
 		    val k2 = (cook_class_refining
 				  false pkg (subj, k1) siblings)
@@ -1104,55 +1104,5 @@ and insert_base_of_extends_redeclaration subj x0 k0 = (
     in
 	k1
     end)
-
-(* Makes sure every package to be syntaxed in the path, where a path
-   is a suffix of a class-tag.  The flag retrying is true for the
-   second call. *)
-
-and secure_package_path__ (retrying : bool) path0 node0 = (
-    case path0 of
-	[] => node0
-      | (n :: path1) => (
-	let
-	    val (subj, x0, components0) = node0
-	    val kp = (! x0)
-	    val components = (! components0)
-
-	    val _ = (assert_package_constraints node0)
-	    val _ = if (step_is_at_least E3 kp) then () else raise Match
-	    val _ = if (class_is_package kp) then () else raise Match
-	    val id = Id n
-	in
-	    case (List.find (fn (Slot (x, _, _, _)) => (x = id)) components) of
-		SOME (Slot (v_, dim, nodes, dummy)) => (
-		let
-		    val _ = if (null dim) then () else raise Match
-		    val _ = if ((length nodes) = 1) then () else raise Match
-		    val node1 = (hd nodes)
-		    val (subsubj, x1, _) = node1
-		    val k0 = (! x1)
-		    val k1 = (assemble_package E3 (subsubj, k0))
-		in
-		    (secure_package_path__ false path1 node1)
-		end)
-	      | NONE => (
-		let
-		    val _ = if (not retrying) then () else raise Match
-		    val cooker = assemble_package
-		    val bindings = (list_elements cooker false kp)
-		in
-		    case (find_in_bindings id bindings) of
-			NONE => raise (error_name_not_found id kp)
-		      | SOME (Binding (v, subsubj, _, (z, r, EL_Class d, h))) => (
-			let
-			    val Defclass (_, k0) = d
-			    val kx = (assemble_package E3 (subsubj, k0))
-			in
-			    (secure_package_path__ true path0 node0)
-			end)
-		      | SOME (Binding (v, _, _, (z, r, EL_State d, h))) => (
-			raise (error_name_is_state v kp))
-		end)
-	end))
 
 end

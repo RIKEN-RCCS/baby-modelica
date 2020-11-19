@@ -43,7 +43,6 @@ val subject_to_instance_tree_path = classtree.subject_to_instance_tree_path
 
 val find_class = finder.find_class
 val find_name_initial_part = finder.find_name_initial_part
-val list_elements = finder.list_elements
 
 val assemble_package = cooker.assemble_package
 
@@ -93,9 +92,9 @@ fun refer_to_package kp subj k0 rr0 = (
 	end)
       | _ => raise error_subscripts_to_package)
 
-(* Makes a reference to a variable.  When it is used in a declaration
-   context, it scans a path in a reference to resolve classes as a
-   prior step for constant folding (which makes resolving unnecessary
+(* Makes a reference to a variable.  It scans a path of a reference to
+   resolve classes as a prior step to constant folding, when it is
+   used in a declaration context (which makes resolving unnecessary
    during constant folding). *)
 
 fun refer_to_variable kp (d as Defvar _) prefix rr0 = (
@@ -129,23 +128,21 @@ fun refer_to_variable kp (d as Defvar _) prefix rr0 = (
     end)
 
 (* Resolves a variable reference in the given package/instance.  It is
-   passed to binding routines.  It adds prefixes to "x.y" as
-   "a.b.x.y", when "a.b" is class K and a class K contains a
-   declaration of "x".  It also resolves functions and constants.  It
-   is called with buildphase=true when an expression appears in a
-   variable declaration (in array dimension expressions). *)
+   passed to binding routines.  It adds a prefix to "x.y" as
+   "a.b.x.y", when "a.b" is a class B and B contains a declaration of
+   "x".  It also resolves functions and constants.  It is called with
+   buildphase=true when an expression appears in a variable
+   declaration (in array dimension expressions). *)
 
-fun make_reference kp (buildphase : bool) w0 = (
+fun make_reference kp (buildphase_ : bool) w0 = (
     case w0 of
 	Vref (_, []) => raise Match
-      | Vref (false, rr as (v0, s0) :: t0) => (
+      | Vref (false, rr as (v0, ss_) :: t0) => (
 	if (reference_is_bound w0) then
 	    Vref (true, rr)
 	else
 	    let
 		val cooker = assemble_package
-		(*fun cook_faulting wantedstep (subj, kx) = raise Match*)
-		(*val cooker = cook_faulting*)
 		val subj0 = (subject_of_class kp)
 	    in
 		case (find_name_initial_part cooker E3 (subj0, kp) v0) of
@@ -153,7 +150,6 @@ fun make_reference kp (buildphase : bool) w0 = (
 		  | SOME (Binding (_, subsubj, _, (z, r, EL_Class d, h))) => (
 		    let
 			val Defclass (_, kx) = d
-			(*val tag = (tag_of_definition d)*)
 			val x0 = (refer_to_package kp subsubj kx rr)
 		    in
 			x0
