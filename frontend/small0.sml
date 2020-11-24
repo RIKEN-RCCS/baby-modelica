@@ -404,12 +404,12 @@ fun classes_are_compatible cv0 cv1 = (
 	true
     end)
 
-fun binding_is_public (Binding (v, _, _, (z, r, d, h))) = (z = Public)
+fun binding_is_public (Naming (_, _, _, _, (z, r, dx, h))) = (z = Public)
 
-fun binding_is_imported (Binding (v, _, i, (z, r, d, h))) = i
+fun binding_is_imported (Naming (_, _, _, i, (z, r, dx, h))) = i
 
-fun binding_is_class (Binding (v, _, _, (z, r, d, h))) = (
-    case d of
+fun binding_is_class (Naming (_, _, _, _, (z, r, dx, h))) = (
+    case dx of
 	EL_Class _ => true
       | EL_State _ => false)
 
@@ -448,17 +448,14 @@ fun body_is_declaration_form k = (
 
 (* It does not matter about variable declarations at step=E3. *)
 
-fun drop_duplicate_declarations step (bindings : binding_t list) = (
+fun drop_duplicate_declarations step (bindings : naming_t list) = (
     let
-	fun eq (Binding (v0, subj0_, _, e0), Binding (v1, subj1_, _, e1)) = (
-	    if (v0 <> v1) then
-		false
-	    else
-		true)
+	fun eq (Naming (v0, _, _, _, _), Naming (v1, _, _, _, _)) = (
+	    (v0 = v1))
 
 	fun unify (b0, b1) = (
 	    case (b0, b1) of
-		(Binding (v0, subj0_, _, e0), Binding (v1, subj1_, _, e1)) => (
+		(Naming (v0, _, _, _, e0), Naming (v1, _, _, _, e1)) => (
 		case (e0, e1) of
 		    ((_, _, EL_Class d0, _), (_, _, EL_Class d1, _)) => (
 		    if ((tag_of_definition d0) = (tag_of_definition d1)) then
@@ -518,8 +515,8 @@ fun body_is_extending k = (
       | Def_In_File => raise Match
       | Def_Mock_Array _ => raise Match)
 
-fun find_in_bindings v bindings = (
-    (List.find (fn Binding (x, _, _, _) => v = x) bindings))
+fun find_in_bindings id bindings = (
+    (List.find (fn Naming (x, _, _, _, _) => x = id) bindings))
 
 fun assert_cook_step step k = (
     if ((cook_step k) = step) then () else raise Match)

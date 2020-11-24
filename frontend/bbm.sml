@@ -42,8 +42,7 @@ use "folder.sml" ;
 use "binder.sml" ;
 use "walker.sml" ;
 use "builder.sml" ;
-use "postbinder.sml" ;
-
 use "connector.sml" ;
+use "postbinder.sml" ;
 
 use "flatdumper.sml" ;

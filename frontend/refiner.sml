@@ -645,10 +645,10 @@ fun list_components kp = (
     let
 	val _ = if (step_is_at_least E3 kp) then () else raise Match
 
-	fun name (Binding (v, s_, _, (z, r, d, h))) = (
+	fun name (Naming (id, _, _, _, (z, r, d, h))) = (
 	    case d of
 		EL_Class _ => raise Match
-	      | EL_State (Defvar (v, q, k, c, a, w)) => [v])
+	      | EL_State (Defvar (_, q, k, c, a, w)) => [id])
 
 	fun faulting_cooker wantedstep (subj, kx) = raise Match
 	val bindings = (list_elements faulting_cooker false kp)

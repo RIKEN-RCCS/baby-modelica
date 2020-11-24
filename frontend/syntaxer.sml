@@ -99,13 +99,13 @@ fun fetch_element_class cooker (defining, id) : definition_body_t = (
 	    in
 		case (find_in_bindings id bindings) of
 		    NONE => raise (error_name_not_found id kp)
-		  | SOME (Binding (_, subsubj, _, (z, r, EL_Class d, h))) => (
+		  | SOME (Naming (_, _, _, _, (z, r, EL_Class dx, h))) => (
 		    let
-			val Defclass (_, k0) = d
+			val Defclass (_, k0) = dx
 		    in
 			k0
 		    end)
-		  | SOME (Binding (_, _, _, (z, r, EL_State d, h))) => (
+		  | SOME (Naming (_, _, _, _, (z, r, EL_State dx, h))) => (
 		    raise (error_name_is_state id kp))
 	    end)
     end)
@@ -751,7 +751,7 @@ and collect_refining main pkg (subj, k0) (name1, (t1, p1, q1), mm1, aa1) sibling
 	in
 	    case (find_class cooker (subj1, k1) name) of
 		NONE => raise (error_class_not_found name k1)
-	      | SOME (enclosing_, x0) => (
+	      | SOME x0 => (
 		let
 		    val _ = tr_cook_vvv (";; collect_refining find ("^
 					 (class_print_name x0)

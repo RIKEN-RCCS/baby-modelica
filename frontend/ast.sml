@@ -252,26 +252,29 @@ and type_marker_t = ENUM | MAIN | BASE | SIMP
    slot is an enclosing class (for a package).  Field abbreviation is:
    Def_Body(mk,j,cs,nm,ee,aa,ww).  Def_Der is a derivative definition.
    Def_Body and Def_Der represent the classes after syntaxing.
-   Def_Name specifies a class name in the language.  Def_Scoped
-   replaces Def_Name by attaching scope information.  Def_Refine
-   represents class modifications, either from a short class
-   definition or from an extends-clause.  Def_Refine holds
-   component_prefixes but it usually only uses a type_prefix part.
-   The entire component_prefixes are needed at instantiation.  Its
-   field abbreviation is: Def_Refine(k,t,q,(ss,mm),a,w).
-   Def_Extending represents an extends-redeclaration.  It is a pair of
-   a base (with modifiers) and a body.  The boolean slot is an
-   extended-flag indicating a base class is set, and it is true when
-   it replaces a replaceable.  It is used only for checking.
-   Def_Replaced is introduced by a redeclaration, and holds an
-   original definition for information.  The first slot is the new
-   definition.  Def_Primitive represents a value of a simple-type and
-   holds its value.  Def_Displaced is a tag left in place of a
-   definition body.  Its subject slot indicates an enclosing class, to
-   refer to an enclosing class that is modified.  Def_In_File is used
-   to indicate that a class is yet to be loaded from a file.  It is
-   only placed in the loaded_classes table.  Such entries are created
-   for file/directory entries when a "package.mo" is loaded.
+   Def_Primitive is primitive types.  Def_Alias is an outer reference
+   of an inner-outer which is a record left in the
+   class_tree/instance_tree.  Def_Name specifies a class name in the
+   language.  Def_Scoped replaces Def_Name by attaching scope
+   information.  Def_Refine represents class modifications, either
+   from a short class definition or from an extends-clause.
+   Def_Refine holds component_prefixes but it usually only uses a
+   type_prefix part.  The entire component_prefixes are needed at
+   instantiation.  Its field abbreviation is:
+   Def_Refine(k,t,q,(ss,mm),a,w).  Def_Extending represents an
+   extends-redeclaration.  It is a pair of a base with modifiers and a
+   body.  The boolean slot is an extended-flag indicating a base class
+   is set, and it is true when it replaces a replaceable.  It is used
+   only for checking purpose.  Def_Replaced is introduced by a
+   redeclaration, and holds an original definition for information.
+   The first slot is the new definition.  Def_Primitive represents a
+   value of a simple-type and holds its value.  Def_Displaced is a tag
+   left in place of a definition body.  Its subject slot indicates an
+   enclosing class, to refer to an enclosing class that is modified.
+   Def_In_File indicates that a class is yet to be loaded from a file.
+   It is only placed in the loaded_classes table.  Such entries are
+   created for file/directory entries when a "package.mo" is loaded.
+   It is a pair of an outer reference and a matching inner reference.
    Def_Mock_Array is temporarily used to represent an array of
    instances, which is created on accessing the instance_tree. *)
 
@@ -286,6 +289,7 @@ and definition_body_t
        * name_t * id_t list * annotation_t * comment_t)
     | Def_Primitive of
       (primitive_type_t * (*value*) expression_t)
+    | Def_Alias of instantiation_t * subject_t * subject_t
     | Def_Name of name_t
     | Def_Scoped of (name_t * scope_t)
     | Def_Refine of
@@ -299,7 +303,7 @@ and definition_body_t
     | Def_Replaced of
       (definition_body_t
        * (visibility_t * element_prefixes_t
-	  * named_element_t * constraint_t option))
+	  * element_union_t * constraint_t option))
     | Def_Displaced of class_tag_t * (*enclosing*) subject_t
     | Def_In_File
     | Def_Mock_Array of
@@ -390,7 +394,7 @@ and annotation_t = Annotation of modifier_t list
 (* A naming element in a class is either a class definition or a
    variable declaration. *)
 
-and named_element_t
+and element_union_t
     = EL_Class of class_definition_t
     | EL_State of variable_declaration_t
 
@@ -454,17 +458,18 @@ and constraint_t = (definition_body_t * modifier_t list
 and enum_list_t = (id_t * annotation_t * comment_t) list
 
 type binding_element_t = (visibility_t * element_prefixes_t
-			  * named_element_t * constraint_t option)
+			  * element_union_t * constraint_t option)
 
 (* An entry of an element list (definitions/declarations).  It is
    stored in the class_bindings table.  The identifier slot is a
-   variable/class name.  The subject slot is a composite name, which
-   is either a composition of a defining class and a name, or it is an
-   outer component, or it is a name of an imported package. *)
+   variable/class name.  The first subject slot is a composite name,
+   which is a composition of a defining class and a name.  The second
+   subject slot points to an inner element when this element is
+   outer. *)
 
-datatype binding_t
-    = Binding of (id_t * subject_t * (*imported*) bool
-		  * binding_element_t)
+datatype naming_t
+    = Naming of (id_t * subject_t * subject_t option * (*imported*) bool
+		 * binding_element_t)
 
 (* ================================================================ *)
 

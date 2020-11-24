@@ -34,7 +34,6 @@ val assert_stored_in_instance_tree = classtree.assert_stored_in_instance_tree
 val lookup_class_in_root = loader.lookup_class_in_root
 val fetch_enclosing_class = loader.fetch_enclosing_class
 
-val find_class = finder.find_class
 val list_elements = finder.list_elements
 
 datatype seek_mode_t = Seek_Export | Seek_Base
@@ -183,13 +182,13 @@ fun lookup_in_main_and_bases (cooker : cooker_t) ctx kp id = (
 	    in
 		case (find_in_bindings id bindings) of
 		    NONE => raise (error_name_not_found id kp)
-		  | SOME (Binding (v, subsubj, _, (z, r, EL_Class d, h))) => (
+		  | SOME (Naming (_, subj, _, _, (z, r, EL_Class dx, h))) => (
 		    let
-			val Defclass ((_, pkg), k0) = d
+			val Defclass (_, k0) = dx
 		    in
-			SOME (enclosing, (subsubj, k0))
+			SOME (enclosing, (subj, k0))
 		    end)
-		  | SOME (Binding (v, subsubj, _, (z, r, EL_State d, h))) => (
+		  | SOME (Naming (_, subj, _, _, (z, r, EL_State dx, h))) => (
 		    raise (error_name_is_state id kp))
 	    end
 	else

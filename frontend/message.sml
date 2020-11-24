@@ -174,7 +174,7 @@ fun error_inner_outer_in_package v = Match
 
 fun error_unhandled_outer d = Match
 
-fun warn_no_inner (cv : named_element_t) = (
+fun warn_no_inner (cv : element_union_t) = (
     print ("WARNING: No matching inner is found for "^
 	   (id_to_string (name_of_naming cv)) ^" in ?\n"))
 

@@ -38,7 +38,6 @@ val class_tree = classtree.class_tree
 val instance_tree = classtree.instance_tree
 val fetch_class_by_scope = classtree.fetch_class_by_scope
 val store_to_instance_tree = classtree.store_to_instance_tree
-val descend_instance_tree = classtree.descend_instance_tree
 val subject_to_instance_tree_path = classtree.subject_to_instance_tree_path
 
 val find_class = finder.find_class
@@ -137,26 +136,28 @@ fun refer_to_variable kp (d as Defvar _) prefix rr0 = (
 fun make_reference kp (buildphase_ : bool) w0 = (
     case w0 of
 	Vref (_, []) => raise Match
-      | Vref (false, rr as (v0, ss_) :: t0) => (
+      | Vref (false, rr as (id, ss_) :: t0) => (
 	if (reference_is_bound w0) then
 	    Vref (true, rr)
 	else
 	    let
 		val cooker = assemble_package
-		val subj0 = (subject_of_class kp)
+		val subjkp = (subject_of_class kp)
 	    in
-		case (find_name_initial_part cooker E3 (subj0, kp) v0) of
-		    NONE => raise (error_variable_name_not_found v0 kp)
-		  | SOME (Binding (_, subsubj, _, (z, r, EL_Class d, h))) => (
+		case (find_name_initial_part cooker E3 (subjkp, kp) id) of
+		    NONE => raise (error_variable_name_not_found id kp)
+		  | SOME (Naming (_, subj, _, _, (z, r, EL_Class dx, h))) => (
 		    let
-			val Defclass (_, kx) = d
-			val x0 = (refer_to_package kp subsubj kx rr)
+			val Defclass (_, kx) = dx
+			(*val subsubj = (compose_subject subjkp id [])*)
+			val x0 = (refer_to_package kp subj kx rr)
 		    in
 			x0
 		    end)
-		  | SOME (Binding (_, subsubj, _, (z, r, EL_State d, h))) => (
+		  | SOME (Naming (_, subj, _, _, (z, r, EL_State dx, h))) => (
 		    let
-			val x0 = (refer_to_variable kp d subsubj rr)
+			(*val subsubj = (compose_subject subjkp id [])*)
+			val x0 = (refer_to_variable kp dx subj rr)
 		    in
 			x0
 		    end)
@@ -623,7 +624,7 @@ and bind_in_constraint ctx binder (r : constraint_t) = (
 	  | Def_Name cn => (
 	    case (find_class cooker (subj, kp) cn) of
 		NONE => raise (error_class_not_found cn kp)
-	      | SOME (_, k1) => (
+	      | SOME k1 => (
 		let
 		    val mm1 = (map walk_m mm0)
 		in

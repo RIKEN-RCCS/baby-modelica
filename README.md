@@ -27,14 +27,14 @@ If someone might be unfamiliar with SML, see
 
 ## Source code files and directories
 
+See frontend/notes.pdf first, then start with frontend/bbm.sml.
+* [frontend/notes.pdf](frontend/notes.pdf): random implementation notes
+* frontend/bbm.sml: a list of the source code files
+
 The toplevel directories are as follows.
 * [frontend](frontend): the source code
 * [silly-models](silly-models): trivial code to check the specification
 * [code-examples](code-examples): code snippets from the specification
-
-See frontend/notes.pdf first, then start with frontend/bbm.sml.
-* [frontend/notes.pdf](frontend/notes.pdf): random implementation notes
-* frontend/bbm.sml: a list of the source code files
 
 ----
 

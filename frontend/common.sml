@@ -276,6 +276,7 @@ fun cook_step (k : definition_body_t) = (
 	Def_Body ((u, f, b), j, cs, nm, ee, aa, ww) => u
       | Def_Der _ => E5
       | Def_Primitive _ => E5 (*raise Match*)
+      | Def_Alias _ => E5
       | Def_Name _ => E0
       | Def_Scoped _ => E0
       | Def_Refine _ => E0
@@ -432,6 +433,23 @@ fun tag_is_root tag = (
       | Ctag [] => true
       | Ctag _ => false)
 
+(* Tests if a class is a record of an inner-outer matching. *)
+
+fun class_is_alias k = (
+    case k of
+	Def_Body _ => false
+      | Def_Der _ => false
+      | Def_Primitive _ => false
+      | Def_Alias _ => true
+      | Def_Name _ => raise Match
+      | Def_Scoped _ => raise Match
+      | Def_Refine _ => raise Match
+      | Def_Extending _ => raise Match
+      | Def_Replaced _ => raise Match
+      | Def_Displaced _ => raise Match
+      | Def_In_File => raise Match
+      | Def_Mock_Array _ => raise Match)
+
 (* ================================================================ *)
 
 fun assert_proper_subject subj = (subj <> bad_subject)
@@ -474,6 +492,7 @@ fun class_print_name k = (
       | Def_Der (tag, cs, n, vv, aa, ww) => (
 	"der ("^ (tag_to_string tag) ^")")
       | Def_Primitive (p, _) => "primitive"
+      | Def_Alias (f, subj, _) => (subject_to_string subj)
       | Def_Name n => (name_to_string n)
       | Def_Scoped (n, s) => (
 	("("^ (name_to_string n) ^" in "^
@@ -526,6 +545,7 @@ fun class_is_package k = (
 	Def_Body ((u, f, b), j, cs, nm, ee, aa, ww) => (f = PKG)
       | Def_Der _ => false
       | Def_Primitive _ => false
+      | Def_Alias (f, _, _) => (f = PKG)
       | Def_Name _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
@@ -605,10 +625,12 @@ fun variability_order v = (
       | Parameter => 1
       | Constant => 0)
 
-fun name_of_naming cv = (
+fun name_of_element_union cv = (
     case cv of
 	EL_Class (Defclass ((v, _), _)) => v
       | EL_State (Defvar (v, _, _, _, _, _)) => v)
+
+val name_of_naming = name_of_element_union
 
 (* Some characters in identifiers need be protected (escaped), that
    is, {"@", ".", "%"}.  "@" and "." are internally used as
@@ -730,6 +752,7 @@ fun subject_of_class k = (
 	    subj
 	end)
       | Def_Primitive _ => raise Match
+      | Def_Alias (f, subj, _) => subj
       | Def_Name _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
@@ -840,6 +863,7 @@ fun class_is_enumerator_definition k = (
       | Def_Der _ => false
       | Def_Primitive (P_Enum tag_, L_Enum (tag, v)) => true
       | Def_Primitive _ => false
+      | Def_Alias _ => false
       | Def_Name _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match

@@ -17,7 +17,7 @@ structure flatdumper
     type variable_declaration_t
     type definition_body_t
     type expression_t
-    type binding_t
+    type naming_t
     type subject_t
     type ctx_t
     type binder_t
@@ -32,11 +32,11 @@ open plain
 open ast
 open small0
 
-val descend_instance_tree = classtree.descend_instance_tree
 val instance_tree = classtree.instance_tree
 val class_tree = classtree.class_tree
 val subject_to_instance_tree_path = classtree.subject_to_instance_tree_path
 val extract_base_classes = classtree.extract_base_classes
+val component_is_alias = classtree.component_is_alias
 
 val simple_type_attribute = simpletype.simple_type_attribute
 val type_of_simple_type = simpletype.type_of_simple_type
@@ -269,7 +269,8 @@ fun traverse_tree f (node0, acc0) = (
 	val _ = if ((cook_step kp) <> E0) then () else raise Match
 
 	val acc1 = (f (kp, acc0))
-	val components = (! cx)
+	val c0 = (! cx)
+	val components = (List.filter (not o component_is_alias) c0)
     in
 	(foldl (fn (Slot (v, dim, nodes, dummy), accx) =>
 		   (foldl (traverse_tree f) accx nodes))
@@ -291,7 +292,10 @@ fun collect_variables root = (
 		let
 		    val subj = (subject_of_class kp)
 		in
-		    if (class_is_enumerator_definition kp) then
+		    if (class_is_alias kp) then
+			(* THIS WILL BE REMOVED. *)
+			acc
+		    else if (class_is_enumerator_definition kp) then
 			acc
 		    else if (class_is_package kp) then
 			acc
@@ -320,7 +324,10 @@ fun collect_enumerations root = (
 	    (class_is_enum k) andalso (class_is_package k))
 
 	fun collect (kp, acc) = (
-	    if (class_is_enumerator_definition kp) then
+	    if (class_is_alias kp) then
+		(* THIS WILL BE REMOVED. *)
+		acc
+	    else if (class_is_enumerator_definition kp) then
 		acc
 	    else if (step_is_less E3 kp) then
 		acc
@@ -345,7 +352,10 @@ fun collect_records root = (
 	    (kind_is_record k) andalso (class_is_package k))
 
 	fun collect (kp, acc) = (
-	    if (class_is_enumerator_definition kp) then
+	    if (class_is_alias kp) then
+		(* THIS WILL BE REMOVED. *)
+		acc
+	    else if (class_is_enumerator_definition kp) then
 		acc
 	    else if (step_is_less E3 kp) then
 		acc
@@ -373,7 +383,10 @@ fun collect_functions root = (
 	      | _ => raise Match)
 
 	fun collect (kp, acc) = (
-	    if (class_is_enumerator_definition kp) then
+	    if (class_is_alias kp) then
+		(* THIS WILL BE REMOVED. *)
+		acc
+	    else if (class_is_enumerator_definition kp) then
 		acc
 	    else if (step_is_less E3 kp) then
 		acc
@@ -427,18 +440,22 @@ fun collect_equations initial () = (
 	(* Include equations in simple-types. *)
 
 	fun collect (kp, acc) = (
-	    let
-		val (bases, _) = (extract_base_classes false kp)
-		val subj = (subject_of_class kp)
-		val tag = (tag_of_body kp)
-		val classes = [(tag, kp)] @ bases
-		val ee = (foldl eqn1 [] classes)
-	    in
-		if (not (null ee)) then
-		    acc @ [(subj, ee)]
-		else
-		    acc
-	    end)
+	    if (class_is_alias kp) then
+		(* THIS WILL BE REMOVED. *)
+		acc
+	    else
+		let
+		    val (bases, _) = (extract_base_classes false kp)
+		    val subj = (subject_of_class kp)
+		    val tag = (tag_of_body kp)
+		    val classes = [(tag, kp)] @ bases
+		    val ee = (foldl eqn1 [] classes)
+		in
+		    if (not (null ee)) then
+			acc @ [(subj, ee)]
+		    else
+			acc
+		end)
 
 	val node = model_root_node
 	val eqns = (traverse_tree collect (node, []))

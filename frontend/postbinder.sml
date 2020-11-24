@@ -18,6 +18,7 @@ val instance_tree = classtree.instance_tree
 val fetch_class_by_scope = classtree.fetch_class_by_scope
 val store_to_instance_tree = classtree.store_to_instance_tree
 val fetch_from_instance_tree = classtree.fetch_from_instance_tree
+val component_is_alias = classtree.component_is_alias
 
 val make_reference = binder.make_reference
 val bind_in_class = binder.bind_in_class
@@ -43,12 +44,16 @@ fun secure_references_in_class kp = (
     end)
 
 (* Resolves variable references in a package or an instance.  It
-   processes all instances when scanning=true, because the building
-   routine leaves some instances partially resolved (only a value
-   attribute is resolved in simple-types). *)
+   returns true if some instances are processed, to repeat the process
+   until it stabilizes.  It, with scanning=true, processes all
+   instances, becuase the building routine may leave some instances in
+   a partially resolved state (such as simple-types, whose value
+   attribute is only resolved). *)
 
 fun bind_in_instance (scanning : bool) k0 = (
-    if (class_is_enumerator_definition k0) then
+    if (class_is_alias k0) then
+	false
+    else if (class_is_enumerator_definition k0) then
 	false
     else if (class_is_package k0) then
 	false
@@ -83,9 +88,9 @@ fun bind_in_instance (scanning : bool) k0 = (
 
 (* Resolves variables in packages/instances.  It skips classes which
    are named but are not used as packages (which have the step=E0).
-   IT ACCESSES THE COMPONENT SLOT AFTER PROCESSING THE CLASS. *)
+   It accesses the component slot after processing the class. *)
 
-fun bind_instance_loop (scanning : bool) node0 = (
+fun bind_instances_loop (scanning : bool) node0 = (
     let
 	val (subj, kx, cx) = node0
 	val kp = (! kx)
@@ -96,7 +101,8 @@ fun bind_instance_loop (scanning : bool) node0 = (
 
 	val changes0 = (bind_in_instance scanning kp)
 	(* KEEP ORDERING. *)
-	val components = (! cx)
+	val c0 = (! cx)
+	val components = (List.filter (not o component_is_alias) c0)
 
 	val _ = if (null components) then ()
 		else if (not (class_is_simple_type kp)) then ()
@@ -106,13 +112,11 @@ fun bind_instance_loop (scanning : bool) node0 = (
 	val changes1
 	    = (List.concat
 		   (map (fn (Slot (v, dim, nodes, dummy)) =>
-			    (map (bind_instance_loop scanning) nodes))
+			    (map (bind_instances_loop scanning) nodes))
 			components))
     in
 	(List.exists (fn x => x) (changes0 :: changes1))
     end)
-
-(* ================================================================ *)
 
 (* Binds variables in the model.  Call it with true.  It repeatedly
    calls the bind procedure until settled, because values and
@@ -120,8 +124,8 @@ fun bind_instance_loop (scanning : bool) node0 = (
 
 fun bind_model scanning = (
     let
-	val changes0 = (bind_instance_loop scanning instance_tree)
-	val changes1 = (bind_instance_loop scanning class_tree)
+	val changes0 = (bind_instances_loop scanning instance_tree)
+	val changes1 = (bind_instances_loop scanning class_tree)
     in
 	if (changes0 orelse changes1) then
 	    (bind_model false)

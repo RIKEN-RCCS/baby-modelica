@@ -19,7 +19,7 @@ sig
 
     val xreset : unit -> unit
     val xload : string -> class_definition_t
-    val xfind : string -> subject_t * definition_body_t
+    val xfind : string -> definition_body_t
     val xbuild : string -> unit
 end = struct
 
@@ -37,6 +37,8 @@ val store_to_instance_tree = classtree.store_to_instance_tree
 val assert_stored_in_instance_tree = classtree.assert_stored_in_instance_tree
 val unwrap_array_of_instances = classtree.unwrap_array_of_instances
 val subject_to_instance_tree_path = classtree.subject_to_instance_tree_path
+val component_is_alias = classtree.component_is_alias
+val dereference_alias_component = classtree.dereference_alias_component
 
 val find_name_initial_part = finder.find_name_initial_part
 val list_elements = finder.list_elements
@@ -110,6 +112,34 @@ fun make_dummy_array_class (dim, array, dummy) = (
 		Def_Mock_Array (dim, array, dummy)
 	end))
 
+fun assert_inner_outer_condition binding = (
+    let
+	val Naming (id, subj, inner, _, (z, r, dd, h)) = binding
+	(*val subcomponent = (test_subcomponent subsubj (subj, id))*)
+	val subcomponent = (inner = NONE)
+	val _ = if ((not ((#Outer r) andalso (not (#Inner r))))
+		    orelse (not subcomponent))
+		then () else raise Match
+    in
+	()
+    end)
+
+(* ================================================================ *)
+
+(* Inserts an alias instance to record an inner-outer matching in the
+   class_tree/instance_tree.  An outer reference will be substituted
+   by an inner reference, but it is delayed until processing
+   connectors (connectors need to distinguish internal connections).
+   It temporarily instantiates an outer reference as an alias. *)
+
+fun instantiate_alias var outer inner = (
+    let
+	val k = Def_Alias (var, outer, inner)
+	val _ = (store_to_instance_tree outer k)
+    in
+	k
+    end)
+
 (* ================================================================ *)
 
 (* Instantiates a class.  It repeatedly calls assemble_instance until
@@ -120,8 +150,7 @@ fun make_dummy_array_class (dim, array, dummy) = (
 
 fun instantiate_class (subj, k0) = (
     let
-	val (dim, array, dummy)
-	    = (instantiate_with_dimension (subj, k0))
+	val (dim, array, dummy) = (instantiate_with_dimension (subj, k0))
 	val _ = (app (assert_cook_step E3) array)
 	val k1 = (make_dummy_array_class (dim, array, dummy))
 	val _ = (store_to_instance_tree subj k1)
@@ -273,14 +302,22 @@ and secure_reference_loop ctx buildphase (retrying : bool) path0 node0 = (
 		    (secure_reference_loop
 			 ctx buildphase true path0 node0)
 		end)
-	      | SOME (cc as Slot (v_, dim, nodes, dummy)) => (
-		let
-		    val _ = (check_reference_subscripts cc ss)
-		in
-		    (List.concat
-			 (map (secure_reference_loop
-				   ctx buildphase false path1) nodes))
-		end)
+	      | SOME (slot as Slot (_, dim, nodes, dummy)) => (
+		if (component_is_alias slot) then
+		    let
+			val node1 = (dereference_alias_component slot)
+		    in
+			(secure_reference_loop
+			     ctx buildphase true path0 node1)
+		    end
+		else
+		    let
+			val _ = (check_reference_subscripts slot ss)
+		    in
+			(List.concat
+			     (map (secure_reference_loop
+				       ctx buildphase false path1) nodes))
+		    end)
 	end))
 
 (* Checks an access is proper about scalar or array.  It is an error
@@ -318,45 +355,71 @@ and check_reference_subscripts (Slot (v, dim, nodes, dummy)) ss = (
 and instantiate_class_in_class kp id = (
     let
 	val cooker = assemble_package
-	(*fun cook_faulting wantedstep (subj, kx) = raise Match*)
-	(*val cooker = cook_faulting*)
 	val subj = (subject_of_class kp)
 	val package = (class_is_package kp)
     in
 	case (find_name_initial_part cooker E3 (subj, kp) id) of
 	    NONE => raise (error_name_not_found id kp)
-	  | SOME (Binding (_, subsubj, _, (z, r, EL_Class d, h))) => (
+	  | SOME binding => (
 	    let
-		(*val _ = if (package) then ()
-		  else raise (error_name_is_class id kp)*)
-		val Defclass (_, k0) = d
-		val k2 = (assemble_package E3 (subsubj, k0))
+		val (dim, array) = (instantiate_element kp binding)
 	    in
-		([], [k2])
-	    end)
-	  | SOME (Binding (_, subsubj, _, (z, r, EL_State d, h))) => (
-	    let
-		val _ = if ((not package) orelse (declaration_is_constant d))
-			then () else raise error_non_constant_in_package
-		val subcomponent = (test_subcomponent subsubj (subj, id))
-	    in
-		if (subcomponent) then
-		    let
-			val Defvar (_, q, k0, c, aa, ww) = d
-			val k1 = Def_Refine (k0, NONE, copy_type, q,
-					     ([], []), aa, ww)
-			val _ = print "(AHO) DROP CONDITIONAL\n"
-			val (dim, array) = (instantiate_class (subsubj, k1))
-		    in
-			(dim, array)
-		    end
-		else
-		    case (fetch_from_instance_tree subsubj) of
-			NONE => raise Match
-		      | SOME (Def_Mock_Array (dim, array, _)) => (dim, array)
-		      | SOME k1 => ([], [k1])
+		(dim, array)
 	    end)
     end)
+
+and instantiate_element kp binding = (
+    let
+	val Naming (id, subj, inner, _, _) = binding
+    in
+	case (fetch_from_instance_tree subj) of
+	    SOME kx => (
+	    let
+		val (dim, array) = (unwrap_array_of_instances kx)
+	    in
+		(dim, array)
+	    end)
+	  | NONE => (
+	    case inner of
+		SOME truesubj => (
+		let
+		    val kx = surely (fetch_from_instance_tree truesubj)
+		    val var = if (class_is_package kx) then PKG else VAR
+		    val k0 = (instantiate_alias var subj truesubj)
+		in
+		    ([], [k0])
+		end)
+	      | NONE => (
+		let
+		    val (dim, array) = (instantiate_subelement kp binding)
+		in
+		    (dim, array)
+		end))
+    end)
+
+and instantiate_subelement kp binding = (
+    case binding of
+	Naming (id, subj, NONE, _, (z, r, EL_Class dx, h)) => (
+	let
+	    val Defclass (_, k0) = dx
+	    val k2 = (assemble_package E3 (subj, k0))
+	in
+	    ([], [k2])
+	end)
+      | Naming (id, subj, NONE, _, (z, r, EL_State dx, h)) => (
+	let
+	    val package = (class_is_package kp)
+	    val _ = if ((not package) orelse (declaration_is_constant dx))
+		    then () else raise error_non_constant_in_package
+	    val Defvar (_, q, k0, c, aa, ww) = dx
+	    val k1 = Def_Refine (k0, NONE, copy_type, q,
+				 ([], []), aa, ww)
+	    val _ = print "(AHO) DROP CONDITIONAL\n"
+	    val (dim, array) = (instantiate_class (subj, k1))
+	in
+	    (dim, array)
+	end)
+      | Naming (id, subj, SOME _, _, _) => raise Match)
 
 (* Determines a dimension of a declaration, which needs looking at the
    RHS in cases like "A~x[:]=e". *)
@@ -412,7 +475,7 @@ fun secure_subject ctx subj = (
    usually already processed.  It is used to traverse the component
    variables. *)
 
-fun call_if_component kp f (Binding (v, subsubj, _, (z, r, dd, h))) = (
+fun call_if_component__ kp f (Naming (v, subsubj, _, _, (z, r, dd, h))) = (
     case dd of
 	EL_Class dx => ()
       | EL_State dx => (
@@ -439,44 +502,40 @@ fun call_if_component kp f (Binding (v, subsubj, _, (z, r, dd, h))) = (
    always a non-array (at the last part), and it collectively creates
    an array of instances. *)
 
-fun traverse_with_instantiation (subj, d0) = (
+fun traverse_with_instantiation (subj0, k0) = (
     let
-	fun traverse kx = (
-	    if (class_is_simple_type kx) then
+	fun instantiate kp binding = (
+	    case binding of
+		Naming (_, _, _, _, (z, r, EL_Class _, h)) => raise Match
+	      | Naming (_, _, _, _, (z, r, EL_State _, h)) => (
+		let
+		    val (dim, array) = (instantiate_element kp binding)
+		in
+		    array
+		end))
+
+	and traverse kx = (
+	    if (class_is_alias kx) then
+		()
+	    else if (class_is_simple_type kx) then
 		()
 	    else
 		let
-		    val _ = (assert_match_subject_sans_subscript subj kx)
+		    (*val _ = (assert_match_subject_sans_subscript subj kx)*)
 		    val cooker = assemble_package
 		    val bindings = (list_elements cooker true kx)
 		    val (classes, states) =
 			  (List.partition binding_is_class bindings)
-		    val fx = traverse_with_instantiation
-		    val _ = (app (call_if_component kx fx) states)
+		    val _ = (app assert_inner_outer_condition states)
+		    val instances = (List.concat (map (instantiate kx) states))
+		    val _ = (app traverse instances)
 		in
 		    ()
 		end)
 
-	val _ = (assert_subject_is_not_array subj)
-	val Defvar (v, q, k0, c, aa, ww) = d0
-	val k1 = Def_Refine (k0, NONE, copy_type, q, ([], []), aa, ww)
-	val _ = print "(AHO) DROP CONDITIONAL\n"
+	val _ = (assert_subject_is_not_array subj0)
     in
-	case (fetch_from_instance_tree subj) of
-	    SOME kx => (
-	    let
-		val (dim, array) = (unwrap_array_of_instances kx)
-		val ee = (map traverse array)
-	    in
-		()
-	    end)
-	  | NONE => (
-	    let
-		val (dim, array) = (instantiate_class (subj, k1))
-		val ee = (map traverse array)
-	    in
-		()
-	    end)
+	(traverse k0)
     end)
 
 (* ================================================================ *)
@@ -522,13 +581,13 @@ fun xfind (s : string) = (
     in
 	case (find_class cooker root name) of
 	    NONE => raise Fail ("Class ("^ s ^") not found")
-	  | SOME (enclosing, kx) => (enclosing, kx)
+	  | SOME kx => kx
     end)
 
 fun xbuild s = (
     let
 	val subj = the_model_subject
-	val (enclosing, k0) = (xfind s)
+	val k0 = (xfind s)
 	val (dim, array) = (instantiate_class (subj, k0))
 	val _ = if (null dim) then () else raise Match
 	val _ = if ((length array) = 1) then () else raise Match
@@ -536,7 +595,7 @@ fun xbuild s = (
 	val v = Id ""
 	val q = no_component_prefixes
 	val var = Defvar (v, q, k3, NONE, Annotation [], Comment [])
-	val _ = (traverse_with_instantiation (subj, var))
+	val _ = (traverse_with_instantiation (subj, k3))
     in
 	()
     end)
