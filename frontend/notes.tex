@@ -1015,13 +1015,14 @@ classes (the relation that is not extended by importing and extending)
 cannot affect the enclosed class by modifications.  Thus, it is safe
 to use the textual definition for such classes.\end{QFACT}
 %%%%
-(Actually, redeclarations may change the elements of a base class, but
-they work on the textual definition of the base class).
+For example, consider a case $\mathit{.Modelica}$ extends
+$\mathit{.Modelica.Icons.Package}$.  As $\mathit{.Modelica.Icons}$ is
+textually defined, it is not necessary to process $\mathit{.Modelica}$
+first to take the definition of $\mathit{.Modelica.Icons}$.  Thus, it
+avoids a potential cycle in definitions.
 
-For example, although $\mathit{.Modelica}$ extends
-$\mathit{.Modelica.Icons.Package}$ but it is textually defined, it
-does not need to process $\mathit{.Modelica}$ first to take the
-definition of $\mathit{.Modelica.Icons}$.
+%%(Actually, redeclarations may change the elements of a base class, but
+%%they work on the textual definition of the base class).
 
 %%%%%%%%%%%%%%%%
 
