@@ -630,16 +630,16 @@ language_specification
 
 external_function_call
 	: IDENT "(" ")" {
-		St_Call ([], Vref (false, [(Id $1, [])]), [],
+		St_Call ([], Vref (NONE, [(Id $1, [])]), [],
 			 Annotation [], Comment [])}
 	| IDENT "(" expression_list ")" {
-		St_Call ([], Vref (false, [(Id $1, [])]), $3,
+		St_Call ([], Vref (NONE, [(Id $1, [])]), $3,
 			 Annotation [], Comment [])}
 	| component_reference "=" IDENT "(" ")" {
-		St_Call ([$1], Vref (false, [(Id $3, [])]), [],
+		St_Call ([$1], Vref (NONE, [(Id $3, [])]), [],
 			 Annotation [], Comment [])}
 	| component_reference "=" IDENT "(" expression_list ")" {
-		St_Call ([$1], Vref (false, [(Id $3, [])]), $5,
+		St_Call ([$1], Vref (NONE, [(Id $3, [])]), $5,
 			 Annotation [], Comment [])}
 	;
 
@@ -1369,22 +1369,22 @@ name
 
 component_reference
 	: IDENT {
-		Vref (false, [(Id $1, [])])}
+		Vref (NONE, [(Id $1, [])])}
 	| IDENT array_subscripts {
-		Vref (false,[(Id $1, $2)])}
+		Vref (NONE, [(Id $1, $2)])}
 	| "." IDENT {
-		Vref (false, [(Id ".", []), (Id $2, [])])}
+		Vref (NONE, [(Id "", []), (Id $2, [])])}
 	| "." IDENT array_subscripts {
-		Vref (false, [(Id ".", []), (Id $2, $3)])}
+		Vref (NONE, [(Id "", []), (Id $2, $3)])}
 	| component_reference "." IDENT {
 		case $1 of
 		    Vref (_, v) =>
-			Vref (false, (v ++ [(Id $3, [])]))
+			Vref (NONE, (v ++ [(Id $3, [])]))
 		  | _ => raise Match}
 	| component_reference "." IDENT array_subscripts {
 		case $1 of
 		    Vref (_, v) =>
-			Vref (false, (v ++ [(Id $3, $4)]))
+			Vref (NONE, (v ++ [(Id $3, $4)]))
 		  | _ => raise Match}
 	;
 

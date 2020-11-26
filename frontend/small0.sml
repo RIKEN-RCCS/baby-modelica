@@ -18,34 +18,6 @@ fun tr_tree_vvv (s : string) = if false then (print (s ^"\n")) else ()
 
 (* ================================================================ *)
 
-(* Converts a literal constant to an int value. *)
-
-fun literal_to_int w = (
-    case w of
-	L_Number (_, s) => (
-	case (string_is_int s) of
-	    NONE => raise error_non_integer_value
-	  | SOME v => v)
-      | _ => raise error_non_constant_value)
-
-(* (Note Real.fromString parses the prefix of s) *)
-
-fun r_value s = (
-    case (Real.fromString s) of
-	SOME x => x
-      | NONE => raise Match)
-
-fun z_value s = (
-    case (Int.fromString s) of
-	SOME x => x
-      | NONE => raise Match)
-
-fun r_literal x = (
-    L_Number (R, (Real.toString x)))
-
-fun z_literal x = (
-    L_Number (Z, (Int.toString x)))
-
 (* Tests if a class is a simple-type, that is, Real, Integer, Boolean,
    String, enumerations, types extending them, and arrays of them. *)
 
@@ -196,6 +168,24 @@ fun replace_body_elements (k : definition_body_t) ee = (
       | Def_In_File => raise Match
       | Def_Mock_Array _ => raise Match)
 
+fun assert_match_subject_name id subj = (
+    let
+	val (prefix, (v, ss)) = (subject_prefix subj)
+	val _ = if (v = id) then () else raise Match
+    in
+	()
+    end)
+
+(* Checks a variable declaration has no subscripts by nature. *)
+
+fun assert_no_subscript_to_subject subj = (
+    let
+	val (prefix, (v, ss)) = (subject_prefix subj)
+	val _ = if (null ss) then () else raise Match
+    in
+	()
+    end)
+
 fun assert_match_subject subj k = (
     if (subj = (subject_of_class k)) then () else raise Match)
 
@@ -334,17 +324,6 @@ fun class_is_encapsulated k = (
 	  | Def_In_File => raise Match
 	  | Def_Mock_Array _ => raise Match
     end)
-
-(* Bound variables start with "" for globals *)
-
-fun reference_is_bound x0 = (
-    case x0 of
-	Vref (_, []) => raise Match
-      | Vref (false, (Id "", []) :: _) => true
-      | Vref (false, (Id "", _) :: _) => raise Match
-      | Vref (false, (Id s, _) :: _) => false
-      | Vref (true, _) => true
-      | _ => raise Match)
 
 (* Tests if modifiers is empty or a single value. *)
 

@@ -167,6 +167,39 @@ val predefined_function_names = [
 
 (* ================================================================ *)
 
+val error_non_integer_value = Match
+val error_non_constant_value = Match
+
+(* Converts a literal constant to an int value. *)
+
+fun literal_to_int w = (
+    case w of
+	L_Number (_, s) => (
+	case (string_is_int s) of
+	    NONE => raise error_non_integer_value
+	  | SOME v => v)
+      | _ => raise error_non_constant_value)
+
+(* (Note that Real.fromString parses the prefix of s). *)
+
+fun r_value s = (
+    case (Real.fromString s) of
+	SOME x => x
+      | NONE => raise Match)
+
+fun z_value s = (
+    case (Int.fromString s) of
+	SOME x => x
+      | NONE => raise Match)
+
+fun r_literal x = (
+    L_Number (R, (Real.toString x)))
+
+fun z_literal x = (
+    L_Number (Z, (Int.toString x)))
+
+(* ================================================================ *)
+
 fun id_to_string ((Id s) : id_t) : string = s
 
 (* Returns a string for a qualified-name. *)
@@ -236,6 +269,14 @@ fun subject_print_string (Subj (ns, cc0)) = (
 		  cc1))
     end)
 
+fun subject_as_reference (Subj (ns, cc0)) = (
+    let
+	fun mapr f (x0, x1) = (x0, (f x1))
+	val cc1 = (attach_dot_of_package_root ns cc0)
+    in
+	(map (mapr (map z_literal)) cc1)
+    end)
+
 (* Checks if a class is in a processed form, which can appear in the
    instance_tree.  The other forms are syntactic.  Def_Primitive only
    appears in the instance_tree as an enumerator. *)
@@ -253,17 +294,6 @@ fun assert_proper_class (k : definition_body_t) = (
       | Def_Displaced _ => raise Match
       | Def_In_File => raise Match
       | Def_Mock_Array _ => raise Match)
-
-(* ================================================================ *)
-
-val error_not_found_in_table = Fail "(internal) not found"
-
-fun error_duplicate_definitions d = (
-    Fail ("duplicate definitions ("^ (name_of_definition d) ^")"))
-
-val error_array_index_to_scalar = Match
-val error_array_index = Match
-val error_no_instantiated_instance = Match
 
 (* ================================================================ *)
 
@@ -454,15 +484,6 @@ fun class_is_alias k = (
 
 fun assert_proper_subject subj = (subj <> bad_subject)
 
-fun discriminate_reference_root x = (
-    case x of
-	Vref (false, _) => raise Match
-      | Vref (true, []) => raise Match
-      | Vref (true, (Id "", []) :: _) => PKG
-      | Vref (true, (Id "", _) :: _) => raise Match
-      | Vref (true, _) => VAR
-      | _ => raise Match)
-
 (* (It prints a subject in a subtype relation, because a subject
    cannot tell the subtype and object-type relations). *)
 
@@ -504,25 +525,8 @@ fun class_print_name k = (
       | Def_In_File => raise Match
       | Def_Mock_Array _ => raise Match)
 
-(* Returns a path for a variable reference by dropping all subscript
-   expressions.  The returned path will be used to instantiate classes
-   along a path. *)
-
-fun pseudo_path_for_reference w0 = (
-    let
-	val ns = (discriminate_reference_root w0)
-    in
-	case w0 of
-	    Vref (false, _) => raise Match
-	  | Vref (true, rr) => (
-	    let
-		val cc0 = (map (fn (v, ss) => (v, [])) rr)
-		val cc1 = (drop_dot_of_package_root ns cc0)
-	    in
-		(ns, cc1)
-	    end)
-	  | _ => raise Match
-    end)
+fun pseudo_reference_path path = (
+    (map (fn (id, ss) => (id, [])) path))
 
 fun body_name_at_step k = (
     (class_print_name k) ^"@"^ (cook_step_to_string (cook_step k)))
@@ -667,7 +671,7 @@ fun compose_subject (Subj (ns, cc)) (Id v) (index : int list) = (
 fun compose_subject_with_index subj0 (index : int list) = (
     let
 	val (prefix, (v, ss0)) = (subject_prefix subj0)
-	val ss1 = (merge_subscripts ss0 index)
+	val ss1 = (merge_subscripts index ss0)
 	val subj1 = (compose_subject prefix v ss1)
     in
 	subj1

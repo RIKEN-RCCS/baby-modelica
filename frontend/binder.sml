@@ -53,77 +53,55 @@ fun tr_build (s : string) = if true then (print (s ^"\n")) else ()
 
 (* ================================================================ *)
 
-(* Appends a variable reference whose head and tail match.  It
-   requires the last component of p equals to the first component of
-   q. *)
+(* Tests a global reference, which starts with "" and is considered
+   bound. *)
 
-fun extend_reference p q = (
-    case p of
-	Vref (false, _) => raise Match
-      | Vref (true, p0) => (
-	case (p0, q) of
-	    ([], _) => raise Match
-	  | (_, []) => raise Match
-	  | (_, (vq, ssq) :: tl) => (
-	    let
-		val (hd, (vp, ssp)) = (split_last p0)
-		val _ = if (vp = vq) then () else raise Match
-		val ssx = (merge_subscripts ssq ssp)
-	    in
-		Vref (true, (hd @ [(vp, ssx)] @ tl))
-	    end))
+fun reference_is_global x0 = (
+    case x0 of
+	Vref (_, []) => raise Match
+      | Vref (NONE, (Id "", []) :: _) => true
+      | Vref (NONE, (Id "", _) :: _) => raise Match
+      | Vref (NONE, (Id _, _) :: _) => false
+      | Vref (SOME _, _) => raise Match
       | _ => raise Match)
 
-(* Makes a reference in a class.  The first part of a name has been
-   resolved to a class and it is dropped.  It secures the name
-   postfixes are proper references. *)
+(* Appends a path of a variable reference to a variable declaration.
+   It requires the names of the head of a reference and the tail of a
+   declaration match. *)
 
-fun refer_to_package kp subj k0 rr0 = (
-    case rr0 of
+fun extend_reference subj rr = (
+    case rr of
 	[] => raise Match
-      | ((v_, []) :: rr1) => (
+      | (id1, ss1) :: _ => (
 	let
-	    (*val subj_ = (tag_to_subject tag)*)
-	    val path0 = (subject_as_reference subj)
-	    val path1 = (extend_reference path0 rr0)
+	    val _ = (assert_no_subscript_to_subject subj)
+	    val _ = (assert_match_subject_name id1 subj)
+	    val (prefix, (id_, ss_)) = (subject_prefix subj)
 	in
-	    path1
-	end)
+	    Vref (SOME prefix, rr)
+	end))
+
+(* Makes a reference in a class.  The first part of a path matches to
+   a resolved class.  The name postfix needs to be secured as a proper
+   reference. *)
+
+fun refer_in_package kp subj rr = (
+    case rr of
+	[] => raise Match
+      | (id, []) :: _ => (extend_reference subj rr)
       | _ => raise error_subscripts_to_package)
 
-(* Makes a reference to a variable.  It scans a path of a reference to
-   resolve classes as a prior step to constant folding, when it is
-   used in a declaration context (which makes resolving unnecessary
-   during constant folding). *)
+(* Makes a reference in a variable. *)
 
-fun refer_to_variable kp (d as Defvar _) prefix rr0 = (
+fun refer_in_variable kp (d as Defvar _) subj rr = (
     let
-	val subj0 = (subject_of_class kp)
+	val _ = if (not (class_is_package kp)) then ()
+		else if (declaration_is_constant d) then ()
+		else raise error_variable_in_static_class
     in
-	case rr0 of
+	case rr of
 	    [] => raise Match
-	  | (v_, s_) :: rr1 => (
-	    if (class_is_package kp) then
-		let
-		    val _ = if (declaration_is_constant d) then ()
-			    else raise error_variable_in_static_class
-		    val _ = if (null s_) then () else raise Match
-		    val path0 = (subject_as_reference prefix)
-		    val path1 = (extend_reference path0 rr0)
-		(*
-		    val (newsubj, k1) = (resolve_package (subj0, kp) rr1)
-		    val _ = if (newsubj = (Var path)) then () else raise Match
-		*)
-		in
-		    path1
-		end
-	    else
-		let
-		    val path0 = (subject_as_reference prefix)
-		    val path1 = (extend_reference path0 rr0)
-		in
-		    path1
-		end)
+	  | _ => (extend_reference subj rr)
     end)
 
 (* Resolves a variable reference in the given package/instance.  It is
@@ -136,9 +114,9 @@ fun refer_to_variable kp (d as Defvar _) prefix rr0 = (
 fun make_reference kp (buildphase_ : bool) w0 = (
     case w0 of
 	Vref (_, []) => raise Match
-      | Vref (false, rr as (id, ss_) :: t0) => (
-	if (reference_is_bound w0) then
-	    Vref (true, rr)
+      | Vref (NONE, rr as (id, ss_) :: rr1) => (
+	if (reference_is_global w0) then
+	    Vref (SOME the_root_subject, rr1)
 	else
 	    let
 		val cooker = assemble_package
@@ -148,21 +126,18 @@ fun make_reference kp (buildphase_ : bool) w0 = (
 		    NONE => raise (error_variable_name_not_found id kp)
 		  | SOME (Naming (_, subj, _, _, (z, r, EL_Class dx, h))) => (
 		    let
-			val Defclass (_, kx) = dx
-			(*val subsubj = (compose_subject subjkp id [])*)
-			val x0 = (refer_to_package kp subj kx rr)
+			val x0 = (refer_in_package kp subj rr)
 		    in
 			x0
 		    end)
 		  | SOME (Naming (_, subj, _, _, (z, r, EL_State dx, h))) => (
 		    let
-			(*val subsubj = (compose_subject subjkp id [])*)
-			val x0 = (refer_to_variable kp dx subj rr)
+			val x0 = (refer_in_variable kp dx subj rr)
 		    in
 			x0
 		    end)
 	    end)
-      | Vref (true, rr0) => w0
+      | Vref (SOME _, _) => w0
       | _ => raise Match)
 
 (* Makes a binder of for-iterators.  It returns a pair of a binder and
@@ -194,25 +169,19 @@ fun make_iterator_binder ctx buildphase binder iters = (
 and make_reference_on_iterator binder id w0 = (
     case w0 of
 	Vref (_, []) => raise Match
-      | Vref (false, rr as (v0, ss0) :: tt) => (
-	let
-	in
-	    if (reference_is_bound w0) then
-		Vref (true, rr)
-	    else
-		if (v0 = id) then
-		    let
-			val _ = if (null ss0) then ()
-				else raise error_subscripts_to_iterator
-			val _ = if (null tt) then ()
-				else raise error_components_to_iterator
-		    in
-			Iref id
-		    end
-		else
-		    (binder w0)
-	end)
-      | Vref (true, rr) => w0
+      | Vref (NONE, rr as (v0, ss0) :: tt) => (
+	if (v0 = id) then
+	    let
+		val _ = if (null ss0) then ()
+			else raise error_subscripts_to_iterator
+		val _ = if (null tt) then ()
+			else raise error_components_to_iterator
+	    in
+		Iref id
+	    end
+	else
+	    (binder w0))
+      | Vref (SOME _, _) => w0
       | _ => raise Match)
 
 (* Walks an expression and calls an binder on a variable reference.
@@ -242,16 +211,16 @@ and bind_in_expression ctx buildphase binder w0 = (
 		(walk_x1 e)
 	    end)
 	  | Vref (_, []) => raise Match
-	  | Vref (false, rr0) => (
+	  | Vref (NONE, rr0) => (
 	    let
 		val rr1 = (map walk_vref rr0)
-		val w1 = Vref (false, rr1)
+		val w1 = Vref (NONE, rr1)
 		val w2 = (binder w1)
 		(*val _ = (secure_reference ctx buildphase w2)*)
 	    in
 		(walk_x w2)
 	    end)
-	  | Vref (true, rr0) => (
+	  | Vref (SOME _, _) => (
 	    if (not buildphase) then
 		w0
 	    else

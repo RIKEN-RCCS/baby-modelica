@@ -296,8 +296,8 @@ fun obtain_array_dimension w : int list * bool = (
       | Otherwise => raise Match
       | Scoped _ => raise Match
       | Vref (_, []) => raise Match
-      | Vref (false, _) => raise Match
-      | Vref (true, _) => ([], false)
+      | Vref (NONE, _) => raise Match
+      | Vref (SOME _, _) => ([], false)
       | Opr _ => raise Match
       | App _ => ([], false)
       | ITE cc => (
@@ -663,8 +663,8 @@ fun fold_pseudo_split w0 = (
 	  | Otherwise => raise Match
 	  | Scoped _ => raise Match
 	  | Vref (_, []) => raise Match
-	  | Vref (false, _) => raise Match
-	  | Vref (true, _) => w0
+	  | Vref (NONE, _) => raise Match
+	  | Vref (SOME _, _) => w0
 	  | Opr _ => raise Match
 	  | App _ => w0
 	  | ITE _ => w0
@@ -709,7 +709,7 @@ fun fold_pseudo_split w0 = (
 	  | Reduction_Argument _ => raise Match
 	  | Named_Argument (n, x) => raise Match
 	  | Pseudo_Split (x, ss) => (
-	    (Pseudo_Split (x, (merge_subscripts ss index))))
+	    (Pseudo_Split (x, (merge_subscripts index ss))))
 	  | Component_Ref _ => raise NOTYET
 	  | Instance (dim, kk, dummy) => (
 	    (subarray_of_instances index (dim, kk, dummy)))

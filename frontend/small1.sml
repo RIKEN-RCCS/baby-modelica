@@ -12,36 +12,34 @@ open small0
 
 val fetch_from_instance_tree = classtree.fetch_from_instance_tree
 
-(* Converts a subject to a variable reference, by simply making an
-   integer index to a literal expression. *)
-
-fun subject_as_reference (Subj (ns, cc0)) = (
-    let
-	fun mapr f (x0, x1) = (x0, (f x1))
-	val cc1 = (attach_dot_of_package_root ns cc0)
-	val rr = (map (mapr (map z_literal)) cc1)
-    in
-	Vref (true, rr)
-    end)
+fun extend_subject subj cc = (
+    case cc of
+	[] => raise Match
+      | _ => (
+	let
+	    (*val _ = (assert_no_subscript_to_subject subj)*)
+	    val Subj (ns, path) = subj
+	in
+	    Subj (ns, (path @ cc))
+	end))
 
 (* Converts a variable reference to a subject, requiring array
-   subscripts being literals.  It is called when it is certain that
-   array subscripts are literals. *)
+   subscripts being literals.  It is called only when it is certain
+   that array subscripts are literals and the referenced variable is
+   instantiated. *)
 
 fun reference_as_subject x = (
     case x of
 	Vref (_, []) => raise Match
-      | Vref (false, _) => raise Match
-      | Vref (true, rr) => (
+      | Vref (NONE, _) => raise Match
+      | Vref (SOME subj0, rr) => (
 	let
 	    fun mapr f (x0, x1) = (x0, f x1)
-	    val ns = (discriminate_reference_root x)
-	    val cc0 = (map (mapr (map literal_to_int)) rr)
-	    val cc1 = (drop_dot_of_package_root ns cc0)
+	    val cc = (map (mapr (map literal_to_int)) rr)
+	    val subj1 = (extend_subject subj0 cc)
 	in
-	    Subj (ns, cc1)
-	end)
-      | _ => raise Match)
+	    subj1
+	end))
 
 (* Tests literalness.  It assumes performing partial folding of
    constants beforehand ("partial folding" is defined by this
@@ -54,8 +52,8 @@ fun expression_is_literal w = (
       | Otherwise => raise Match
       | Scoped _ => raise Match
       | Vref (_, []) => raise Match
-      | Vref (false, _) => raise Match
-      | Vref (true, _) => false
+      | Vref (NONE, _) => raise Match
+      | Vref (SOME _, _) => false
       | Opr _ => raise Match
       | App _ => false
       | ITE _ => false

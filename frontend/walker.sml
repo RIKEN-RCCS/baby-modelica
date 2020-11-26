@@ -86,11 +86,11 @@ fun walk_in_expression (ctx : 'a fixer_t) (w0, acc0) = (
 	  | Otherwise => (Otherwise, acc0)
 	  | Scoped _ => raise Match
 	  | Vref (_, []) => raise Match
-	  | Vref (false, _) => raise Match
-	  | Vref (true, rr0) => (
+	  | Vref (NONE, _) => raise Match
+	  | Vref (SOME subj, rr0) => (
 	    let
 		val (rr1, acc1) = (map_along walk_subscript (rr0, acc0))
-		val w1 = Vref (true, rr1)
+		val w1 = Vref (SOME subj, rr1)
 	    in
 		((#fixer ctx) (w1, acc1))
 	    end)

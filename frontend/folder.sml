@@ -160,9 +160,8 @@ fun expression_is_constant__ w = (
 	  | Otherwise => raise Match
 	  | Scoped _ => raise Match
 	  | Vref (_, []) => raise Match
-	  | Vref (false, _) => raise Match
-	  | Vref (true, (r0 as (Id n, s) :: t)) => (
-	    false)
+	  | Vref (NONE, _) => raise Match
+	  | Vref (SOME _, _) => false
 	  | Opr _ => raise Match
 	  | App (x0, a0) => false
 	  | ITE c0 => false
@@ -220,7 +219,9 @@ fun simplify_ite w0 = (
 
 fun value_of_reference w0 = (
     case w0 of
-	Vref (true, _) => (
+	Vref (_, []) => raise Match
+      | Vref (NONE, []) => raise Match
+      | Vref (SOME _, _) => (
 	let
 	    val subj = (reference_as_subject w0)
 	in
@@ -251,8 +252,8 @@ fun fold_expression ctx needliteral w0 = (
 	  | Otherwise => Otherwise
 	  | Scoped _ => raise Match
 	  | Vref (_, []) => raise Match
-	  | Vref (false, _) => raise Match
-	  | Vref (true, rr0) => (
+	  | Vref (NONE, _) => raise Match
+	  | Vref (SOME _, _) => (
 	    let
 		val (w1, literals) = (fold_subscripts_in_reference ctx w0)
 	    in
@@ -386,15 +387,15 @@ fun fold_expression ctx needliteral w0 = (
 and fold_subscripts_in_reference ctx w0 = (
     case w0 of
 	Vref (_, []) => raise Match
-      | Vref (false, _) => raise Match
-      | Vref (true, rr0) => (
+      | Vref (NONE, _) => raise Match
+      | Vref (SOME subj, rr0) => (
 	let
 	    fun mapr f (x0, x1) = (x0, f x1)
 	    val convert = (fold_expression ctx true)
 	    val rr1 = (map (mapr (map convert)) rr0)
 	    val ok = (List.all ((List.all expression_is_literal) o #2) rr1)
 	in
-	    (Vref (true, rr1), ok)
+	    (Vref (SOME subj, rr1), ok)
 	end)
       | _ => raise Match)
 

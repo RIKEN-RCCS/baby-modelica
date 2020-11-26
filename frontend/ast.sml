@@ -402,18 +402,19 @@ and element_union_t
    Colon is a [:] in a subscript.  Otherwise is a truth for an
    else-part condition.  NIL, Colon, and Otherwise appear alone, and
    not in an expression.  Scoped is an expression in a scope.  Vref
-   represents a component reference which includes array indexing.
-   Opr represends predefined operators.  L_Number, L_String, L_Bool,
-   and L_Enum are literals.  L_Number has a slot indicating Real or
-   Integer.  Real literals are represented by strings to make syntax
-   trees eqtype in SML.  L_Enum is introduced when enumerations are
-   processed.  Reduction_Argument is an argument list for reductions.
-   Note that arguments to Array_Constructor is non-empty.
-   Pseudo_Split is an array indexing, that is introduced at rewriting
-   a non-each modifier on an array.  Component_Ref is a component
-   reference, that is introduced at rewriting a modifier of class
-   copying.  It is with an array dimension which is null for a scalar
-   component.  Iref is an iterator variable reference.  Others,
+   represents a component reference which includes array indexing.  An
+   optional first part indicates where a variable is declared, when it
+   is resolved.  Opr represends predefined operators.  L_Number,
+   L_String, L_Bool, and L_Enum are literals.  L_Number has a slot
+   indicating Real or Integer.  Real literals are represented by
+   strings to make syntax trees eqtype in SML.  L_Enum is introduced
+   when enumerations are processed.  Reduction_Argument is an argument
+   list for reductions.  Note that arguments to Array_Constructor is
+   non-empty.  Pseudo_Split is an array indexing, that is introduced
+   at rewriting a non-each modifier on an array.  Component_Ref is a
+   component reference, that is introduced at rewriting a modifier of
+   class copying.  It is with an array dimension which is null for a
+   scalar component.  Iref is an iterator variable reference.  Others,
    Array_fill, Array_diagonal, etc. are predefined functions. *)
 
 and expression_t
@@ -421,7 +422,7 @@ and expression_t
     | Colon
     | Otherwise
     | Scoped of expression_t * scope_t
-    | Vref of (*resolved*) bool * component_and_subscript_t list
+    | Vref of (*resolved*) subject_t option * component_and_subscript_t list
     | Opr of predefined_operator_t
     | App of expression_t * expression_t list
     | ITE of (expression_t * expression_t) list
@@ -597,7 +598,7 @@ fun qualify_name ((Id v), (Ctag pkg)) = (
 (* Combines two array subscripts in the row-major order, such as
    "T[s0]~a[s1]=>T[s1,s0]~a", or "T[s0][s1]=>T[s1,s0]". *)
 
-fun merge_subscripts s1 s0 = (s1 @ s0)
+fun merge_subscripts s0 s1 = (s1 @ s0)
 
 fun set_visibility z e = (
     case e of
@@ -719,7 +720,7 @@ fun make_component_clause
 	(ss0 : subscripts_t)
 	((v, ss1, mm, c, a, w) : declaration_with_subscripts_t) = (
     let
-	val ssx = (merge_subscripts ss1 ss0)
+	val ssx = (merge_subscripts ss0 ss1)
 	val k0 = if ((null ssx) andalso (null mm)) then
 		     Def_Name n
 		 else

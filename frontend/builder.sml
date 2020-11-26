@@ -39,6 +39,7 @@ val unwrap_array_of_instances = classtree.unwrap_array_of_instances
 val subject_to_instance_tree_path = classtree.subject_to_instance_tree_path
 val component_is_alias = classtree.component_is_alias
 val dereference_alias_component = classtree.dereference_alias_component
+val fetch_instance_tree_node = classtree.fetch_instance_tree_node
 
 val find_name_initial_part = finder.find_name_initial_part
 val list_elements = finder.list_elements
@@ -257,16 +258,13 @@ and secure_reference_in_expression ctx buildphase w0 = (
 
 and secure_reference ctx buildphase w0 = (
     case w0 of
-	Vref (false, _) => raise Match
-      | Vref (true, _) => (
+	Vref (_, []) => raise Match
+      | Vref (NONE, _) => raise Match
+      | Vref (SOME subj, rr0) => (
 	let
-	    val (tree, path) = (pseudo_path_for_reference w0)
-	    val root = if (tree = PKG) then class_tree else instance_tree
-	    val nodes = (secure_reference_loop ctx buildphase false path root)
-	    (*
-	    val vars = (map (! o #2) nodes)
-	    val _ = (map (bind_in_value {k = ctx} buildphase) vars)
-	    *)
+	    val node = surely (fetch_instance_tree_node subj)
+	    val rr1 = (pseudo_reference_path rr0)
+	    val nodes = (secure_reference_loop ctx buildphase false rr1 node)
 	in
 	    w0
 	end)

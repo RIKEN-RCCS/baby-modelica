@@ -66,6 +66,7 @@ sig
     val fetch_class_by_scope :
 	subject_t * class_tag_t -> subject_t * definition_body_t
 
+    val fetch_instance_tree_node : subject_t -> instance_node_t option
     val descend_instance_tree :
 	(id_t * int list) list -> instance_node_t -> instance_node_t option
     val dereference_alias_component : component_slot_t -> instance_node_t
@@ -300,23 +301,25 @@ fun subject_to_instance_tree_path subj = (
       | Subj (VAR, path) => (VAR, path)
       | Subj (PKG, path) => (PKG, path))
 
-(* Fetchs an instance in the instance_tree. *)
-
-fun fetch_from_instance_tree subj : definition_body_t option = (
+fun fetch_instance_tree_node subj : instance_node_t option = (
     let
 	val (tree, path) = (subject_to_instance_tree_path subj)
 	val root = if (tree = PKG) then class_tree else instance_tree
-	val node = (descend_instance_tree path root)
     in
-	case node of
-	    NONE => NONE
-	  | SOME (_, kx, cx) => (
-	    let
-		val k0 = (! kx)
-	    in
-		SOME k0
-	    end)
+	(descend_instance_tree path root)
     end)
+
+(* Fetchs an instance in the instance_tree. *)
+
+fun fetch_from_instance_tree subj : definition_body_t option = (
+    case (fetch_instance_tree_node subj) of
+	NONE => NONE
+      | SOME (_, kx, cx) => (
+	let
+	    val k0 = (! kx)
+	in
+	    SOME k0
+	end))
 
 (* Follows an (inner-outer) alias node.  Note that it returns a node
    above one pointed by an alias. *)

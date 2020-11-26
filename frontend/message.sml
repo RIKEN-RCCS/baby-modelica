@@ -212,8 +212,6 @@ fun warn_cycle_in_dimensions () = (
 
 val error_bad_array_dimension = Match
 
-val error_non_integer_value = Match
-
 val error_non_constant_array_dimension = Match
 
 val error_instance_reference_thru_package = Match
@@ -231,8 +229,6 @@ val error_subscripts_to_package = Match
 val error_name_not_found_in_package = Match
 
 val error_non_constant_in_package = Match
-
-val error_non_constant_value = Match
 
 val error_no_value_in_rhs = Match
 
@@ -309,5 +305,16 @@ val error_components_to_iterator = Match
 val error_subscripts_to_scalar = Match
 
 val error_split_array_dimension = Match
+
+val error_array_index_to_scalar = Match
+
+val error_array_index = Match
+
+val error_no_instantiated_instance = Match
+
+val error_not_found_in_table = Fail "(internal) not found"
+
+fun error_duplicate_definitions d = (
+    Fail ("duplicate definitions ("^ (name_of_definition d) ^")"))
 
 end
