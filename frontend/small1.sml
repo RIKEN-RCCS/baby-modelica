@@ -32,13 +32,13 @@ fun reference_as_subject x = (
     case x of
 	Vref (_, []) => raise Match
       | Vref (NONE, _) => raise Match
-      | Vref (SOME subj0, rr) => (
+      | Vref (SOME ns, rr) => (
 	let
 	    fun mapr f (x0, x1) = (x0, f x1)
-	    val cc = (map (mapr (map literal_to_int)) rr)
-	    val subj1 = (extend_subject subj0 cc)
+	    val cc0 = (map (mapr (map literal_to_int)) rr)
+	    val cc1 = (drop_dot_of_package_root ns cc0)
 	in
-	    subj1
+	    Subj (ns, cc1)
 	end))
 
 (* Tests literalness.  It assumes performing partial folding of

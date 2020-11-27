@@ -606,8 +606,7 @@ fun replace_outer_loop slot0 (prefix0, suffix0) = (
 	(Entry (Name outer, Name inner), _) => (
 	let
 	    val (prefix1, (id, ss)) = (split_last prefix0)
-	    val n = ((length inner) - 1)
-	    val prefix2 = (List.take (prefix1, n))
+	    val prefix2 = (List.take (prefix1, ((length inner) - 1)))
 	    val path = (prefix2 @ [(id, ss)] @ suffix0)
 	in
 	    (replace_outer_loop (! inner_outer_table) ([], path))
@@ -615,8 +614,8 @@ fun replace_outer_loop slot0 (prefix0, suffix0) = (
       | (Alist alist, []) => (prefix0 @ suffix0)
       | (Alist alist, (Id v, ss) :: suffix1) => (
 	let
-	    val (entry, _) = (List.partition (fn (s, _) => (s = v)) alist)
 	    val prefix1 = prefix0 @ [(Id v, ss)]
+	    val (entry, _) = (List.partition (fn (s, _) => (s = v)) alist)
 	in
 	    case entry of
 		[] => (prefix0 @ suffix0)
@@ -628,13 +627,11 @@ fun replace_outer w0 = (
     case w0 of
 	Vref (_, []) => raise Match
       | Vref (NONE, _) => raise Match
-      | Vref (SOME subj, rr1) => (
+      | Vref (SOME ns, rr0) => (
 	let
-	    val rr0 = (subject_as_reference subj)
-	    val rr2 = (rr0 @ rr1)
-	    val rrx = (replace_outer_loop (! inner_outer_table) ([], rr2))
+	    val rrx = (replace_outer_loop (! inner_outer_table) ([], rr0))
 	in
-	    Vref (SOME subj, rrx)
+	    Vref (SOME ns, rrx)
 	end)
       | _ => raise Match)
 

@@ -69,16 +69,18 @@ fun reference_is_global x0 = (
    It requires the names of the head of a reference and the tail of a
    declaration match. *)
 
-fun extend_reference subj rr = (
-    case rr of
+fun extend_reference subj rr1 = (
+    case rr1 of
 	[] => raise Match
       | (id1, ss1) :: _ => (
 	let
 	    val _ = (assert_no_subscript_to_subject subj)
 	    val _ = (assert_match_subject_name id1 subj)
-	    val (prefix, (id_, ss_)) = (subject_prefix subj)
+	    val Subj (ns, _) = subj
+	    val rr0 = (subject_as_reference subj)
+	    val (prefix, _) = (split_last rr0)
 	in
-	    Vref (SOME prefix, rr)
+	    Vref (SOME ns, (prefix @ rr1))
 	end))
 
 (* Makes a reference in a class.  The first part of a path matches to
@@ -116,7 +118,9 @@ fun make_reference kp (buildphase_ : bool) w0 = (
 	Vref (_, []) => raise Match
       | Vref (NONE, rr as (id, ss_) :: rr1) => (
 	if (reference_is_global w0) then
-	    Vref (SOME the_root_subject, rr1)
+	    (* May drop root prefix. *)
+	    (*(drop_dot_of_package_root ns rr)*)
+	    Vref (SOME PKG, rr)
 	else
 	    let
 		val cooker = assemble_package

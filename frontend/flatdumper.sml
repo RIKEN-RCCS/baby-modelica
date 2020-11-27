@@ -99,12 +99,8 @@ fun expression_to_string w = (
 	  | Scoped (x1, scope) => raise Match
 	  | Vref (_, []) => raise Match
 	  | Vref (NONE, rr) => raise Match
-	  | Vref (SOME subj, rr1) => (
-	    let
-		val rr0 = (subject_as_reference subj)
-	    in
-		(ref_to_string (rr0 @ rr1))
-	    end)
+	  | Vref (SOME ns, rr0) => (
+	    (ref_to_string rr0))
 	  | Opr p => (predefined_operator_to_string p)
 	  | App (f, aa) => (
 	    let
@@ -494,11 +490,11 @@ fun declaraton_of_real k = (
 	val truth_value = L_Bool true
 	val false_value = L_Bool false
 	val stateselect_default
-	    = Vref (SOME the_root_subject,
-		    [(Id "StateSelect", []), (Id "default", [])])
+	    = Vref (SOME PKG,
+		    [(Id "", []), (Id "StateSelect", []), (Id "default", [])])
 	val inf
-	    = Vref (SOME the_root_subject,
-		    [(Id "Modelica", []),
+	    = Vref (SOME PKG,
+		    [(Id "", []), (Id "Modelica", []),
 		     (Id "Constants", []), (Id "inf", [])])
 	val min_default = App (Opr Opr_neg, [inf])
 	val max_default = App (Opr Opr_id, [inf])

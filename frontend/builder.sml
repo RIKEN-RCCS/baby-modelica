@@ -245,11 +245,12 @@ and secure_reference ctx buildphase w0 = (
     case w0 of
 	Vref (_, []) => raise Match
       | Vref (NONE, _) => raise Match
-      | Vref (SOME subj, rr0) => (
+      | Vref (SOME ns, rr0) => (
 	let
-	    val node = surely (fetch_instance_tree_node subj)
+	    val root = if (ns = PKG) then class_tree else instance_tree
 	    val rr1 = (pseudo_reference_path rr0)
-	    val nodes = (secure_reference_loop ctx buildphase false rr1 node)
+	    val rr2 = (drop_dot_of_package_root ns rr1)
+	    val nodes = (secure_reference_loop ctx buildphase false rr2 root)
 	in
 	    w0
 	end)

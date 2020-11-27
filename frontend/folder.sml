@@ -388,14 +388,14 @@ and fold_subscripts_in_reference ctx w0 = (
     case w0 of
 	Vref (_, []) => raise Match
       | Vref (NONE, _) => raise Match
-      | Vref (SOME subj, rr0) => (
+      | Vref (SOME ns, rr0) => (
 	let
 	    fun mapr f (x0, x1) = (x0, f x1)
 	    val convert = (fold_expression ctx true)
 	    val rr1 = (map (mapr (map convert)) rr0)
 	    val ok = (List.all ((List.all expression_is_literal) o #2) rr1)
 	in
-	    (Vref (SOME subj, rr1), ok)
+	    (Vref (SOME ns, rr1), ok)
 	end)
       | _ => raise Match)
 

@@ -56,12 +56,8 @@ fun expression_to_string w = (
 	  | Scoped (x1, scope) => ("(scoped "^ (expression_to_string x1) ^")")
 	  | Vref (_, []) => raise Match
 	  | Vref (NONE, rr) => (ref_to_string rr)
-	  | Vref (SOME subj, rr1) => (
-	    let
-		val rr0 = (subject_as_reference subj)
-	    in
-		(ref_to_string (rr0 @ rr1))
-	    end)
+	  | Vref (SOME ns, rr) => (
+	    (ref_to_string rr))
 	  | Opr p => (predefined_operator_to_string p)
 	  | App (f, aa) => (
 	    let
