@@ -316,19 +316,19 @@ import n2 = pkg.n2;
 
 \subsubsection*{Modifier applications}
 
-The syntaxer associates an application of modifiers to a declaration
+The_syntaxer associates an application of modifiers to a declaration
 which is converted to a modification.  Association to a class
 definition $C$ is by temporarily creating a syntax element
 $\mathit{refine}(C, ...)$ with modifiers.
 
 \subsubsection*{Redeclarations}
 
-The syntaxer handles a redeclaration by replacing a replaceable.
+The_syntaxer handles a redeclaration by replacing a replaceable.
 Similarly, it handles an extends-redeclaration by replacing a
 replaceable class and making it a base class.
 
 A class redefinition may need be applied to multiple occurrences of a
-replaceable in class elements, because the syntaxer delays merging
+replaceable in class elements, because the_syntaxer delays merging
 elements in a main and base classes.  See
 Rule~\ref{multiple-definitions}.
 
@@ -466,23 +466,9 @@ in searching $\mathit{Complex}$ in $\mathit{.Modelica}$, again.
 
 \subsection{Instances}
 
-The syntaxer does not distinguish classes and instances, and a class
+The_syntaxer does not distinguish classes and instances, and a class
 is an instance when it is associated to a state variable.  It is like
 classless languages as Self.
-
-%%%%%%%%%%%%%%%%
-
-\subsection{Handling inner/outer declarations}
-
-The syntaxer keeps inner/outer prefixes.  The syntaxer performs an
-inner-outer matching, when it makes a list of visible identifiers in
-an instance.
-
-The_implementation makes an alias declaration to an inner variable
-which is placed at a declaration of an outer variable.  It is used to
-retain the component relation of a connector (where a connector is
-declared) which determines the flow direction.  The aliases are
-removed after handling the connectors.
 
 %%%%%%%%%%%%%%%%
 
@@ -514,6 +500,19 @@ expressions.
 
 %%%%%%%%%%%%%%%%
 
+\subsection{Handling inner/outer declarations}
+
+The_syntaxer performs an inner-outer matching when it makes a list of
+visible names in an instance.  It leaves an alias for an outer
+variable pointing to an inner variable.  An alias is necessary to
+retain the component relation for a connector (a place where a
+connector is declared) which determines the flow direction.  Outer
+aliases are replaced after handling connectors.  Replacing an outer
+alias is performed by ignoring subscripts of a variable reference
+because they are irrelevant.
+
+%%%%%%%%%%%%%%%%
+
 \subsection{Record class identity}
 
 A record class needs identity for the purposes such as passing
@@ -523,8 +522,9 @@ may change the components of a class, and the_implementation treats
 redeclarations create a separate class but non-redeclarations do not
 create a new one.  The_implementation creates an identity by
 concatenating an identity of a package and a name given after
-redeclarations.
-See Fact~\ref{record-class-identity}.
+redeclarations.  See Fact~\ref{record-class-identity}.
+The_implementation does not identify functions this way, because
+modifications of values change the function.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

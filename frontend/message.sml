@@ -317,4 +317,6 @@ val error_not_found_in_table = Fail "(internal) not found"
 fun error_duplicate_definitions d = (
     Fail ("duplicate definitions ("^ (name_of_definition d) ^")"))
 
+val error_duplicate_inner_outer = Match
+
 end

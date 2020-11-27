@@ -17,6 +17,7 @@ sig
     type component_slot_t
     type cook_step_t
     type cooker_t
+    type inner_outer_slot_t
 
     val class_tree : instance_node_t
     val instance_tree : instance_node_t
@@ -24,6 +25,8 @@ sig
     val loaded_classes : (string, class_definition_t) HashTable.hash_table
     val class_bindings : (string, naming_t list) HashTable.hash_table
     val dummy_inners : (string, naming_t) HashTable.hash_table
+
+    val inner_outer_table : inner_outer_slot_t ref
 
     val fetch_from_loaded_classes :
 	class_tag_t -> class_definition_t option
@@ -34,6 +37,9 @@ sig
 	subject_t -> definition_body_t option
     val store_to_instance_tree :
 	subject_t -> definition_body_t -> definition_body_t
+
+    val instantiate_alias :
+	instantiation_t -> subject_t -> subject_t -> definition_body_t
 
     val subject_to_instance_tree_path :
 	subject_t -> (instantiation_t * (id_t * int list) list)
@@ -115,8 +121,7 @@ val class_bindings : (string, naming_t list) HashTable.hash_table = (
     HashTable.mkTable (table_size_hint, Match))
 
 (* The dummy_inners table records an inner created for an unmatched
-   outer.  It is a mapping from a variable to a binding.  It is keyed
-   by a composite of names and subscripts (subject_t). *)
+   outer.  Keys are subjects. *)
 
 val dummy_inners : (string, naming_t) HashTable.hash_table = (
     HashTable.mkTable (table_size_hint, Match))
@@ -502,6 +507,88 @@ fun main_class kp = (
 	in
 	    km
 	end)
+
+(* ================================================================ *)
+
+datatype inner_outer_slot_t
+    = Entry of name_t * name_t
+    | Alist of (string * inner_outer_slot_t) list
+
+(* The inner_outer_table table records a mapping from an outer to an
+   inner.  It records variable references with subscripts dropped.
+   Note that an inner is a prefix of an outer. *)
+
+val inner_outer_table = ref (Alist [])
+
+fun record_inner_outer outer inner = (
+    let
+	fun subject_path (Subj (ns, path)) = (
+	    let
+		val _ = if (ns = VAR) then () else raise Match
+	    in
+		(map (fn (Id s, _) => s) path)
+	    end)
+
+	fun make_singleton_path e path = (
+	    (foldr (fn (k, s) => Alist [(k, s)]) e path))
+
+	fun insert_outer e slots0 path0 = (
+	    case (slots0, path0) of
+	        (Entry _, []) => (
+		let
+		    val _ = if (e = slots0) then ()
+			    else raise error_duplicate_inner_outer
+		in
+		    slots0
+		end)
+	      | (Alist _, []) => raise Match
+	      | (Entry _, v :: path1) => raise Match
+	      | (Alist alist0, v :: path1) => (
+		let
+		    val (entry, others)
+			= (List.partition (fn (s, _) => (s = v)) alist0)
+		in
+		    case entry of
+			[] => (
+			let
+			    val s = (make_singleton_path e path1)
+			    val alist1 = ((v, s) :: others)
+			in
+			    Alist alist1
+			end)
+		      | [(_, slot1)] => (
+			let
+			    val s = (insert_outer e slot1 path1)
+			    val alist1 = ((v, s) :: others)
+			in
+			    Alist alist1
+			end)
+		      | _ => raise Match
+		end))
+
+	val path = (subject_path outer)
+	val ip = (subject_path inner)
+	val e = Entry (Name path, Name ip)
+	val new = (insert_outer e (! inner_outer_table) path)
+	val _ = inner_outer_table := new
+    in
+	()
+    end)
+
+(* Inserts an alias instance to record an inner-outer matching in the
+   class_tree/instance_tree.  An outer reference will be substituted
+   by an inner reference, but it is delayed until processing
+   connectors (connectors need to distinguish internal connections).
+   It temporarily instantiates an outer reference as an alias. *)
+
+fun instantiate_alias var outer inner = (
+    let
+	val k = Def_Alias (var, outer, inner)
+	val _ = (store_to_instance_tree outer k)
+	val _ = (record_inner_outer outer inner)
+    in
+	k
+    end)
 
 (* ================================================================ *)
 

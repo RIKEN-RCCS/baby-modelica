@@ -40,6 +40,7 @@ val subject_to_instance_tree_path = classtree.subject_to_instance_tree_path
 val component_is_alias = classtree.component_is_alias
 val dereference_alias_component = classtree.dereference_alias_component
 val fetch_instance_tree_node = classtree.fetch_instance_tree_node
+val instantiate_alias = classtree.instantiate_alias
 
 val find_name_initial_part = finder.find_name_initial_part
 val list_elements = finder.list_elements
@@ -123,22 +124,6 @@ fun assert_inner_outer_condition binding = (
 		then () else raise Match
     in
 	()
-    end)
-
-(* ================================================================ *)
-
-(* Inserts an alias instance to record an inner-outer matching in the
-   class_tree/instance_tree.  An outer reference will be substituted
-   by an inner reference, but it is delayed until processing
-   connectors (connectors need to distinguish internal connections).
-   It temporarily instantiates an outer reference as an alias. *)
-
-fun instantiate_alias var outer inner = (
-    let
-	val k = Def_Alias (var, outer, inner)
-	val _ = (store_to_instance_tree outer k)
-    in
-	k
     end)
 
 (* ================================================================ *)
