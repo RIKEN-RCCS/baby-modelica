@@ -516,9 +516,56 @@ datatype inner_outer_slot_t
 
 (* The inner_outer_table table records a mapping from an outer to an
    inner.  It records variable references with subscripts dropped.
-   Note that an inner is a prefix of an outer. *)
+   Note that an inner is a prefix of an outer, when the last part
+   which is identical is dropped. *)
 
 val inner_outer_table = ref (Alist [])
+
+fun make_singleton_slot e path = (
+    (foldr (fn (k, s) => Alist [(k, s)]) e path))
+
+fun insert_outer_loop e slot0 path0 = (
+    case (slot0, path0) of
+	(Entry _, []) => (
+	let
+	    val _ = if (e = slot0) then ()
+		    else raise error_duplicate_inner_outer
+	in
+	    slot0
+	end)
+      | (Alist _, []) => raise Match
+      | (Entry _, v :: path1) => raise Match
+      | (Alist alist0, v :: path1) => (
+	let
+	    val (entry, others)
+		= (List.partition (fn (s, _) => (s = v)) alist0)
+	in
+	    case entry of
+		[] => (
+		let
+		    val s = (make_singleton_slot e path1)
+		    val alist1 = ((v, s) :: others)
+		in
+		    Alist alist1
+		end)
+	      | [(_, slot1)] => (
+		let
+		    val s = (insert_outer_loop e slot1 path1)
+		    val alist1 = ((v, s) :: others)
+		in
+		    Alist alist1
+		end)
+	      | _ => raise Match
+	end))
+
+fun assert_prefix_but_last x y = (
+    let
+	val (x1, x2) = (split_last x)
+	val (y1, y2) = (split_last y)
+    in
+	if ((list_prefix (op =) x1 y1) andalso x2 = y2) then ()
+	else raise Match
+    end)
 
 fun record_inner_outer outer inner = (
     let
@@ -529,47 +576,11 @@ fun record_inner_outer outer inner = (
 		(map (fn (Id s, _) => s) path)
 	    end)
 
-	fun make_singleton_path e path = (
-	    (foldr (fn (k, s) => Alist [(k, s)]) e path))
-
-	fun insert_outer e slots0 path0 = (
-	    case (slots0, path0) of
-	        (Entry _, []) => (
-		let
-		    val _ = if (e = slots0) then ()
-			    else raise error_duplicate_inner_outer
-		in
-		    slots0
-		end)
-	      | (Alist _, []) => raise Match
-	      | (Entry _, v :: path1) => raise Match
-	      | (Alist alist0, v :: path1) => (
-		let
-		    val (entry, others)
-			= (List.partition (fn (s, _) => (s = v)) alist0)
-		in
-		    case entry of
-			[] => (
-			let
-			    val s = (make_singleton_path e path1)
-			    val alist1 = ((v, s) :: others)
-			in
-			    Alist alist1
-			end)
-		      | [(_, slot1)] => (
-			let
-			    val s = (insert_outer e slot1 path1)
-			    val alist1 = ((v, s) :: others)
-			in
-			    Alist alist1
-			end)
-		      | _ => raise Match
-		end))
-
-	val path = (subject_path outer)
-	val ip = (subject_path inner)
-	val e = Entry (Name path, Name ip)
-	val new = (insert_outer e (! inner_outer_table) path)
+	val opath = (subject_path outer)
+	val ipath = (subject_path inner)
+	val _ = (assert_prefix_but_last ipath opath)
+	val e = Entry (Name opath, Name ipath)
+	val new = (insert_outer_loop e (! inner_outer_table) opath)
 	val _ = inner_outer_table := new
     in
 	()
@@ -589,6 +600,43 @@ fun instantiate_alias var outer inner = (
     in
 	k
     end)
+
+fun replace_outer_loop slot0 (prefix0, suffix0) = (
+    case (slot0, suffix0) of
+	(Entry (Name outer, Name inner), _) => (
+	let
+	    val (prefix1, (id, ss)) = (split_last prefix0)
+	    val n = ((length inner) - 1)
+	    val prefix2 = (List.take (prefix1, n))
+	    val path = (prefix2 @ [(id, ss)] @ suffix0)
+	in
+	    (replace_outer_loop (! inner_outer_table) ([], path))
+	end)
+      | (Alist alist, []) => (prefix0 @ suffix0)
+      | (Alist alist, (Id v, ss) :: suffix1) => (
+	let
+	    val (entry, _) = (List.partition (fn (s, _) => (s = v)) alist)
+	    val prefix1 = prefix0 @ [(Id v, ss)]
+	in
+	    case entry of
+		[] => (prefix0 @ suffix0)
+	      | [(_, slot1)] => (replace_outer_loop slot1 (prefix1, suffix1))
+	      | _ => raise Match
+	end))
+
+fun replace_outer w0 = (
+    case w0 of
+	Vref (_, []) => raise Match
+      | Vref (NONE, _) => raise Match
+      | Vref (SOME subj, rr1) => (
+	let
+	    val rr0 = (subject_as_reference subj)
+	    val rr2 = (rr0 @ rr1)
+	    val rrx = (replace_outer_loop (! inner_outer_table) ([], rr2))
+	in
+	    Vref (SOME subj, rrx)
+	end)
+      | _ => raise Match)
 
 (* ================================================================ *)
 

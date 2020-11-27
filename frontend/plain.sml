@@ -206,4 +206,10 @@ fun array_index dimension0 index0 offset = (
 fun array_size dimension = (
     (array_index dimension [] 1))
 
+fun list_prefix eq x y = (
+    ((length x) < (length y)) andalso (List.all eq (ListPair.zip (x, y))))
+
+fun list_suffix eq x y = (
+    (list_prefix eq (List.rev x) (List.rev y)))
+
 end
