@@ -32,11 +32,12 @@ open plain
 open ast
 open small0
 
-val instance_tree = classtree.instance_tree
-val class_tree = classtree.class_tree
+val package_root_node = classtree.package_root_node
+val model_root_node = classtree.model_root_node
 val subject_to_instance_tree_path = classtree.subject_to_instance_tree_path
 val extract_base_classes = classtree.extract_base_classes
 val component_is_alias = classtree.component_is_alias
+val traverse_tree = classtree.traverse_tree
 
 val simple_type_attribute = simpletype.simple_type_attribute
 val type_of_simple_type = simpletype.type_of_simple_type
@@ -256,27 +257,6 @@ fun expression_to_string w = (
     end)
 
 (* ================================================================ *)
-
-val package_root_node = class_tree
-val model_root_node = instance_tree
-
-(* Calls f like foldl on each node in the class_tree/instance_tree. *)
-
-fun traverse_tree f (node0, acc0) = (
-    let
-	val (subj, kx, cx) = node0
-	val kp = (! kx)
-
-	val _ = if ((cook_step kp) <> E0) then () else raise Match
-
-	val acc1 = (f (kp, acc0))
-	val c0 = (! cx)
-	val components = (List.filter (not o component_is_alias) c0)
-    in
-	(foldl (fn (Slot (v, dim, nodes, dummy), accx) =>
-		   (foldl (traverse_tree f) accx nodes))
-	       acc1 components)
-    end)
 
 (* Packages are processed to step=E3, but some packages which are
    named but unused remain at step=E0 (.Modelica.Icons.Package). *)

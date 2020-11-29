@@ -7,6 +7,7 @@
 structure postbinder :
 sig
     val xbind : unit -> unit
+    val xreplace : unit -> 'a list
 end = struct
 
 open ast
@@ -19,6 +20,8 @@ val fetch_class_by_scope = classtree.fetch_class_by_scope
 val store_to_instance_tree = classtree.store_to_instance_tree
 val fetch_from_instance_tree = classtree.fetch_from_instance_tree
 val component_is_alias = classtree.component_is_alias
+val traverse_tree = classtree.traverse_tree
+val replace_outer_reference = classtree.replace_outer_reference
 
 val make_reference = binder.make_reference
 val bind_in_class = binder.bind_in_class
@@ -135,6 +138,34 @@ fun bind_model scanning = (
 
 (* ================================================================ *)
 
+fun replace_outer_in_instance (k0, acc0) = (
+    if (class_is_alias k0) then
+	acc0
+    else if (class_is_enumerator_definition k0) then
+	acc0
+    else if (class_is_package k0) then
+	acc0
+    else
+	let
+	    val _ = if (not (class_is_primitive k0)) then () else raise Match
+
+	    val subj = (subject_of_class k0)
+	    val ctx = k0
+	    val fixer = {fixer = (fn (w, _) =>
+				     ((replace_outer_reference w), ()))}
+	    val walker = {walker = (walk_in_expression fixer)}
+	    val (k1, _) = (walk_in_class walker (k0, ()))
+	    val _ = (store_to_instance_tree subj k1)
+	in
+	    acc0
+	end)
+
+fun replace_outer () = (
+    (traverse_tree replace_outer_in_instance (instance_tree, [])))
+
+(* ================================================================ *)
+
 fun xbind () = (bind_model true)
+fun xreplace () = (replace_outer ())
 
 end

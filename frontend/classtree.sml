@@ -18,9 +18,12 @@ sig
     type cook_step_t
     type cooker_t
     type inner_outer_slot_t
+    type expression_t
 
     val class_tree : instance_node_t
     val instance_tree : instance_node_t
+    val package_root_node : instance_node_t
+    val model_root_node : instance_node_t
 
     val loaded_classes : (string, class_definition_t) HashTable.hash_table
     val class_bindings : (string, naming_t list) HashTable.hash_table
@@ -40,6 +43,7 @@ sig
 
     val instantiate_alias :
 	instantiation_t -> subject_t -> subject_t -> definition_body_t
+    val replace_outer_reference : expression_t -> expression_t
 
     val subject_to_instance_tree_path :
 	subject_t -> (instantiation_t * (id_t * int list) list)
@@ -75,6 +79,11 @@ sig
     val fetch_instance_tree_node : subject_t -> instance_node_t option
     val descend_instance_tree :
 	(id_t * int list) list -> instance_node_t -> instance_node_t option
+
+    val traverse_tree :
+	(definition_body_t * 'a list -> 'a list)
+	-> instance_node_t * 'a list -> 'a list
+
     val dereference_alias_component : component_slot_t -> instance_node_t
     val component_is_alias : component_slot_t -> bool
 
@@ -201,6 +210,9 @@ val class_tree : instance_node_t =
 
 val instance_tree : instance_node_t =
       (the_model_subject, ref Def_In_File, ref [])
+
+val package_root_node = class_tree
+val model_root_node = instance_tree
 
 (* Accesses a component in the instance_tree at an index.  An access
    with index=[] means either as a scalar or as an array.  An array is
@@ -608,6 +620,9 @@ fun replace_outer_loop slot0 (prefix0, suffix0) = (
 	    val (prefix1, (id, ss)) = (split_last prefix0)
 	    val prefix2 = (List.take (prefix1, ((length inner) - 1)))
 	    val path = (prefix2 @ [(id, ss)] @ suffix0)
+	    val _ = tr_tree (";; replace_outer ("^
+			     (name_to_string (Name outer)) ^", "^
+			     (name_to_string (Name inner)) ^")")
 	in
 	    (replace_outer_loop (! inner_outer_table) ([], path))
 	end)
@@ -623,7 +638,7 @@ fun replace_outer_loop slot0 (prefix0, suffix0) = (
 	      | _ => raise Match
 	end))
 
-fun replace_outer w0 = (
+fun replace_outer_reference w0 = (
     case w0 of
 	Vref (_, []) => raise Match
       | Vref (NONE, _) => raise Match
@@ -633,7 +648,7 @@ fun replace_outer w0 = (
 	in
 	    Vref (SOME ns, rrx)
 	end)
-      | _ => raise Match)
+      | _ => w0)
 
 (* ================================================================ *)
 
@@ -867,6 +882,35 @@ fun clear_syntaxer_tables () = (
 	val _ = (clear_table class_bindings)
 	val _ = (clear_instance_tree ())
     in () end)
+
+(* ================================================================ *)
+
+(* Calls f like foldl on each node in the class_tree/instance_tree. *)
+
+fun traverse_tree f (node0, acc0) = (
+    let
+	val (subj, kx, cx) = node0
+	val kp = (! kx)
+
+	val _ = if ((cook_step kp) <> E0) then () else raise Match
+	val _ = if ((class_is_package kp) orelse (step_is_at_least E5 kp))
+		then () else raise Match
+
+	val acc1 = (f (kp, acc0))
+	val c0 = (! cx)
+	val components = (List.filter (not o component_is_alias) c0)
+
+	val _ = if (null components) then ()
+		else if (not (class_is_simple_type kp)) then ()
+		else if (class_is_enum kp) then ()
+		else raise error_attribute_access_to_simple_type
+
+	val acc2 = (foldl (fn (Slot (v, dim, nodes, dummy), accx) =>
+			      (foldl (traverse_tree f) accx nodes))
+			  acc1 components)
+    in
+	acc2
+    end)
 
 (* ================================================================ *)
 
