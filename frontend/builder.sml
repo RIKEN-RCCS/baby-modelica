@@ -249,8 +249,8 @@ and secure_reference ctx buildphase w0 = (
 	let
 	    val root = if (ns = PKG) then class_tree else instance_tree
 	    val rr1 = (pseudo_reference_path rr0)
-	    val rr2 = (drop_dot_of_package_root ns rr1)
-	    val nodes = (secure_reference_loop ctx buildphase false rr2 root)
+	    (*val rr2 = (drop_dot_of_package_root ns rr1)*)
+	    val nodes = (secure_reference_loop ctx buildphase false rr1 root)
 	in
 	    w0
 	end)

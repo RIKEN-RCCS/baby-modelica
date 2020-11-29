@@ -227,7 +227,7 @@ fun attach_dot_of_package_root ns cc = (
     else
 	cc)
 
-(* Unprefixes subject parts by a dot for the package-root. *)
+(* Removes a dot prefix in the package reference parts. *)
 
 fun drop_dot_of_package_root ns cc0 = (
     if (ns = PKG) then
@@ -272,9 +272,9 @@ fun subject_print_string (Subj (ns, cc0)) = (
 fun subject_as_reference (Subj (ns, cc0)) = (
     let
 	fun mapr f (x0, x1) = (x0, (f x1))
-	val cc1 = (attach_dot_of_package_root ns cc0)
+	(*val cc1 = (attach_dot_of_package_root ns cc0)*)
     in
-	(map (mapr (map z_literal)) cc1)
+	(map (mapr (map z_literal)) cc0)
     end)
 
 (* Checks if a class is in a processed form, which can appear in the

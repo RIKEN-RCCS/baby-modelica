@@ -7,26 +7,9 @@
    needed to remove the references to them. *)
 
 structure flatdumper
-
-(*
 : sig
-    type id_t
-    type class_tag_t
-    type cook_step_t
-    type class_definition_t
-    type variable_declaration_t
-    type definition_body_t
-    type expression_t
-    type naming_t
-    type subject_t
-    type ctx_t
-    type binder_t
-    val dump_flat_model : unit -> unit
     val xdump : unit -> unit
-end
-*)
-
-= struct
+end = struct
 
 open plain
 open ast
@@ -101,7 +84,10 @@ fun expression_to_string w = (
 	  | Vref (_, []) => raise Match
 	  | Vref (NONE, rr) => raise Match
 	  | Vref (SOME ns, rr0) => (
-	    (ref_to_string rr0))
+	    if (ns = PKG) then
+		(ref_to_string ((Id "", []) :: rr0))
+	    else
+		(ref_to_string rr0))
 	  | Opr p => (predefined_operator_to_string p)
 	  | App (f, aa) => (
 	    let
@@ -471,10 +457,10 @@ fun declaraton_of_real k = (
 	val false_value = L_Bool false
 	val stateselect_default
 	    = Vref (SOME PKG,
-		    [(Id "", []), (Id "StateSelect", []), (Id "default", [])])
+		    [(Id "StateSelect", []), (Id "default", [])])
 	val inf
 	    = Vref (SOME PKG,
-		    [(Id "", []), (Id "Modelica", []),
+		    [(Id "Modelica", []),
 		     (Id "Constants", []), (Id "inf", [])])
 	val min_default = App (Opr Opr_neg, [inf])
 	val max_default = App (Opr Opr_id, [inf])

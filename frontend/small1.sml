@@ -36,9 +36,9 @@ fun reference_as_subject x = (
 	let
 	    fun mapr f (x0, x1) = (x0, f x1)
 	    val cc0 = (map (mapr (map literal_to_int)) rr)
-	    val cc1 = (drop_dot_of_package_root ns cc0)
+	    (*val cc1 = (drop_dot_of_package_root ns cc0)*)
 	in
-	    Subj (ns, cc1)
+	    Subj (ns, cc0)
 	end))
 
 (* Tests literalness.  It assumes performing partial folding of

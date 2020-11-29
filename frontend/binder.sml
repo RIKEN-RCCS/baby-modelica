@@ -118,9 +118,7 @@ fun make_reference kp (buildphase_ : bool) w0 = (
 	Vref (_, []) => raise Match
       | Vref (NONE, rr as (id, ss_) :: rr1) => (
 	if (reference_is_global w0) then
-	    (* May drop root prefix. *)
-	    (*(drop_dot_of_package_root ns rr)*)
-	    Vref (SOME PKG, rr)
+	    Vref (SOME PKG, (drop_dot_of_package_root PKG rr))
 	else
 	    let
 		val cooker = assemble_package
