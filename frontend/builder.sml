@@ -50,6 +50,7 @@ val assemble_package = cooker.assemble_package
 val commute_modifier_over_subscript = refiner.commute_modifier_over_subscript
 
 val walk_in_expression = walker.walk_in_expression
+val E_Walker = walker.E_Walker
 
 val fold_constants_in_expression = folder.fold_constants_in_expression
 val value_of_instance = folder.value_of_instance
@@ -226,9 +227,8 @@ and simplify_expression ctx buildphase w0 = (
 
 and secure_reference_in_expression ctx buildphase w0 = (
     let
-	val fixer = {fixer = (fn (x, _) =>
-				 ((secure_reference ctx buildphase x), ()))}
-	val (w1, _) = (walk_in_expression fixer (w0, ()))
+	val walker = (fn (x, _) => ((secure_reference ctx buildphase x), ()))
+	val (w1, _) = (walk_in_expression {walker = E_Walker walker} (w0, ()))
     in
 	w1
     end)

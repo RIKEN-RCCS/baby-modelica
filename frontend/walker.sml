@@ -6,14 +6,22 @@
 structure walker :
 sig
     type expression_t
+    type equation_t
+    type statement_t
     type definition_body_t
-    type 'a fixer_t
     type 'a walker_t
+    type 'a walker_type_t
 
     val walk_in_expression :
-	'a fixer_t -> expression_t * 'a -> expression_t * 'a
+	'a walker_t -> expression_t * 'a -> expression_t * 'a
     val walk_in_class :
 	'a walker_t -> definition_body_t * 'a -> definition_body_t * 'a
+    val Q_Walker :
+	(equation_t * 'a -> equation_t * 'a) -> 'a walker_type_t
+    val S_Walker :
+	(statement_t * 'a -> statement_t * 'a) -> 'a walker_type_t
+    val E_Walker :
+	(expression_t * 'a -> expression_t * 'a) -> 'a walker_type_t
 end = struct
 
 open plain
@@ -24,8 +32,12 @@ val expression_to_string = dumper.expression_to_string
 
 val simplify_ite = folder.simplify_ite
 
-type 'a fixer_t = {fixer : expression_t * 'a -> expression_t * 'a}
-type 'a walker_t = {walker : expression_t * 'a -> expression_t * 'a}
+datatype 'a walker_type_t
+    = Q_Walker of equation_t * 'a -> equation_t * 'a
+    | S_Walker of statement_t * 'a -> statement_t * 'a
+    | E_Walker of expression_t * 'a -> expression_t * 'a
+
+type 'a walker_t = {walker : 'a walker_type_t}
 
 fun tr_expr (s : string) = if true then (print (s ^"\n")) else ()
 fun tr_expr_vvv (s : string) = if false then (print (s ^"\n")) else ()
@@ -64,162 +76,167 @@ fun walk_in_n_xx walk ((n, xx0), acc0) = (
 	((n, xx1), acc1)
     end)
 
-(* Applies a function in the ctx in element expressions in post-order.
-   It need be called after a variable binder.  It does not call the
-   function if an expression has no subexpressions. *)
+(* Applies a function in the ctx in element expressions in the
+   post-order.  It need be called after resolving variable references.
+   It does not call the function if an expression is simple (that is,
+   Colon, Otherwise, and Opr). *)
 
-fun walk_in_expression (ctx : 'a fixer_t) (w0, acc0) = (
-    let
-	val walk_x = (walk_in_expression ctx)
-	val walk_n_x = (walk_in_n_x walk_x)
-	val walk_x_x = (walk_in_x_x walk_x)
-	val walk_x_option = (walk_in_x_option walk_x)
-	val walk_subscript = (walk_in_n_xx walk_x)
-	val walk_xx = (map_along walk_x)
+fun walk_in_expression (ctx : 'a walker_t) (w0, acc0) = (
+    case (#walker ctx) of
+	Q_Walker _ => (w0, acc0)
+      | S_Walker _ => (w0, acc0)
+      | E_Walker walkfn => (
+	let
+	    val walk_x = (walk_in_expression ctx)
+	    val walk_n_x = (walk_in_n_x walk_x)
+	    val walk_x_x = (walk_in_x_x walk_x)
+	    val walk_x_option = (walk_in_x_option walk_x)
+	    val walk_subscript = (walk_in_n_xx walk_x)
+	    val walk_xx = (map_along walk_x)
 
-	val _ = tr_expr_vvv (";; walk_in_expression ("^
-			     (expression_to_string w0) ^")")
-    in
-	case w0 of
-	    NIL => (NIL, acc0)
-	  | Colon => (Colon, acc0)
-	  | Otherwise => (Otherwise, acc0)
-	  | Scoped _ => raise Match
-	  | Vref (_, []) => raise Match
-	  | Vref (NONE, _) => raise Match
-	  | Vref (SOME ns, rr0) => (
-	    let
-		val (rr1, acc1) = (map_along walk_subscript (rr0, acc0))
-		val w1 = Vref (SOME ns, rr1)
-	    in
-		((#fixer ctx) (w1, acc1))
-	    end)
-	  | Opr _ => (w0, acc0)
-	  | App (f0, aa0) => (
-	    let
-		val (f1, acc1) = (walk_x (f0, acc0))
-		val (aa1, acc2) = (map_along walk_x (aa0, acc1))
-		val w1 = App (f1, aa1)
-	    in
-		((#fixer ctx) (w1, acc2))
-	    end)
-	  | ITE cc0 => (
-	    let
-		val (cc1, acc1) = (map_along walk_x_x (cc0, acc0))
-		val w1 = (simplify_ite (ITE cc1))
-	    in
-		((#fixer ctx) (w1, acc1))
-	    end)
-	  | Der aa0 => (
-	    let
-		val (aa1, acc1) = (map_along walk_x (aa0, acc0))
-		val w1 = Der aa1
-	    in
-		((#fixer ctx) (w1, acc1))
-	    end)
-	  | Pure aa0 => (
-	    let
-		val (aa1, acc1) = (map_along walk_x (aa0, acc0))
-		val w1 = Pure aa1
-	    in
-		((#fixer ctx) (w1, acc1))
-	    end)
-	  | Closure (n, aa0) => (
-	    let
-		val (aa1, acc1) = (map_along walk_x (aa0, acc0))
-		val w1 = Closure (n, aa1)
-	    in
-		((#fixer ctx) (w1, acc1))
-	    end)
-	  | L_Number _ => (w0, acc0)
-	  | L_Bool _ => (w0, acc0)
-	  | L_Enum _ => (w0, acc0)
-	  | L_String _ => (w0, acc0)
-	  | Array_Triple (x0, y0, z0) => (
-	    let
-		val (x1, acc1) = (walk_x (x0, acc0))
-		val (y1, acc2) = (walk_x (y0, acc1))
-		val (z1, acc3) = (walk_x_option (z0, acc2))
-		val w1 = Array_Triple (x1, y1, z1)
-	    in
-		((#fixer ctx) (w1, acc3))
-	    end)
-	  | Array_Constructor xx0 => (
-	    let
-		val (xx1, acc1) = (map_along walk_x (xx0, acc0))
-		val w1 = Array_Constructor xx1
-	    in
-		((#fixer ctx) (w1, acc1))
-	    end)
-	  | Array_Comprehension (x0, uu0) => (
-	    let
-		val (x1, acc1) = (walk_x (x0, acc0))
-		val (uu1, acc2) = (map_along walk_n_x (uu0, acc1))
-		val w1 = Array_Comprehension (x1, uu1)
-	    in
-		((#fixer ctx) (w1, acc2))
-	    end)
-	  | Array_Concatenation xx0 => (
-	    let
-		val (xx1, acc1) = (map_along walk_xx (xx0, acc0))
-		val w1 = Array_Concatenation xx1
-	    in
-		((#fixer ctx) (w1, acc1))
-	    end)
-	  | Tuple xx0 => (
-	    let
-		val (xx1, acc1) = (map_along walk_x (xx0, acc0))
-		val w1 = Tuple xx1
-	    in
-		((#fixer ctx) (w1, acc1))
-	    end)
-	  | Reduction_Argument (x0, uu0) => (
-	    let
-		val (x1, acc1) = (walk_x (x0, acc0))
-		val (uu1, acc2) = (map_along walk_n_x (uu0, acc1))
-		val w1 = Reduction_Argument (x1, uu1)
-	    in
-		((#fixer ctx) (w1, acc2))
-	    end)
-	  | Named_Argument (n, x0) => (
-	    let
-		val (x1, acc1) = (walk_x (x0, acc0))
-		val w1 = Named_Argument (n, x1)
-	    in
-		((#fixer ctx) (w1, acc1))
-	    end)
-	  | Pseudo_Split (x0, ss) => (
-	    let
-		val (x1, acc1) = (walk_x (x0, acc0))
-		val w1 = Pseudo_Split (x1, ss)
-	    in
-		((#fixer ctx) (w1, acc1))
-	    end)
-	  | Component_Ref (x0, id) => (
-	    let
-		val (x1, acc1) = (walk_x (x0, acc0))
-		val w1 = Component_Ref (x1, id)
-	    in
-		((#fixer ctx) (w1, acc1))
-	    end)
-	  | Instance _ => ((#fixer ctx) (w0, acc0))
-	  | Iref _ => ((#fixer ctx) (w0, acc0))
-	  | Array_fill (x0, y0) => (
-	    let
-		val (x1, acc1) = (walk_x (x0, acc0))
-		val (y1, acc2) = (walk_x (y0, acc1))
-		val w1 = Array_fill (x1, y1)
-	    in
-		((#fixer ctx) (w1, acc2))
-	    end)
-	  | Array_diagonal x0 => (
-	    let
-		val (x1, acc1) = (walk_x (x0, acc0))
-		val w1 = Array_diagonal x1
-	    in
-		((#fixer ctx) (w1, acc1))
-	    end)
-    end)
+	    val _ = tr_expr_vvv (";; walk_in_expression ("^
+				 (expression_to_string w0) ^")")
+	in
+	    case w0 of
+		NIL => (NIL, acc0)
+	      | Colon => (Colon, acc0)
+	      | Otherwise => (Otherwise, acc0)
+	      | Scoped _ => raise Match
+	      | Vref (_, []) => raise Match
+	      | Vref (NONE, _) => raise Match
+	      | Vref (SOME ns, rr0) => (
+		let
+		    val (rr1, acc1) = (map_along walk_subscript (rr0, acc0))
+		    val w1 = Vref (SOME ns, rr1)
+		in
+		    (walkfn (w1, acc1))
+		end)
+	      | Opr _ => (w0, acc0)
+	      | App (f0, aa0) => (
+		let
+		    val (f1, acc1) = (walk_x (f0, acc0))
+		    val (aa1, acc2) = (map_along walk_x (aa0, acc1))
+		    val w1 = App (f1, aa1)
+		in
+		    (walkfn (w1, acc2))
+		end)
+	      | ITE cc0 => (
+		let
+		    val (cc1, acc1) = (map_along walk_x_x (cc0, acc0))
+		    val w1 = (simplify_ite (ITE cc1))
+		in
+		    (walkfn (w1, acc1))
+		end)
+	      | Der aa0 => (
+		let
+		    val (aa1, acc1) = (map_along walk_x (aa0, acc0))
+		    val w1 = Der aa1
+		in
+		    (walkfn (w1, acc1))
+		end)
+	      | Pure aa0 => (
+		let
+		    val (aa1, acc1) = (map_along walk_x (aa0, acc0))
+		    val w1 = Pure aa1
+		in
+		    (walkfn (w1, acc1))
+		end)
+	      | Closure (n, aa0) => (
+		let
+		    val (aa1, acc1) = (map_along walk_x (aa0, acc0))
+		    val w1 = Closure (n, aa1)
+		in
+		    (walkfn (w1, acc1))
+		end)
+	      | L_Number _ => (w0, acc0)
+	      | L_Bool _ => (w0, acc0)
+	      | L_Enum _ => (w0, acc0)
+	      | L_String _ => (w0, acc0)
+	      | Array_Triple (x0, y0, z0) => (
+		let
+		    val (x1, acc1) = (walk_x (x0, acc0))
+		    val (y1, acc2) = (walk_x (y0, acc1))
+		    val (z1, acc3) = (walk_x_option (z0, acc2))
+		    val w1 = Array_Triple (x1, y1, z1)
+		in
+		    (walkfn (w1, acc3))
+		end)
+	      | Array_Constructor xx0 => (
+		let
+		    val (xx1, acc1) = (map_along walk_x (xx0, acc0))
+		    val w1 = Array_Constructor xx1
+		in
+		    (walkfn (w1, acc1))
+		end)
+	      | Array_Comprehension (x0, uu0) => (
+		let
+		    val (x1, acc1) = (walk_x (x0, acc0))
+		    val (uu1, acc2) = (map_along walk_n_x (uu0, acc1))
+		    val w1 = Array_Comprehension (x1, uu1)
+		in
+		    (walkfn (w1, acc2))
+		end)
+	      | Array_Concatenation xx0 => (
+		let
+		    val (xx1, acc1) = (map_along walk_xx (xx0, acc0))
+		    val w1 = Array_Concatenation xx1
+		in
+		    (walkfn (w1, acc1))
+		end)
+	      | Tuple xx0 => (
+		let
+		    val (xx1, acc1) = (map_along walk_x (xx0, acc0))
+		    val w1 = Tuple xx1
+		in
+		    (walkfn (w1, acc1))
+		end)
+	      | Reduction_Argument (x0, uu0) => (
+		let
+		    val (x1, acc1) = (walk_x (x0, acc0))
+		    val (uu1, acc2) = (map_along walk_n_x (uu0, acc1))
+		    val w1 = Reduction_Argument (x1, uu1)
+		in
+		    (walkfn (w1, acc2))
+		end)
+	      | Named_Argument (n, x0) => (
+		let
+		    val (x1, acc1) = (walk_x (x0, acc0))
+		    val w1 = Named_Argument (n, x1)
+		in
+		    (walkfn (w1, acc1))
+		end)
+	      | Pseudo_Split (x0, ss) => (
+		let
+		    val (x1, acc1) = (walk_x (x0, acc0))
+		    val w1 = Pseudo_Split (x1, ss)
+		in
+		    (walkfn (w1, acc1))
+		end)
+	      | Component_Ref (x0, id) => (
+		let
+		    val (x1, acc1) = (walk_x (x0, acc0))
+		    val w1 = Component_Ref (x1, id)
+		in
+		    (walkfn (w1, acc1))
+		end)
+	      | Instance _ => (walkfn (w0, acc0))
+	      | Iref _ => (walkfn (w0, acc0))
+	      | Array_fill (x0, y0) => (
+		let
+		    val (x1, acc1) = (walk_x (x0, acc0))
+		    val (y1, acc2) = (walk_x (y0, acc1))
+		    val w1 = Array_fill (x1, y1)
+		in
+		    (walkfn (w1, acc2))
+		end)
+	      | Array_diagonal x0 => (
+		let
+		    val (x1, acc1) = (walk_x (x0, acc0))
+		    val w1 = Array_diagonal x1
+		in
+		    (walkfn (w1, acc1))
+		end)
+	end))
 
 (* ================================================================ *)
 
@@ -359,7 +376,7 @@ and walk_in_primitive_type ctx kp (k0, acc0) = (
     case k0 of
 	Def_Primitive (ty, x0) => (
 	let
-	    val walk_x = (#walker ctx)
+	    val walk_x = (walk_in_expression ctx)
 	    val (x1, acc1) = (walk_x (x0, acc0))
 	in
 	    (Def_Primitive (ty, x1), acc1)
@@ -368,7 +385,7 @@ and walk_in_primitive_type ctx kp (k0, acc0) = (
 
 and walk_in_modifier (ctx : 'a walker_t) kp ((m0 : modifier_t), acc0) = (
     let
-	val walk_x = (#walker ctx)
+	val walk_x = (walk_in_expression ctx)
 	val walk_m = (walk_in_modifier ctx kp)
 	val walk_h = (walk_in_constraint ctx kp)
 	val walk_k = (walk_in_class ctx)
@@ -454,7 +471,12 @@ and walk_in_constraint (ctx : 'a walker_t) kp ((h0 : constraint_t), acc0) = (
 
 and walk_in_equation (ctx : 'a walker_t) kp ((q0 : equation_t), acc0) = (
     let
-	val walk_x = (#walker ctx)
+	val walker = case (#walker ctx) of
+			 Q_Walker f => f
+		       | S_Walker _ => (fn (q, acc) => (q, acc))
+		       | E_Walker _ => (fn (q, acc) => (q, acc))
+
+	val walk_x = (walk_in_expression ctx)
 	val walk_m = (walk_in_modifier ctx kp)
 	val walk_q = (walk_in_equation ctx kp)
 	fun walk_x_qq ((x0, qq0), acc0) = (
@@ -464,7 +486,6 @@ and walk_in_equation (ctx : 'a walker_t) kp ((q0 : equation_t), acc0) = (
 	    in
 		((x1, qq1), acc2)
 	    end)
-	fun id q = q
     in
 	case q0 of
 	    Eq_Eq ((x0, y0), Annotation aa0, ww) => (
@@ -473,9 +494,8 @@ and walk_in_equation (ctx : 'a walker_t) kp ((q0 : equation_t), acc0) = (
 		val (y1, acc2) = (walk_x (y0, acc1))
 		val (aa1, acc3) = (map_along walk_m (aa0, acc2))
 		val q1 = Eq_Eq ((x1, y1), Annotation aa1, ww)
-		val q2 = (id q1)
 	    in
-		(q2, acc3)
+		(walker (q1, acc3))
 	    end)
 	  | Eq_Connect ((x0, y0), Annotation aa0, ww) => (
 	    let
@@ -483,27 +503,24 @@ and walk_in_equation (ctx : 'a walker_t) kp ((q0 : equation_t), acc0) = (
 		val (y1, acc2) = (walk_x (y0, acc1))
 		val (aa1, acc3) = (map_along walk_m (aa0, acc2))
 		val q1 = Eq_Connect ((x1, y1), Annotation aa1, ww)
-		val q2 = (id q1)
 	    in
-		(q2, acc3)
+		(walker (q1, acc3))
 	    end)
 	  | Eq_If (c0, Annotation aa0, ww) => (
 	    let
 		val (c1, acc1) = (map_along walk_x_qq (c0, acc0))
 		val (aa1, acc2) = (map_along walk_m (aa0, acc1))
 		val q1 = Eq_If (c1, Annotation aa1, ww)
-		val q2 = (id q1)
 	    in
-		(q2, acc2)
+		(walker (q1, acc2))
 	    end)
 	  | Eq_When (c0, Annotation aa0, ww) => (
 	    let
 		val (c1, acc1) = (map_along walk_x_qq (c0, acc0))
 		val (aa1, acc2) = (map_along walk_m (aa0, acc1))
 		val q1 = Eq_When (c1, Annotation aa1, ww)
-		val q2 = (id q1)
 	    in
-		(q2, acc2)
+		(walker (q1, acc2))
 	    end)
 	  | Eq_App ((x0, yy0), Annotation aa0, ww) => (
 	    let
@@ -511,9 +528,8 @@ and walk_in_equation (ctx : 'a walker_t) kp ((q0 : equation_t), acc0) = (
 		val (yy1, acc2) = (map_along walk_x (yy0, acc1))
 		val (aa1, acc3) = (map_along walk_m (aa0, acc2))
 		val q1 = Eq_App ((x1, yy1), Annotation aa1, ww)
-		val q2 = (id q1)
 	    in
-		(q2, acc3)
+		(walker (q1, acc3))
 	    end)
 	  | Eq_For ((ii, qq0), Annotation aa0, ww) => (
 	    let
@@ -523,15 +539,19 @@ and walk_in_equation (ctx : 'a walker_t) kp ((q0 : equation_t), acc0) = (
 		val (qq1, acc1) = (map_along walk_q (qq0, acc0))
 		val (aa1, acc2) = (map_along walk_m (aa0, acc1))
 		val q1 = Eq_For ((ii, qq1), Annotation aa1, ww)
-		val q2 = (id q1)
 	    in
-		(q2, acc2)
+		(walker (q1, acc2))
 	    end)
     end)
 
 and walk_in_statement (ctx : 'a walker_t) kp ((s0 : statement_t), acc0) = (
     let
-	val walk_x = (#walker ctx)
+	val walker = case (#walker ctx) of
+			 Q_Walker _ => (fn (s, acc) => (s, acc))
+		       | S_Walker f => f
+		       | E_Walker _ => (fn (s, acc) => (s, acc))
+
+	val walk_x = (walk_in_expression ctx)
 	val walk_m = (walk_in_modifier ctx kp)
 	val walk_s = (walk_in_statement ctx kp)
 	val walk_n_x = (walk_in_n_x walk_x)
@@ -542,24 +562,21 @@ and walk_in_statement (ctx : 'a walker_t) kp ((s0 : statement_t), acc0) = (
 	    in
 		((x1, ss1), acc2)
 	    end)
-	fun id s = s
     in
 	case s0 of
 	    St_Break (Annotation mm0, ww) => (
 	    let
 		val (mm1, acc1) = (map_along walk_m (mm0, acc0))
 		val s1 = St_Break (Annotation mm1, ww)
-		val s2 = (id s1)
 	    in
-		(s2, acc1)
+		(walker (s1, acc1))
 	    end)
 	  | St_Return (Annotation mm0, ww) => (
 	    let
 		val (mm1, acc1) = (map_along walk_m (mm0, acc0))
 		val s1 = St_Return (Annotation mm1, ww)
-		val s2 = (id s1)
 	    in
-		(s2, acc1)
+		(walker (s1, acc1))
 	    end)
 	  | St_Assign (x0, y0, Annotation mm0, ww) => (
 	    let
@@ -567,9 +584,8 @@ and walk_in_statement (ctx : 'a walker_t) kp ((s0 : statement_t), acc0) = (
 		val (y1, acc2) = (walk_x (y0, acc1))
 		val (mm1, acc3) = (map_along walk_m (mm0, acc2))
 		val s1 = St_Assign (x1, y1, Annotation mm1, ww)
-		val s2 = (id s1)
 	    in
-		(s2, acc3)
+		(walker (s1, acc3))
 	    end)
 	  | St_Call (xx0, y0, zz0, Annotation mm0, ww) => (
 	    let
@@ -578,18 +594,16 @@ and walk_in_statement (ctx : 'a walker_t) kp ((s0 : statement_t), acc0) = (
 		val (zz1, acc3) = (map_along walk_x (zz0, acc2))
 		val (mm1, acc4) = (map_along walk_m (mm0, acc3))
 		val s1 = St_Call (xx1, y1, zz1, Annotation mm1, ww)
-		val s2 = (id s1)
 	    in
-		(s2, acc4)
+		(walker (s1, acc4))
 	    end)
 	  | St_If (cc0, Annotation mm0, ww) => (
 	    let
 		val (cc1, acc1) = (map_along walk_x_ss (cc0, acc0))
 		val (mm1, acc2) = (map_along walk_m (mm0, acc1))
 		val s1 = St_If (cc1, Annotation mm1, ww)
-		val s2 = (id s1)
 	    in
-		(s2, acc2)
+		(walker (s1, acc2))
 	    end)
 	  | St_While (x0, ss0, Annotation mm0, ww) => (
 	    let
@@ -597,18 +611,16 @@ and walk_in_statement (ctx : 'a walker_t) kp ((s0 : statement_t), acc0) = (
 		val (ss1, acc2) = (map_along walk_s (ss0, acc1))
 		val (mm1, acc3) = (map_along walk_m (mm0, acc2))
 		val s1 = St_While (x1, ss1, Annotation mm1, ww)
-		val s2 = (id s1)
 	    in
-		(s2, acc3)
+		(walker (s1, acc3))
 	    end)
 	  | St_When (cc0, Annotation mm0, ww) => (
 	    let
 		val (cc1, acc1) = (map_along walk_x_ss (cc0, acc0))
 		val (mm1, acc2) = (map_along walk_m (mm0, acc1))
 		val s1 = St_When (cc1, Annotation mm1, ww)
-		val s2 = (id s1)
 	    in
-		(s2, acc2)
+		(walker (s1, acc2))
 	    end)
 	  | St_For (ii, ss0, Annotation mm0, ww) => (
 	    let
@@ -618,9 +630,8 @@ and walk_in_statement (ctx : 'a walker_t) kp ((s0 : statement_t), acc0) = (
 		val (ss1, acc1) = (map_along walk_s (ss0, acc0))
 		val (mm1, acc2) = (map_along walk_m (mm0, acc1))
 		val s1 = St_For (ii, ss1, Annotation mm1, ww)
-		val s2 = (id s1)
 	    in
-		(s2, acc2)
+		(walker (s1, acc2))
 	    end)
     end)
 

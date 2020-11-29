@@ -28,6 +28,7 @@ val bind_in_class = binder.bind_in_class
 
 val walk_in_expression = walker.walk_in_expression
 val walk_in_class = walker.walk_in_class
+val E_Walker = walker.E_Walker
 
 val secure_reference = builder.secure_reference
 val secure_subject = builder.secure_subject
@@ -38,10 +39,8 @@ fun secure_references_in_class kp = (
     let
 	val ctx = kp
 	val buildphase = false
-	val fixer = {fixer = (fn (x, _) =>
-				 ((secure_reference ctx buildphase x), ()))}
-	val walker = {walker = (walk_in_expression fixer)}
-	val (_, _) = (walk_in_class walker (kp, ()))
+	val walker = (fn (x, _) => ((secure_reference ctx buildphase x), ()))
+	val (_, _) = (walk_in_class {walker = E_Walker walker} (kp, ()))
     in
 	()
     end)
@@ -151,10 +150,8 @@ fun replace_outer_in_instance (k0, acc0) = (
 
 	    val subj = (subject_of_class k0)
 	    val ctx = k0
-	    val fixer = {fixer = (fn (w, _) =>
-				     ((replace_outer_reference w), ()))}
-	    val walker = {walker = (walk_in_expression fixer)}
-	    val (k1, _) = (walk_in_class walker (k0, ()))
+	    val walker = (fn (w, _) => ((replace_outer_reference w), ()))
+	    val (k1, _) = (walk_in_class {walker = E_Walker walker} (k0, ()))
 	    val _ = (store_to_instance_tree subj k1)
 	in
 	    acc0
