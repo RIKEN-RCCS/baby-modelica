@@ -191,7 +191,7 @@ datatype equation_t
     | Eq_Connect of ((expression_t * expression_t)
 		     * annotation_t * comment_t)
     | Eq_If of ((expression_t * equation_t list) list
-	      * annotation_t * comment_t)
+		* annotation_t * comment_t)
     | Eq_When of ((expression_t * equation_t list) list
 		  * annotation_t * comment_t)
     | Eq_For of ((for_index_t list * equation_t list)

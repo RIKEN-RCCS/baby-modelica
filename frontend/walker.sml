@@ -506,19 +506,19 @@ and walk_in_equation (ctx : 'a walker_t) kp ((q0 : equation_t), acc0) = (
 	    in
 		(walker (q1, acc3))
 	    end)
-	  | Eq_If (c0, Annotation aa0, ww) => (
+	  | Eq_If (cc0, Annotation aa0, ww) => (
 	    let
-		val (c1, acc1) = (map_along walk_x_qq (c0, acc0))
+		val (cc1, acc1) = (map_along walk_x_qq (cc0, acc0))
 		val (aa1, acc2) = (map_along walk_m (aa0, acc1))
-		val q1 = Eq_If (c1, Annotation aa1, ww)
+		val q1 = Eq_If (cc1, Annotation aa1, ww)
 	    in
 		(walker (q1, acc2))
 	    end)
-	  | Eq_When (c0, Annotation aa0, ww) => (
+	  | Eq_When (cc0, Annotation aa0, ww) => (
 	    let
-		val (c1, acc1) = (map_along walk_x_qq (c0, acc0))
+		val (cc1, acc1) = (map_along walk_x_qq (cc0, acc0))
 		val (aa1, acc2) = (map_along walk_m (aa0, acc1))
-		val q1 = Eq_When (c1, Annotation aa1, ww)
+		val q1 = Eq_When (cc1, Annotation aa1, ww)
 	    in
 		(walker (q1, acc2))
 	    end)

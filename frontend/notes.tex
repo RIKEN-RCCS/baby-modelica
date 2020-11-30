@@ -2435,17 +2435,28 @@ An expandable_connector will automatically include the names of
 variables which are used in connect-equations but are not declared in
 the connector definition.
 
-\subsubsection*{Internal_connections}
+\subsubsection*{Outside_connectors}
 
-An internal_connection is an aspect of a connector when it is accessed
-inside a declaring class.  The flow direction is considered reversed
-(a value is negated) for an internal_connection.  It is referred to as
-an {\it{}outside\/} connector in the_specification.
+An outside_connector is an aspect of a connector when it is connected
+in a declaring class.  It is an internal connection to the connector,
+and the flow direction is considered reversed (a value is negated) for
+the connector.  Note that determination of an outside_connector must
+respect the place where the connector is declared, and inner/outer
+declarations should be ignored for that.
 
-Note that inner/outer declarations should be ignored for determination
-of an internal_connection.  However, implementations could mistake the
-determination when it dealt with an outer variable by simply aliasing
-it to an inner variable (it loses the declaring class).
+\subsubsection*{Connection restrictions}
+
+Connect equations are fixed at translation-time.
+
+\begin{qquote} (\specref{9.3}\/) $\bullet$\,The connect-equations (and
+the special functions for overdetermined connectors) may only be used
+in equations and may not be used inside if-equations with
+non-parametric condition, or in when-equations. [For-equations always
+have parameter expressions for the array expression.]\end{qquote}
+
+\begin{qquote} (\specref{8.3.2}\/) The expression of a for-equation
+shall be a vector expression. ... The expression of a for-equation
+shall be a parameter expression.\end{qquote}
 
 %%%%%%%%%%%%%%%%
 

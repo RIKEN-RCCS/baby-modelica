@@ -28,10 +28,68 @@ val Q_Walker = walker.Q_Walker
 
 (* ================================================================ *)
 
+(*AHO
+
+fun contains_connects (q0, contains0) = (
+    let
+	fun contains_connects_x_qq ((x, qq), contains) = (
+	    (foldl contains_connects contains qq))
+    in
+	case q0 of
+	    Eq_Eq _ => contains0
+	  | Eq_Connect _ => true
+	  | Eq_If (cc, _, _) => (foldl contains_connects_x_qq contains0 cc)
+	  | Eq_When (cc, _, _) => contains0
+	  | Eq_App _ => contains0
+	  | Eq_For ((_, qq), _, _) => (
+	    (foldl contains_connects contains0 qq))
+    end)
+
+fun expand_equations kp q0 = (
+    let
+    in
+	case q0 of
+	    Eq_Eq _ => q0
+	  | Eq_Connect _ => q0
+	  | Eq_If (cc0, aa, ww) => (q0, acc0)
+	  | Eq_When _ => (q0, acc0)
+	  | Eq_App _ => (q0, acc0)
+	  | Eq_For _ => (q0, acc0)
+    end)
+
+fun expand_equations_in_instance (k0, acc0) = (
+    if (class_is_alias k0) then
+	()
+    else if (class_is_enumerator_definition k0) then
+	()
+    else if (class_is_package k0) then
+	()
+    else
+	let
+	    val _ = if (not (class_is_primitive k0)) then () else raise Match
+
+	    val subj = (subject_of_class k0)
+	    val walker = (expand_equations_in_equation k0)
+	    val ctx = {walker = Q_Walker walker}
+	    val (k1, acc1) = (walk_in_class ctx (k0, acc0))
+	in
+	    ()
+	end)
+
+fun expand_equations_for_connects () = (
+    (traverse_tree expand_equations_in_instance (instance_tree, [])))
+
+AHO*)
+
+(* ================================================================ *)
+
 fun drop_subscripts rr = (
     (map (fn (id, _) => id) rr))
 
-fun reference_is_subcomponent subj w = (
+(* Tests if a reference is a component.  It ignores subscripts but it
+   is precise. *)
+
+fun reference_is_component subj w = (
     case w of
 	Vref (_, []) => raise Match
       | Vref (NONE, _) => raise Match
@@ -54,10 +112,10 @@ fun collect_connects_in_equation kp (q0, acc0) = (
 	    Eq_Eq _ => (q0, acc0)
 	  | Eq_Connect ((x, y), aa, ww) => (
 	    let
-		val cx = (reference_is_subcomponent subj x)
-		val cy = (reference_is_subcomponent subj y)
+		val cx = (reference_is_component subj x)
+		val cy = (reference_is_component subj y)
 	    in
-		(q0, ((x, cx, y, cy) :: acc0))
+		(q0, ([(x, cx), (y, cy)] :: acc0))
 	    end)
 	  | Eq_If _ => (q0, acc0)
 	  | Eq_When _ => (q0, acc0)
@@ -89,6 +147,12 @@ fun collect_connects () = (
 
 (* ================================================================ *)
 
-fun xcollect () = (collect_connects ())
+fun xcollect () = (
+    let
+	val cc0 = (collect_connects ())
+	val cc1 = (make_unions (op =) cc0)
+    in
+	cc1
+    end)
 
 end

@@ -232,13 +232,12 @@ fun value_of_reference w0 = (
       | _ => raise Match)
 
 (* Returns a pair of an expression and a class.  It does not repeat
-   simplifying, to allow binding routines to resolve variable
-   references. *)
+   simplifying when oneshot=true. *)
 
-fun fold_expression ctx needliteral w0 = (
+fun fold_expression ctx oneshot w0 = (
     let
-	val walk_x = (fold_expression ctx needliteral)
-	val walk_x = (fold_expression ctx needliteral)
+	val walk_x = (fold_expression ctx oneshot)
+	val walk_x = (fold_expression ctx oneshot)
 	val walk_n_x = (fn (n, x) => (n, (walk_x x)))
 	val walk_x_x = (fn (x, y) => ((walk_x x), (walk_x y)))
 	val walk_x_option = (Option.map walk_x)
@@ -255,11 +254,11 @@ fun fold_expression ctx needliteral w0 = (
 	  | Vref (NONE, _) => raise Match
 	  | Vref (SOME _, _) => (
 	    let
-		val (w1, literals) = (fold_subscripts_in_reference ctx w0)
+		val (w1, literals) = (fold_subscripts ctx oneshot w0)
 	    in
 		if (not literals) then
 		    w1
-		else if (w0 <> w1) then
+		else if (w0 <> w1 andalso oneshot) then
 		    (* DO NOT REPEAT FOLDING. *)
 		    w1
 		else
@@ -272,7 +271,7 @@ fun fold_expression ctx needliteral w0 = (
 		val xx1 = (map walk_x xx0)
 		val w1 = App (f1, xx1)
 	    in
-		if (w0 <> w1) then
+		if (w0 <> w1 andalso oneshot) then
 		    (* DO NOT REPEAT FOLDING. *)
 		    w1
 		else
@@ -368,7 +367,7 @@ fun fold_expression ctx needliteral w0 = (
 		val x1 = (walk_x x0)
 		val w1 = Pseudo_Split (x1, ss)
 	    in
-		if (w0 <> w1) then
+		if (w0 <> w1 andalso oneshot) then
 		    (* DO NOT REPEAT FOLDING. *)
 		    w1
 		else
@@ -381,17 +380,17 @@ fun fold_expression ctx needliteral w0 = (
 	  | Array_diagonal x => w0
     end)
 
-(* Tries to fold constants in array indices, and returns a reference
-   and a boolean indicating indices are all literals. *)
+(* Tries to simplify in array subscripts, and returns a variable
+   reference and a boolean indicating indices are all literals. *)
 
-and fold_subscripts_in_reference ctx w0 = (
+and fold_subscripts ctx oneshot w0 = (
     case w0 of
 	Vref (_, []) => raise Match
       | Vref (NONE, _) => raise Match
       | Vref (SOME ns, rr0) => (
 	let
 	    fun mapr f (x0, x1) = (x0, f x1)
-	    val convert = (fold_expression ctx true)
+	    val convert = (fold_expression ctx oneshot)
 	    val rr1 = (map (mapr (map convert)) rr0)
 	    val ok = (List.all ((List.all expression_is_literal) o #2) rr1)
 	in
@@ -399,11 +398,14 @@ and fold_subscripts_in_reference ctx w0 = (
 	end)
       | _ => raise Match)
 
-fun fold_constants_in_expression kp needliteral w0 = (
+(* Simplifies an expression.  It does not repeat simplifying when
+   oneshot=true.  It is to allow the resolver routines to assure
+   referenced variables are instantiated in the build-phase. *)
+
+fun fold_constants_in_expression kp oneshot w0 = (
     let
-	(*val _ = if (step_is_at_least E4 kp) then () else raise Match*)
 	val ctx = {k = kp}
-	val w1 = (fold_expression ctx needliteral w0)
+	val w1 = (fold_expression ctx oneshot w0)
 	val _ = tr_expr_vvv (";; fold_constants ("^
 			     (expression_to_string w0) ^"=>"^
 			     (expression_to_string w1) ^")")

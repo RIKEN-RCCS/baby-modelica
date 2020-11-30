@@ -212,4 +212,28 @@ fun list_prefix eq x y = (
 fun list_suffix eq x y = (
     (list_prefix eq (List.rev x) (List.rev y)))
 
+(* Unions sets in a bag if they intersect.  It takes a list of lists
+   as a bag of sets.  Do not enter the empty set. *)
+
+fun make_unions eq bag = (
+    let
+	fun intersects eq uu vv = (
+	    (List.exists (fn y => (List.exists (fn x => (eq (x, y))) vv)) uu))
+
+	fun insert eq x ww = (
+	    if (List.exists (fn y => (eq (x, y))) ww) then ww else (x :: ww))
+
+	fun merge eq (uu, vv) = (
+	    (foldl (fn (x, ww) => (insert eq x ww)) vv uu))
+
+	fun merge_if_intersects eq x uu = (
+	    let
+		val (vv, others) = (List.partition (intersects eq x) uu)
+	    in
+		((foldl (merge eq) [] (x :: vv)) :: others)
+	    end)
+    in
+	(foldl (fn (x, uu) => (merge_if_intersects eq x uu)) [] bag)
+    end)
+
 end
