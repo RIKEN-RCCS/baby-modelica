@@ -1318,7 +1318,7 @@ expression_list_rows_
 
 primary
 	: UNSIGNED_NUMBER {
-		(check_literal_number $1)}
+		(string_to_literal_number $1)}
 	| STRING {
 		L_String $1}
 	| FALSE {

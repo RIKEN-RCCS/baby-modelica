@@ -2383,7 +2383,7 @@ and yyreduce (yylex : yylexstate_t -> int * yyv_t * yylexstate_t)
 | 224 =>
 (* line 1320 "modelica-grammar.y" *)
 (#yyval yysm) := VS_EXPRESSION (
-		(check_literal_number (case (yyvs_ref yysm (0)) of (VS_TOKEN x) => x | _ => raise (bad_parser (yyvs_ref yysm (0))))))
+		(string_to_literal_number (case (yyvs_ref yysm (0)) of (VS_TOKEN x) => x | _ => raise (bad_parser (yyvs_ref yysm (0))))))
 | 225 =>
 (* line 1322 "modelica-grammar.y" *)
 (#yyval yysm) := VS_EXPRESSION (

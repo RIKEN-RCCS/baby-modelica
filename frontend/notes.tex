@@ -3144,14 +3144,12 @@ Some can be easily defined by others.
 
 %%%%%%%%%%%%%%%%
 
-\subsection{Iterators of for}
+\subsection{Iterators of for}\label{sec:for-iterator}
 
 Iterators are used in for-equations, for-statements, reductions, and
-comprehensions.  An iterator ranges in Integer, Boolean, and
-enumeration, and the range is typically specified by a vector
-expression.  Range expressions of iterators are translation-time
-constants (parameters), but they can include iterators in the nested
-ranges.
+comprehensions.  An iterator ranges in Real, Integer, Boolean, and an
+enumeration, and its range is specified by a vector expression or by a
+type of Boolean or an enumeration.
 
 \subsubsection*{Range expressions of iterators}
 
@@ -3161,6 +3159,12 @@ nested ones.
 \begin{qquote} (\specref{11.2.2.3}\/) it can be expanded into the
 usual form by replacing each "," by 'loop for' and adding extra 'end
 for'.\end{qquote}
+
+Range expressions of for-equations are translation-time constants, and
+they can include iterators in the nested ranges.
+
+\begin{qquote} (\specref{8.3.2}\/) The expression of a for-equation
+shall be a parameter expression.\end{qquote}
 
 It is allowed to refer to an iterator in vector expressions in a
 single for-equation.
@@ -3174,15 +3178,12 @@ end for;
 \end{lstlisting}
 \end{quote}
 
-The following quotes might badly state an iterator variable is a
-parameter.
+The following quotes of the scope description might conflict with the
+handling by nesting iterators.
 
 \begin{qquote}\label{quo:iterator-scope} (\specref{8.3.2}\/) It is
 evaluated once for each for-equation, and is evaluated in the scope
 immediately enclosing the for-equation.\end{qquote}
-
-\begin{qquote} (\specref{8.3.2}\/) The expression of a for-equation
-shall be a parameter expression.\end{qquote}
 
 \subsubsection*{Implicit iterator ranges}
 
@@ -3191,7 +3192,7 @@ inferred from the uses of an iterator.  Implicit iterator ranges are
 allowed in every {\it{}for}-iteration, that is, loops in equations and
 statements, reductions, and array constructors.  Implicit ranges are
 accepted for arrays with dimensions of Integer, Boolean, and
-enumeration.  See an example in \specref{4.8.5}.
+enumeration.  See the example in \specref{4.8.5}.
 %%%%
 \begin{quote}
 \begin{lstlisting}[aboveskip=-\baselineskip]
@@ -3204,7 +3205,7 @@ end for;
 \end{lstlisting}
 \end{quote}
 
-See an example in \specref{11.2.2.3}.
+See the example in \specref{11.2.2.3}.
 %%%%
 \begin{quote}
 \begin{lstlisting}[aboveskip=-\baselineskip]
@@ -3621,6 +3622,21 @@ connectors, operator_records) and arrays of them, and functions.
 \begin{qquote} (\specref{12.2}\/) $\bullet$ A function may only
 contain components of the restricted classes type, record, operator
 record, and function; i.e. no model or block components.\end{qquote}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Equations}
+
+\subsubsection*{if-equation}
+
+Each branch of $\mathbf{if}$ is tested sequentially, and the first
+true branch is taken.
+
+\subsubsection*{for-equation}
+
+A range of $\mathbf{for}$ is a vector expression (real or integer)
+that is a translation-time constant, or types of Boolean or an
+enumeration.  See Section~\ref{sec:for-iterator}.
 
 %%%%%%%%%%%%%%%%
 

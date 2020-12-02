@@ -731,25 +731,25 @@ fun make_component_clause
 	Defvar (v, q, k0, c, a, w)
     end)
 
-fun attach_comment_to_equation q (a, w) = (
+fun attach_comment_to_equation q (aa, ww) = (
     case q of
-	Eq_Eq ((x, y), _, _) => Eq_Eq ((x, y), a, w)
-      | Eq_Connect ((x, y), _, _) => Eq_Connect ((x, y), a, w)
-      | Eq_If (c, _, _) => Eq_If (c, a, w)
-      | Eq_When (c, _, _) => Eq_When (c, a, w)
-      | Eq_For ((i, qq), _, _) => Eq_For ((i, qq), a, w)
-      | Eq_App ((e, ee), _, _) => Eq_App ((e, ee), a, w))
+	Eq_Eq ((x, y), _, _) => Eq_Eq ((x, y), aa, ww)
+      | Eq_Connect ((x, y), _, _) => Eq_Connect ((x, y), aa, ww)
+      | Eq_If (cc, _, _) => Eq_If (cc, aa, ww)
+      | Eq_When (cc, _, _) => Eq_When (cc, aa, ww)
+      | Eq_For ((rr, qq), _, _) => Eq_For ((rr, qq), aa, ww)
+      | Eq_App ((e, ee), _, _) => Eq_App ((e, ee), aa, ww))
 
-fun attach_comment_to_statement s (a, w) = (
+fun attach_comment_to_statement s (aa, ww) = (
     case s of
-	St_Break (_, _) => St_Break (a, w)
-      | St_Return (_, _) => St_Return (a, w)
-      | St_Assign (x0, x1, _, _) => St_Assign (x0, x1, a, w)
-      | St_Call (vv, f, ee, _, _) => St_Call (vv, f, ee, a, w)
-      | St_If (cc, _, _) => St_If (cc, a, w)
-      | St_For (ii, ss, _, _) => St_For (ii, ss, a, w)
-      | St_While (e, ss, _, _) => St_While (e, ss, a, w)
-      | St_When (cc, _, _) => St_When (cc, a, w))
+	St_Break (_, _) => St_Break (aa, ww)
+      | St_Return (_, _) => St_Return (aa, ww)
+      | St_Assign (x, y, _, _) => St_Assign (x, y, aa, ww)
+      | St_Call (vv, f, ee, _, _) => St_Call (vv, f, ee, aa, ww)
+      | St_If (cc, _, _) => St_If (cc, aa, ww)
+      | St_When (cc, _, _) => St_When (cc, aa, ww)
+      | St_For (rr, ss, _, _) => St_For (rr, ss, aa, ww)
+      | St_While (e, ss, _, _) => St_While (e, ss, aa, ww))
 
 (* Makes if-then-else, by simply concatenating an else-if part to
    reduce nesting. *)
@@ -759,32 +759,29 @@ fun make_ite cc0 elsepart = (
 	ITE cc1 => ITE (cc0 @ cc1)
       | _ => ITE (cc0 @ [(Otherwise, elsepart)]))
 
-(* Parses a string as a decimal integer. *)
+(* Parses a whole string as a decimal integer. *)
 
 fun string_is_int s = (
     let
 	val ss = (TextIO.openString s)
-	val v = case (TextIO.scanStream (Int.scan StringCvt.DEC) ss) of
-		    NONE => NONE
-		  | SOME v => (
-		    if (TextIO.endOfStream ss) then
-			SOME v
-		    else
-			NONE)
+	val x = (TextIO.scanStream (Int.scan StringCvt.DEC) ss)
+	val eos = (TextIO.endOfStream ss)
 	val _ = (TextIO.closeIn ss)
     in
-	v
+	case (x, eos) of
+	    (SOME v, true) => SOME v
+	  | _  => NONE
     end)
 
-(* Floating-point numbers (including integers) are readable by the SML
-   IEEE floating-point number reader. *)
+(* Makes a number literal (real or integer).  The IEEE floating-point
+   number reader of SML can read both reals and integers. *)
 
-fun check_literal_number s = (
+fun string_to_literal_number s = (
     case (IEEEReal.fromString s) of
-	SOME x_ => (
+	SOME _ => (
 	case (string_is_int s) of
 	    NONE => L_Number (R, s)
-	  | SOME v_ => L_Number (Z, s))
+	  | SOME _ => L_Number (Z, s))
       | NONE => (
 	raise (error_bad_literal_number s)))
 

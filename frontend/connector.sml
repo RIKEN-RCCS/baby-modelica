@@ -13,9 +13,8 @@ end
 
 = struct
 
-open plain
-open ast
-open small0
+open ast plain
+open small1
 
 fun tr_conn (s : string) = if true then (print (s ^"\n")) else ()
 fun tr_conn_vvv (s : string) = if false then (print (s ^"\n")) else ()
@@ -23,12 +22,13 @@ fun tr_conn_vvv (s : string) = if false then (print (s ^"\n")) else ()
 val instance_tree = classtree.instance_tree
 val traverse_tree = classtree.traverse_tree
 
+val fold_constants_in_expression = folder.fold_constants_in_expression
+val explicitize_range = folder.explicitize_range
+
 val walk_in_class = walker.walk_in_class
 val Q_Walker = walker.Q_Walker
 
 (* ================================================================ *)
-
-(*AHO
 
 fun contains_connects (q0, contains0) = (
     let
@@ -45,41 +45,93 @@ fun contains_connects (q0, contains0) = (
 	    (foldl contains_connects contains0 qq))
     end)
 
-fun expand_equations kp q0 = (
+fun expand_equations kp env q0 = (
     let
+	fun branch env cc0 = (
+	    case cc0 of
+		[] => []
+	      | (w0, qq0) :: cc1 => (
+		let
+		    val w1 = (fold_constants_in_expression kp false w0)
+		in
+		    if (not (expression_is_literal w1)) then
+			raise error_conditional_containing_connect
+		    else
+			case w1 of
+			    Otherwise => (
+			    (map (expand_equations kp env) qq0))
+			  | L_Number _ => raise error_non_boolean
+			  | L_Bool false => (branch env cc1)
+			  | L_Bool true => (
+			    (map (expand_equations kp env) qq0))
+			  | L_Enum _ => raise error_non_boolean
+			  | L_String _ => raise error_non_boolean
+			  | Array_Triple _ => raise error_non_boolean
+			  | Array_Constructor _ => raise error_non_boolean
+			  | Array_Concatenation _ => raise error_non_boolean
+			  | Named_Argument _ => raise error_non_boolean
+			  | _ => raise Match
+		end))
+
+	fun range env rr0 qq = (
+	    case rr0 of
+		[] => raise Match
+	      | (v, Colon) :: rr1 => (
+	      )
+	      | (v, w0) :: rr1 => (
+		let
+		    (*env*)
+		    val w1 = (fold_constants_in_expression kp false w0)
+		in
+		    if (not (expression_is_literal w1)) then
+			raise error_range_iterator
+		    else
+			case w1 of
+			    Array_Triple _ => ()
+			  | Instance k => ()
+			  | _ => raise Match
+		end))
     in
 	case q0 of
 	    Eq_Eq _ => q0
 	  | Eq_Connect _ => q0
-	  | Eq_If (cc0, aa, ww) => (q0, acc0)
-	  | Eq_When _ => (q0, acc0)
-	  | Eq_App _ => (q0, acc0)
-	  | Eq_For _ => (q0, acc0)
+	  | Eq_If (cc0, aa, ww) => (
+	    let
+		val cc1 = (branch env cc0)
+	    in
+		Eq_If ([(Otherwise, cc1)], aa, ww)
+	    end)
+	  | Eq_When _ => q0
+	  | Eq_App _ => q0
+	  | Eq_For ((rr0, qq0), aa, ww) => (
+	    let
+		val rr1 = (map (fn (id, x) => (id, (range x))) rr0)
+	    in
+		q0
+	    end)
     end)
 
 fun expand_equations_in_instance (k0, acc0) = (
     if (class_is_alias k0) then
-	()
+	acc0
     else if (class_is_enumerator_definition k0) then
-	()
+	acc0
     else if (class_is_package k0) then
-	()
+	acc0
     else
 	let
 	    val _ = if (not (class_is_primitive k0)) then () else raise Match
 
 	    val subj = (subject_of_class k0)
-	    val walker = (expand_equations_in_equation k0)
+	    val walker = (fn (q, x) => ((expand_equations k0 [] q), []))
 	    val ctx = {walker = Q_Walker walker}
 	    val (k1, acc1) = (walk_in_class ctx (k0, acc0))
 	in
-	    ()
+	    acc1
 	end)
 
 fun expand_equations_for_connects () = (
     (traverse_tree expand_equations_in_instance (instance_tree, [])))
-
-AHO*)
 
 (* ================================================================ *)
 

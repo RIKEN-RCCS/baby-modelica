@@ -133,6 +133,18 @@ fun int_seq m n = (
     else
 	(m :: (int_seq (m + 1) n)))
 
+fun z_seq lb step (n :int) : int list = (
+    if (n <= 0) then
+	[]
+    else
+	lb :: (z_seq (lb + step) step (n - 1)))
+
+fun r_seq lb step (n : int): real list = (
+    if (n <= 0) then
+	[]
+    else
+	lb :: (r_seq (lb + step) step (n - 1)))
+
 (* Returns a list by calling f on each index in the dimension.  Note
    that an index is one-origin. *)
 

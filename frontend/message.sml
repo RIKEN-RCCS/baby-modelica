@@ -319,4 +319,18 @@ fun error_duplicate_definitions d = (
 
 val error_duplicate_inner_outer = Match
 
+val error_conditional_containing_connect = Match
+
+val error_non_boolean = Match
+
+val error_range_iterator = Match
+
+val error_non_scalar_literal = Match
+
+val error_not_vector = Match
+
+val error_non_scalar_class = Match
+
+val error_range_on_class = Match
+
 end

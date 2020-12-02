@@ -18,41 +18,6 @@ fun tr_tree_vvv (s : string) = if false then (print (s ^"\n")) else ()
 
 (* ================================================================ *)
 
-(* Tests if a class is a simple-type, that is, Real, Integer, Boolean,
-   String, enumerations, types extending them, and arrays of them. *)
-
-fun class_is_simple_type k = (
-    let
-	fun tag_is_simple_type tag = (
-	    case tag of
-		Ctag [""] => raise Match
-	      | Ctag [] => false
-	      | Ctag ["Real"] => true
-	      | Ctag ["Integer"] => true
-	      | Ctag ["Boolean"] => true
-	      | Ctag ["String"] => true
-	      | _ => false)
-    in
-	case k of
-	    Def_Body (mk, j, cs, (tag, n, x), ee, aa, ww) => (
-	    let
-		val _ = if (step_is_at_least E3 k) then () else raise Match
-	    in
-		(class_is_enum k) orelse (tag_is_simple_type tag)
-	    end)
-	  | Def_Der _ => false
-	  | Def_Primitive _ => true
-	  | Def_Name _ => raise Match
-	  | Def_Scoped _ => raise Match
-	  | Def_Refine (kx, v, ts, q, (ss, mm), aa, ww) => (
-	    (class_is_simple_type kx))
-	  | Def_Extending _ => raise Match
-	  | Def_Replaced _ => raise Match
-	  | Def_Displaced (tag, _) => (tag_is_simple_type tag)
-	  | Def_In_File => raise Match
-	  | Def_Mock_Array _ => raise Match
-    end)
-
 fun make_file_path basepath (Name ss) =
     (foldl (fn (r, l) => (l ^ "/" ^ r)) basepath ss)
 

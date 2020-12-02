@@ -27,6 +27,9 @@ sig
 
     val fold_pseudo_split :
 	expression_t -> expression_t
+
+    val bool_order : expression_t -> int
+    val enumerator_order : expression_t -> int
 end = struct
 
 open ast plain
@@ -320,9 +323,15 @@ fun obtain_array_dimension w : int list * bool = (
 	    ([], false)
 	else
 	    case (x, y, zo) of
-		(L_Number _, L_Number _, _) => (
+		(L_Number _, L_Number _, NONE) => (
 		let
-		    val z = (getOpt (zo, L_Number (Z, "1")))
+		    val z = L_Number (Z, "1")
+		in
+		    ([(triple_size x z y)], true)
+		end)
+	      | (L_Number _, L_Number _, SOME (L_Number _)) => (
+		let
+		    val z = (valOf zo)
 		in
 		    ([(triple_size x y z)], true)
 		end)

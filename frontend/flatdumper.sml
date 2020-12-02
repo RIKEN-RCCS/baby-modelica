@@ -287,9 +287,6 @@ fun collect_variables root = (
 
 fun collect_enumerations root = (
     let
-	fun class_is_enumeration_definition k = (
-	    (class_is_enum k) andalso (class_is_package k))
-
 	fun collect (kp, acc) = (
 	    if (class_is_alias kp) then
 		(* THIS WILL BE REMOVED. *)

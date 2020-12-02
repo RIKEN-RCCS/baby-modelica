@@ -41,15 +41,15 @@ fun reference_as_subject x = (
 	    Subj (ns, cc0)
 	end))
 
-(* Tests literalness.  It assumes performing partial folding of
-   constants beforehand ("partial folding" is defined by this
-   function). *)
+(* Tests literal-ness.  It assumes performing partial folding of
+   constants beforehand ("partial folding" is defined as acceptance by
+   this function).  Otherwise is used as a truth for an else-part. *)
 
 fun expression_is_literal w = (
     case w of
 	NIL => raise Match
       | Colon => raise Match
-      | Otherwise => raise Match
+      | Otherwise => true
       | Scoped _ => raise Match
       | Vref (_, []) => raise Match
       | Vref (NONE, _) => raise Match

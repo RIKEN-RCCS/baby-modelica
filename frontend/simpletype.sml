@@ -144,9 +144,6 @@ fun register_enumerators_for_enumeration kp = (
 	    in
 		()
 	    end)
-
-	fun class_is_enumeration_definition k = (
-	    (class_is_enum k) andalso (class_is_package k))
     in
 	if (not (class_is_enumeration_definition kp)) then
 	    ()
