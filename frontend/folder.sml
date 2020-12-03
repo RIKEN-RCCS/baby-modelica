@@ -17,8 +17,6 @@ sig
 	definition_body_t -> bool
 	-> expression_t -> expression_t
 
-    val simplify_ite : expression_t -> expression_t
-
     val value_of_instance :
 	expression_t -> definition_body_t -> expression_t
 
@@ -31,6 +29,8 @@ open ast
 open small1
 
 val simple_type_attribute = simpletype.simple_type_attribute
+
+val simplify_ite = walker.simplify_ite
 
 (*val unary_operator = operator.unary_operator*)
 (*val binary_operator = operator.binary_operator*)
@@ -198,29 +198,6 @@ fun expression_is_constant__ w = (
 				  andalso (expression_is_constant__ n))
 	  | Array_diagonal x => (expression_is_constant__ x)
     end)
-
-fun simplify_ite w0 = (
-    case w0 of
-	ITE cc0 => (
-	let
-	    val cc1 = foldr
-			  (fn (c, tail) =>
-			      case (c, tail) of
-				  ((Otherwise, v), []) => [(Otherwise, v)]
-				| ((Otherwise, v), _) => raise Match
-				| ((L_Bool true, v), _) => [(Otherwise, v)]
-				| ((L_Bool false, v), _) => tail
-				| (_, _) => (c :: tail))
-			  [] cc0
-	    val ite1 = case ITE cc1 of
-			   ITE [(Otherwise, v)] => v
-			 | ITE ((Otherwise, v) :: _) => raise Match
-			 | ITE _ => ITE cc1
-			 | _ => raise Match
-	in
-	    ite1
-	end)
-      | _ => raise Match)
 
 fun value_of_reference w0 = (
     case w0 of
@@ -450,7 +427,7 @@ fun triple_value (x, y, zo) = (
 	end)
       | _ => raise error_bad_triple)
 
-(* Converts an iterator range to an L_Number list. *)
+(* Converts a (constant) iterator range to an L_Number list. *)
 
 fun explicitize_range w = (
     let
@@ -522,7 +499,7 @@ fun explicitize_range w = (
 		    (map z_literal (z_seq 1 1 (length vv))))
 	    else
 		raise error_range_on_class)
-	  | Instance (_, _, _) => raise error_non_scalar_class
+	  | Instance (_, _, _) => raise error_range_on_array
 	  | _ => raise Match
     end)
 

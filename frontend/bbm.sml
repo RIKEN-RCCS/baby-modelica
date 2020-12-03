@@ -37,10 +37,11 @@ use "syntaxer.sml" ;
 use "small1.sml" ;
 use "dumper.sml" ;
 
+use "walker.sml" ;
+use "expression.sml" ;
 use "operator.sml" ;
 use "folder.sml" ;
 use "binder.sml" ;
-use "walker.sml" ;
 use "builder.sml" ;
 use "postbinder.sml" ;
 

@@ -22,6 +22,8 @@ sig
 	(statement_t * 'a -> statement_t * 'a) -> 'a walker_type_t
     val E_Walker :
 	(expression_t * 'a -> expression_t * 'a) -> 'a walker_type_t
+
+    val simplify_ite : expression_t -> expression_t
 end = struct
 
 open plain
@@ -29,8 +31,6 @@ open ast
 open small0
 
 val expression_to_string = dumper.expression_to_string
-
-val simplify_ite = folder.simplify_ite
 
 datatype 'a walker_type_t
     = Q_Walker of equation_t * 'a -> equation_t * 'a
@@ -41,6 +41,33 @@ type 'a walker_t = {walker : 'a walker_type_t}
 
 fun tr_expr (s : string) = if true then (print (s ^"\n")) else ()
 fun tr_expr_vvv (s : string) = if false then (print (s ^"\n")) else ()
+
+(* ================================================================ *)
+
+fun simplify_ite w0 = (
+    case w0 of
+	ITE cc0 => (
+	let
+	    val cc1 = foldr
+			  (fn (c, tail) =>
+			      case (c, tail) of
+				  ((Otherwise, v), []) => [(Otherwise, v)]
+				| ((Otherwise, v), _) => raise Match
+				| ((L_Bool true, v), _) => [(Otherwise, v)]
+				| ((L_Bool false, v), _) => tail
+				| (_, _) => (c :: tail))
+			  [] cc0
+	    val ite1 = case ITE cc1 of
+			   ITE [(Otherwise, v)] => v
+			 | ITE ((Otherwise, v) :: _) => raise Match
+			 | ITE _ => ITE cc1
+			 | _ => raise Match
+	in
+	    ite1
+	end)
+      | _ => raise Match)
+
+(* ================================================================ *)
 
 fun walk_in_n_x walk ((n, x0), acc0) = (
     let

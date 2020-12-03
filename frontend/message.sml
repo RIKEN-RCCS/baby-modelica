@@ -329,7 +329,7 @@ val error_non_scalar_literal = Match
 
 val error_not_vector = Match
 
-val error_non_scalar_class = Match
+val error_range_on_array = Match
 
 val error_range_on_class = Match
 
