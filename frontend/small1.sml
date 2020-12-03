@@ -41,45 +41,4 @@ fun reference_as_subject x = (
 	    Subj (ns, cc0)
 	end))
 
-(* Tests literal-ness.  It assumes performing partial folding of
-   constants beforehand ("partial folding" is defined as acceptance by
-   this function).  Otherwise is used as a truth for an else-part. *)
-
-fun expression_is_literal w = (
-    case w of
-	NIL => raise Match
-      | Colon => raise Match
-      | Otherwise => true
-      | Scoped _ => raise Match
-      | Vref (_, []) => raise Match
-      | Vref (NONE, _) => raise Match
-      | Vref (SOME _, _) => false
-      | Opr _ => raise Match
-      | App _ => false
-      | ITE _ => false
-      | Der _ => false
-      | Pure _ => raise NOTYET
-      | Closure _ => false
-      | L_Number _ => true
-      | L_Bool _ => true
-      | L_Enum _ => true
-      | L_String _ => true
-      | Array_Triple (x, y, NONE) => (
-	(List.all expression_is_literal [x, y]))
-      | Array_Triple (x, y, SOME z) => (
-	(List.all expression_is_literal [x, y, z]))
-      | Array_Constructor ee => (List.all expression_is_literal ee)
-      | Array_Comprehension (x, uu) => false
-      | Array_Concatenation ee => (
-	(List.all (List.all expression_is_literal) ee))
-      | Tuple ee => raise error_tuple_in_rhs
-      | Reduction_Argument (x, uu) => false
-      | Named_Argument (n, x) => (expression_is_literal x)
-      | Pseudo_Split (x, s) => (expression_is_literal x)
-      | Component_Ref _ => false
-      | Instance _ => false
-      | Iref _ => false
-      | Array_fill _ => false
-      | Array_diagonal _ => false)
-
 end

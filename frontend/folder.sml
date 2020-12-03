@@ -12,9 +12,10 @@ sig
     type definition_body_t
     type class_definition_t
     type expression_t
+    type id_t
 
     val fold_constants_in_expression :
-	definition_body_t -> bool
+	definition_body_t -> bool -> (id_t * expression_t) list
 	-> expression_t -> expression_t
 
     val value_of_instance :
@@ -27,10 +28,12 @@ open plain
 open ast
 (*open small0*)
 open small1
+open expression
 
 val simple_type_attribute = simpletype.simple_type_attribute
 
 val simplify_ite = walker.simplify_ite
+val expression_is_literal = expression.expression_is_literal
 
 (*val unary_operator = operator.unary_operator*)
 (*val binary_operator = operator.binary_operator*)
@@ -384,7 +387,7 @@ and fold_subscripts ctx oneshot w0 = (
    oneshot=true.  It is to allow the resolver routines to assure
    referenced variables are instantiated in the build-phase. *)
 
-fun fold_constants_in_expression kp oneshot w0 = (
+fun fold_constants_in_expression kp oneshot env0 w0 = (
     let
 	val ctx = {k = kp}
 	val w1 = (fold_expression ctx oneshot w0)
@@ -396,36 +399,6 @@ fun fold_constants_in_expression kp oneshot w0 = (
     end)
 
 (* ================================================================ *)
-
-fun triple_value (x, y, zo) = (
-    case (x, y, zo) of
-	(L_Number (t0, s0), L_Number (t1, s1), NONE) => (
-	let
-	    val ty = case (t0, t1) of (Z, Z) => Z | _ => R
-	in
-	    (ty, s0, "1", s1)
-	end)
-      | (L_Number (t0, s0), L_Number (t1, s1), SOME (L_Number (t2, s2))) => (
-	let
-	    val ty = case (t0, t1, t2) of (Z, Z, Z) => Z | _ => R
-	in
-	    (ty, s0, s1, s2)
-	end)
-      | (L_Bool _, L_Bool _, NONE) => (
-	let
-	    val lb = (bool_order x)
-	    val ub = (bool_order y)
-	in
-	    (Z, (Int.toString lb), "1", (Int.toString ub))
-	end)
-      | (L_Enum (tag0, v0), L_Enum (tag1, v1), NONE) => (
-	let
-	    val lb = (enumerator_order x)
-	    val ub = (enumerator_order y)
-	in
-	    (Z, (Int.toString lb), "1", (Int.toString ub))
-	end)
-      | _ => raise error_bad_triple)
 
 (* Converts a (constant) iterator range to an L_Number list. *)
 
@@ -452,55 +425,58 @@ fun explicitize_range w = (
 	      | L_Enum _ => (r_literal (Real.fromInt (enumerator_order w)))
 	      | _ => raise error_non_scalar_literal)
     in
-	case w of
-	    Array_Triple triple => (
-	    case (triple_value triple) of
-	        (R, s0, s1, s2) => (
-		let
-		    val lb = (r_value s0)
-		    val step = (r_value s1)
-		    val ub = (r_value s2)
-		    val n = (floor ((ub - lb) / step)) + 1
-		in
-		    if ((step > 0.0 andalso lb > ub)
-			orelse (step < 0.0 andalso lb < ub)) then
-			[]
-		    else
-			(map r_literal (r_seq lb step n))
-		end)
-	      | (Z, s0, s1, s2) => (
-		let
-		    val lb = (z_value s0)
-		    val step = (z_value s1)
-		    val ub = (z_value s2)
-		    val n = ((ub - lb) div step) + 1
-		in
-		    if ((step > 0 andalso lb > ub)
-			orelse (step < 0 andalso lb < ub)) then
-			[]
-		    else
-			(map z_literal (z_seq lb step n))
-		end))
-	  | Array_Constructor ee => (
-	    if (List.exists literal_is_real ee) then
-		(map r_scalar_literal ee)
-	    else
-		(map z_scalar_literal ee))
-	  | Array_Comprehension (x, rr) => raise NOTYET
-	  | Array_Concatenation _ => raise error_not_vector
-	  | Instance ([], [k], NONE) => (
-	    if (class_is_boolean k) then
-		(map z_literal [0, 1])
-	    else if (class_is_enumeration_definition k) then
-		case (take_enumarator_element k) of
-		    NONE => raise error_enum_unspecified
-		  | SOME [] => raise Match
-		  | SOME vv => (
-		    (map z_literal (z_seq 1 1 (length vv))))
-	    else
-		raise error_range_on_class)
-	  | Instance (_, _, _) => raise error_range_on_array
-	  | _ => raise Match
+	if (not (expression_is_literal w)) then
+	    raise error_range_iterator
+	else
+	    case w of
+		Array_Triple triple => (
+		case (triple_value triple) of
+		    (R, s0, s1, s2) => (
+		    let
+			val lb = (r_value s0)
+			val step = (r_value s1)
+			val ub = (r_value s2)
+			val n = (floor ((ub - lb) / step)) + 1
+		    in
+			if ((step > 0.0 andalso lb > ub)
+			    orelse (step < 0.0 andalso lb < ub)) then
+			    []
+			else
+			    (map r_literal (r_seq lb step n))
+		    end)
+		  | (Z, s0, s1, s2) => (
+		    let
+			val lb = (z_value s0)
+			val step = (z_value s1)
+			val ub = (z_value s2)
+			val n = ((ub - lb) div step) + 1
+		    in
+			if ((step > 0 andalso lb > ub)
+			    orelse (step < 0 andalso lb < ub)) then
+			    []
+			else
+			    (map z_literal (z_seq lb step n))
+		    end))
+	      | Array_Constructor ee => (
+		if (List.exists literal_is_real ee) then
+		    (map r_scalar_literal ee)
+		else
+		    (map z_scalar_literal ee))
+	      | Array_Comprehension (x, rr) => raise NOTYET
+	      | Array_Concatenation _ => raise error_not_vector
+	      | Instance ([], [k], NONE) => (
+		if (class_is_boolean k) then
+		    (map z_literal [0, 1])
+		else if (class_is_enumeration_definition k) then
+		    case (take_enumarator_element k) of
+			NONE => raise error_enum_unspecified
+		      | SOME [] => raise Match
+		      | SOME vv => (
+			(map z_literal (z_seq 1 1 (length vv))))
+		else
+		    raise error_range_on_class)
+	      | Instance (_, _, _) => raise error_range_on_array
+	      | _ => raise Match
     end)
 
 end

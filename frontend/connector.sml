@@ -4,13 +4,11 @@
 (* CONNECTOR HANDLING. *)
 
 structure connector
-
 (*
 : sig
 xcollect
 end
 *)
-
 = struct
 
 open ast plain
@@ -22,11 +20,15 @@ fun tr_conn_vvv (s : string) = if false then (print (s ^"\n")) else ()
 val instance_tree = classtree.instance_tree
 val traverse_tree = classtree.traverse_tree
 
+val expression_is_literal = expression.expression_is_literal
+
 val fold_constants_in_expression = folder.fold_constants_in_expression
 val explicitize_range = folder.explicitize_range
 
 val walk_in_class = walker.walk_in_class
+val walk_in_equation = walker.walk_in_equation
 val Q_Walker = walker.Q_Walker
+val E_Walker = walker.E_Walker
 
 (* ================================================================ *)
 
@@ -45,14 +47,26 @@ fun contains_connects (q0, contains0) = (
 	    (foldl contains_connects contains0 qq))
     end)
 
+fun replace_iterator_in_expression kp env (w, _) = (
+    ((fold_constants_in_expression kp false env w), ()))
+
+fun replace_iterator_in_equation kp env q0 = (
+    let
+	val walker = (replace_iterator_in_expression kp env)
+	val ctx = {walker = E_Walker walker}
+	val (q1, _) = (walk_in_equation ctx kp (q0, ()))
+    in
+	q1
+    end)
+
 fun expand_equations kp env q0 = (
     let
-	fun branch env cc0 = (
+	fun branch env0 cc0 = (
 	    case cc0 of
 		[] => []
 	      | (w0, qq0) :: cc1 => (
 		let
-		    val w1 = (fold_constants_in_expression kp false w0)
+		    val w1 = (fold_constants_in_expression kp false env0 w0)
 		in
 		    if (not (expression_is_literal w1)) then
 			raise error_conditional_containing_connect
@@ -73,23 +87,23 @@ fun expand_equations kp env q0 = (
 			  | _ => raise Match
 		end))
 
-	fun range env rr0 qq = (
+	fun range (qq0, aa, ww) env0 rr0 : equation_t = (
 	    case rr0 of
-		[] => raise Match
-	      | (v, Colon) :: rr1 => (
-	      )
+		[] => (
+		let
+		    val qq1 = (map (replace_iterator_in_equation kp env0) qq0)
+		in
+		    Eq_If ([(Otherwise, qq1)], aa, ww)
+		end)
+	      | (v, Colon) :: rr1 => (raise NOTYET)
 	      | (v, w0) :: rr1 => (
 		let
-		    (*env*)
-		    val w1 = (fold_constants_in_expression kp false w0)
+		    val w1 = (fold_constants_in_expression kp false env0 w0)
+		    val vv = (explicitize_range w1)
+		    val qq1 = (map (fn x => (range (qq0, aa, ww)
+						   ((v, x) :: env0) rr1)) vv)
 		in
-		    if (not (expression_is_literal w1)) then
-			raise error_range_iterator
-		    else
-			case w1 of
-			    Array_Triple _ => ()
-			  | Instance k => ()
-			  | _ => raise Match
+		    Eq_If ([(Otherwise, qq1)], aa, ww)
 		end))
     in
 	case q0 of
@@ -97,18 +111,14 @@ fun expand_equations kp env q0 = (
 	  | Eq_Connect _ => q0
 	  | Eq_If (cc0, aa, ww) => (
 	    let
-		val cc1 = (branch env cc0)
+		val qq1 = (branch env cc0)
 	    in
-		Eq_If ([(Otherwise, cc1)], aa, ww)
+		Eq_If ([(Otherwise, qq1)], aa, ww)
 	    end)
 	  | Eq_When _ => q0
 	  | Eq_App _ => q0
 	  | Eq_For ((rr0, qq0), aa, ww) => (
-	    let
-		val rr1 = (map (fn (id, x) => (id, (range x))) rr0)
-	    in
-		q0
-	    end)
+	    (range (qq0, aa, ww) env rr0))
     end)
 
 fun expand_equations_in_instance (k0, acc0) = (

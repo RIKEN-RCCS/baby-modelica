@@ -183,7 +183,7 @@ datatype cook_step_t = E0 | E1 | E2 | E3 | E4 | E5
 
 datatype redeclaration_source_t = In_Modifiers | In_Elements
 
-(* Equations. *)
+(* Equations.  Eq_List is introduced temporarily. *)
 
 datatype equation_t
     = Eq_Eq of ((expression_t * expression_t)
@@ -198,6 +198,7 @@ datatype equation_t
 		 * annotation_t * comment_t)
     | Eq_App of ((expression_t * expression_t list)
 		 * annotation_t * comment_t)
+    (*| Eq_List of equation_t list * annotation_t * comment_t*)
 
 (* Statements.  Call has a form: "(v):=f(a)".  A comment on statements
    has a separate entry, while most comments are stored in syntax

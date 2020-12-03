@@ -217,7 +217,7 @@ and simplify_expression ctx buildphase w0 = (
 	val buildphase = true
 	val w1 = (bind_in_scoped_expression buildphase ctx w0)
 	val w2 = (secure_reference_in_expression ctx buildphase w1)
-	val w3 = (fold_constants_in_expression ctx buildphase w2)
+	val w3 = (fold_constants_in_expression ctx buildphase [] w2)
     in
 	if (w0 = w3) then
 	    w3

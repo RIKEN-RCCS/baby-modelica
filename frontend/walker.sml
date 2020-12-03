@@ -1,7 +1,8 @@
 (* walker.sml -*-Coding: us-ascii-unix;-*- *)
 (* Copyright (C) 2018-2020 RIKEN R-CCS *)
 
-(* SCANING IN EXPRESSIONS. *)
+(* SCANING IN EXPRESSIONS.  The routines here are used after resolving
+   variable references. *)
 
 structure walker :
 sig
@@ -14,6 +15,9 @@ sig
 
     val walk_in_expression :
 	'a walker_t -> expression_t * 'a -> expression_t * 'a
+    val walk_in_equation :
+	'a walker_t -> definition_body_t
+	-> equation_t * 'a -> equation_t * 'a
     val walk_in_class :
 	'a walker_t -> definition_body_t * 'a -> definition_body_t * 'a
     val Q_Walker :

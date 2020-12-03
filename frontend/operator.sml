@@ -34,11 +34,14 @@ end = struct
 
 open ast plain
 open small1
+open expression
 
 fun tr_expr (s : string) = if true then (print (s ^"\n")) else ()
 fun tr_expr_vvv (s : string) = if false then (print (s ^"\n")) else ()
 
 val take_enumarator_element = simpletype.take_enumarator_element
+
+val expression_is_literal = expression.expression_is_literal
 
 datatype operator_type_t
     = ARITHMETIC_UOP | ARITHMETIC_BOP
@@ -106,175 +109,6 @@ fun empty_global_function name = (
 
 fun r_equal x y = (
     (r_literal x) = (r_literal y))
-
-(* Returns a zero-origin integer indicating the order of a boolean. *)
-
-fun bool_order x = (
-    case x of
-	L_Bool false => 0
-      | L_Bool true => 1
-      | _ => raise Match)
-
-(* Returns a boolean at a zero-origin index. *)
-
-fun bool_nth i = (
-    case i of
-	0 => L_Bool false
-      | 1 => L_Bool true
-      | _ => raise Match)
-
-fun bool_size x y = (
-    let
-	val lb = (bool_order x)
-	val ub = (bool_order y)
-	val z = (ub - lb + 1)
-    in
-	(Int.max (0, z))
-    end)
-
-(* Returns a zero-origin integer indicating the order of an
-   enumerator. *)
-
-fun enumerator_order x = (
-    case x of
-	L_Enum (tag, v) => (
-	let
-	    val subj = (tag_to_subject tag)
-	    val kp = surely (fetch_from_instance_tree subj)
-	in
-	    case (take_enumarator_element kp) of
-		NONE => raise error_enum_unspecified
-	      | SOME [] => raise Match
-	      | SOME vv => (
-		case (list_index (fn (k, a, w) => (v = k)) vv 0) of
-		    NONE => raise Match
-		  | SOME index => index)
-	end)
-      | _ => raise Match)
-
-fun enumerator_compare x y = (
-    let
-	val ix = (enumerator_order x)
-	val iy = (enumerator_order y)
-    in
-	(ix - iy)
-    end)
-
-(* Returns an enumerator at a zero-origin index. *)
-
-fun enumerator_nth x i = (
-    case x of
-	L_Enum (tag, v) => (
-	let
-	    val subj = (tag_to_subject tag)
-	    val kp = surely (fetch_from_instance_tree subj)
-	in
-	    case (take_enumarator_element kp) of
-		NONE => raise error_enum_unspecified
-	      | SOME [] => raise Match
-	      | SOME vv => (
-		let
-		    val (k, a, w) = (List.nth (vv, i))
-		in
-		    L_Enum (tag, k)
-		end)
-	end)
-      | _ => raise Match)
-
-fun enumerator_size x y = (
-    let
-	val lb = (enumerator_order x)
-	val ub = (enumerator_order y)
-	val z = (ub - lb + 1)
-    in
-	(Int.max (0, z))
-    end)
-
-fun triple_nth x y z (index : int list) = (
-    case index of
-	[] => raise Match
-      | [i0] => (
-	case (x, y, z) of
-	    (L_Number (Z, sx), L_Number (Z, sy), L_Number (Z, sz)) => (
-	    let
-		val i = (i0 - 1)
-		val lb = (z_value sx)
-		val ub = (z_value sy)
-		val s = (z_value sz)
-		val _ = if (i >= 0 andalso i < ((ub + s - lb) div s)) then ()
-			else raise error_out_of_range
-		val v = (lb + (s * i))
-	    in
-		(z_literal v)
-	    end)
-	  | (L_Number (_, sx), L_Number (_, sy), L_Number (_, sz)) => (
-	    let
-		val i = (Real.fromInt (i0 - 1))
-		val lb = (r_value sx)
-		val ub = (r_value sy)
-		val s = (r_value sz)
-		val _ = if (i >= 0.0 andalso i < ((ub + s - lb) / s)) then ()
-			else raise error_out_of_range
-		val v = (lb + (s * i))
-	  in
-	      (r_literal v)
-	  end)
-	  | _ => raise error_bad_triple)
-      | _ => raise error_dimensions_mismatch)
-
-fun triple_size x y z = (
-    case (x, y, z) of
-	(L_Number (Z, sx), L_Number (Z, sy), L_Number (Z, sz)) => (
-	let
-	    val lb = (z_value sx)
-	    val ub = (z_value sy)
-	    val s = (z_value sz)
-	    val z = ((ub + s - lb) div s)
-	in
-	    (Int.max (0, z))
-	end)
-      | (L_Number (_, sx), L_Number (_, sy), L_Number (_, sz)) => (
-	let
-	    val lb = (r_value sx)
-	    val ub = (r_value sy)
-	    val s = (r_value sz)
-	    val z = (Real.floor ((ub + s - lb) / s))
-	in
-	    (Int.max (0, z))
-	end)
-      | _ => raise error_bad_triple)
-
-fun range_nth x y (index : int list) = (
-    case index of
-	[] => raise Match
-      | [i0] => (
-	case (x, y) of
-	    (L_Number (Z, _), L_Number (Z, _)) => (
-	    (triple_nth x y (L_Number (Z, "1")) index))
-	  | (L_Bool v0, L_Bool v1) => (
-	    let
-		val i = (i0 - 1)
-		val lb = (bool_order x)
-		val ub = (bool_order y)
-		val _ = if (i >= 0 andalso i < (ub - lb + 1)) then ()
-			else raise error_out_of_range
-	    in
-		(bool_nth i)
-	    end)
-	  | (L_Enum (tag0, _), L_Enum (tag1, _)) => (
-	    let
-		val _ = if (tag0 = tag1) then ()
-			else raise error_different_enumerations
-		val i = (i0 - 1)
-		val lb = (enumerator_order x)
-		val ub = (enumerator_order y)
-		val _ = if (i >= 0 andalso i < (ub - lb + 1)) then ()
-			else raise error_out_of_range
-	    in
-		(enumerator_nth x (lb + i))
-	    end)
-	  | _ => raise error_bad_triple)
-      | _ => raise error_dimensions_mismatch)
 
 fun expression_is_true x = (*AHO*) raise Match
 fun expression_is_integer x = (*AHO*) false
