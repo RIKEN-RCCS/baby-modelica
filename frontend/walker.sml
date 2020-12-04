@@ -424,6 +424,82 @@ and walk_in_primitive_type (vamp : 'a vamper_t) (k0, acc0) = (
 	end)
       | _ => raise Match)
 
+fun walk_in_modifier ewalk ((m0 : modifier_t), acc0) = (
+    let
+	val walk_x = ewalk
+	val walk_m = (walk_in_modifier walk_x)
+	val walk_h = (walk_in_constraint walk_x)
+	fun walk_k (k, acc) = (k, acc)
+    in
+	case m0 of
+	    Mod_Redefine (r, d0, h0) => (
+	    let
+		val Defclass ((v, g), k0) = d0
+		val (k1, acc1) = (walk_k (k0, acc0))
+		val d1 = Defclass ((v, g), k1)
+		val (h1, acc2) = (walk_in_x_option walk_h (h0, acc1))
+		val m1 = Mod_Redefine (r, d1, h1)
+	    in
+		(m1, acc2)
+	    end)
+	  | Mod_Elemental_Redefine (z, r, d0, h0) => (
+	    let
+		val Defclass ((v, g), k0) = d0
+		val (k1, acc1) = (walk_k (k0, acc0))
+		val d1 = Defclass ((v, g), k1)
+		val (h1, acc2) = (walk_in_x_option walk_h (h0, acc1))
+		val m1 = Mod_Elemental_Redefine (z, r, d1, h1)
+	    in
+		(m1, acc2)
+	    end)
+	  | Mod_Redeclare (r, d0, h0) => (
+	    let
+		val Defvar (v, q, k0, c, aa, ww) = d0
+		val (k1, acc1) = (walk_k (k0, acc0))
+		val d1 = Defvar (v, q, k1, c, aa, ww)
+		val (h1, acc2) = (walk_in_x_option walk_h (h0, acc1))
+		val m1 = Mod_Redeclare (r, d1, h1)
+	    in
+		(m1, acc2)
+	    end)
+	  | Mod_Elemental_Redeclare (z, r, d0, h0) => (
+	    let
+		val Defvar (v, q, k0, c, aa, ww) = d0
+		val (k1, acc1) = (walk_k (k0, acc0))
+		val d1 = Defvar (v, q, k1, c, aa, ww)
+		val (h1, acc2) = (walk_in_x_option walk_h (h0, acc1))
+		val m1 = Mod_Elemental_Redeclare (z, r, d1, h1)
+	    in
+		(m1, acc2)
+	    end)
+	  | Mod_Entry (ef, n, mm0, w) => (
+	    let
+		val (mm1, acc1) = (map_along walk_m (mm0, acc0))
+		val m1 = Mod_Entry (ef, n, mm1, w)
+	    in
+		(m1, acc1)
+	    end)
+	  | Mod_Value x0 => (
+	    let
+		val (x1, acc1) = (walk_x (x0, acc0))
+		val m1 = Mod_Value x1
+	    in
+		(m1, acc1)
+	    end)
+    end)
+
+and walk_in_constraint ewalk ((h0 : constraint_t), acc0) = (
+    let
+	val walk_m = (walk_in_modifier ewalk)
+
+	val (k0, mm0, Annotation aa0, ww) = h0
+	val (mm1, acc1) = (map_along walk_m (mm0, acc0))
+	val (aa1, acc2) = (map_along walk_m (aa0, acc1))
+	val h1 = (k0, mm1, Annotation aa1, ww)
+    in
+	(h1, acc2)
+    end)
+
 fun walk_in_equation qvamp (ewalk : 'a e_vamper_t) (q0, acc0) = (
     let
 	val walk_x = ewalk
@@ -493,7 +569,7 @@ fun walk_in_equation qvamp (ewalk : 'a e_vamper_t) (q0, acc0) = (
 	    end)
     end)
 
-and walk_in_statement svamp (ewalk : 'a e_vamper_t) (s0, acc0) = (
+fun walk_in_statement svamp (ewalk : 'a e_vamper_t) (s0, acc0) = (
     let
 	val walk_x = ewalk
 	val walk_m = (walk_in_modifier walk_x)
@@ -576,82 +652,5 @@ and walk_in_statement svamp (ewalk : 'a e_vamper_t) (s0, acc0) = (
 		(svamp (s1, acc3))
 	    end)
     end)
-
-and walk_in_modifier ewalk ((m0 : modifier_t), acc0) = (
-    let
-	val walk_x = ewalk
-	val walk_m = (walk_in_modifier walk_x)
-	val walk_h = (walk_in_constraint walk_x)
-	fun walk_k (k, acc) = (k, acc)
-    in
-	case m0 of
-	    Mod_Redefine (r, d0, h0) => (
-	    let
-		val Defclass ((v, g), k0) = d0
-		val (k1, acc1) = (walk_k (k0, acc0))
-		val d1 = Defclass ((v, g), k1)
-		val (h1, acc2) = (walk_in_x_option walk_h (h0, acc1))
-		val m1 = Mod_Redefine (r, d1, h1)
-	    in
-		(m1, acc2)
-	    end)
-	  | Mod_Elemental_Redefine (z, r, d0, h0) => (
-	    let
-		val Defclass ((v, g), k0) = d0
-		val (k1, acc1) = (walk_k (k0, acc0))
-		val d1 = Defclass ((v, g), k1)
-		val (h1, acc2) = (walk_in_x_option walk_h (h0, acc1))
-		val m1 = Mod_Elemental_Redefine (z, r, d1, h1)
-	    in
-		(m1, acc2)
-	    end)
-	  | Mod_Redeclare (r, d0, h0) => (
-	    let
-		val Defvar (v, q, k0, c, aa, ww) = d0
-		val (k1, acc1) = (walk_k (k0, acc0))
-		val d1 = Defvar (v, q, k1, c, aa, ww)
-		val (h1, acc2) = (walk_in_x_option walk_h (h0, acc1))
-		val m1 = Mod_Redeclare (r, d1, h1)
-	    in
-		(m1, acc2)
-	    end)
-	  | Mod_Elemental_Redeclare (z, r, d0, h0) => (
-	    let
-		val Defvar (v, q, k0, c, aa, ww) = d0
-		val (k1, acc1) = (walk_k (k0, acc0))
-		val d1 = Defvar (v, q, k1, c, aa, ww)
-		val (h1, acc2) = (walk_in_x_option walk_h (h0, acc1))
-		val m1 = Mod_Elemental_Redeclare (z, r, d1, h1)
-	    in
-		(m1, acc2)
-	    end)
-	  | Mod_Entry (ef, n, mm0, w) => (
-	    let
-		val (mm1, acc1) = (map_along walk_m (mm0, acc0))
-		val m1 = Mod_Entry (ef, n, mm1, w)
-	    in
-		(m1, acc1)
-	    end)
-	  | Mod_Value x0 => (
-	    let
-		val (x1, acc1) = (walk_x (x0, acc0))
-		val m1 = Mod_Value x1
-	    in
-		(m1, acc1)
-	    end)
-    end)
-
-and walk_in_constraint ewalk ((h0 : constraint_t), acc0) = (
-    let
-	val walk_m = (walk_in_modifier ewalk)
-
-	val (k0, mm0, Annotation aa0, ww) = h0
-	val (mm1, acc1) = (map_along walk_m (mm0, acc0))
-	val (aa1, acc2) = (map_along walk_m (aa0, acc1))
-	val h1 = (k0, mm1, Annotation aa1, ww)
-    in
-	(h1, acc2)
-    end)
-
 
 end
