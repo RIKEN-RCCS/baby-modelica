@@ -1,9 +1,9 @@
 (* walker.sml -*-Coding: us-ascii-unix;-*- *)
 (* Copyright (C) 2018-2020 RIKEN R-CCS *)
 
-(* EXPRESSION SCANNING.  It walks in expressions, and its helper
-   routines help traverse in equations/statements in a class.  These
-   routines are used after resolving variable references. *)
+(* EXPRESSION SCANNING.  It walks in expressions.  Helper routines
+   help traverse in equations/statements in a class.  These routines
+   are used after resolving variable references. *)
 
 structure walker :
 sig
@@ -267,8 +267,8 @@ fun walk_in_expression (evamp : 'a e_vamper_t) (w0, acc0) = (
 
 (* ================================================================ *)
 
-(* Calls walkers in equations/statements in a class.  It rejects
-   simple types. *)
+(* Calls walkers in equations/statements in a class.  It works on a
+   value expression in a simple type through a dummy equation. *)
 
 fun walk_in_class (vamp : 'a vamper_t) (k0 : definition_body_t, acc0) = (
     if (class_is_simple_type k0) then

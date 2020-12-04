@@ -132,19 +132,14 @@ fun expand_equations_in_instance (k0, acc0) = (
 	let
 	    val _ = if (not (class_is_primitive k0)) then () else raise Match
 	in
-	    (*
-	    if (class_is_simple_type k0) then
-		acc0
-	    else
-	    *)
-		let
-		    val qfix = (fn (q, _) => ((expand_equations k0 [] q), []))
-		    val sfix = (fn (s, a) => (s, a))
-		    val walker = {q_vamp = qfix, s_vamp = sfix}
-		    val (k1, acc1) = (walk_in_class walker (k0, acc0))
-		in
-		    acc1
-		end
+	    let
+		val qfix = (fn (q, _) => ((expand_equations k0 [] q), []))
+		val sfix = (fn (s, a) => (s, a))
+		val walker = {q_vamp = qfix, s_vamp = sfix}
+		val (k1, acc1) = (walk_in_class walker (k0, acc0))
+	    in
+		acc1
+	    end
 	end)
 
 fun expand_equations_for_connects () = (
@@ -203,21 +198,16 @@ fun collect_connects_in_instance (k0, acc0) = (
 	let
 	    val _ = if (not (class_is_primitive k0)) then () else raise Match
 	in
-	    (*
-	    if (class_is_simple_type k0) then
-		acc0
-	    else
-	    *)
-		let
-		    val efix = (fn (e, a) => (e, a))
-		    val qfix = (collect_connects_in_equation k0)
-		    val qwalk = (walk_in_equation qfix efix)
-		    val sfix = (fn (s, a) => (s, a))
-		    val walker = {q_vamp = qwalk, s_vamp = sfix}
-		    val (k1, acc1) = (walk_in_class walker (k0, acc0))
-		in
-		    acc1
-		end
+	    let
+		val efix = (fn (e, a) => (e, a))
+		val qfix = (collect_connects_in_equation k0)
+		val qwalk = (walk_in_equation qfix efix)
+		val sfix = (fn (s, a) => (s, a))
+		val walker = {q_vamp = qwalk, s_vamp = sfix}
+		val (k1, acc1) = (walk_in_class walker (k0, acc0))
+	    in
+		acc1
+	    end
 	end)
 
 fun collect_connects () = (
