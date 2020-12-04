@@ -37,9 +37,6 @@ val traverse_tree = classtree.traverse_tree
 
 val take_enumarator_element = simpletype.take_enumarator_element
 
-val walk_in_class = walker.walk_in_class
-val Q_Walker = walker.Q_Walker
-
 (* ================================================================ *)
 
 (* Returns a zero-origin integer indicating the order of a boolean. *)

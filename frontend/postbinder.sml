@@ -26,9 +26,10 @@ val replace_outer_reference = classtree.replace_outer_reference
 val make_reference = binder.make_reference
 val bind_in_class = binder.bind_in_class
 
-val walk_in_expression = walker.walk_in_expression
 val walk_in_class = walker.walk_in_class
-val E_Walker = walker.E_Walker
+val walk_in_expression = walker.walk_in_expression
+val walk_in_equation = walker.walk_in_equation
+val walk_in_statement = walker.walk_in_statement
 
 val secure_reference = builder.secure_reference
 val secure_subject = builder.secure_subject
@@ -36,14 +37,31 @@ val secure_subject = builder.secure_subject
 (* ================================================================ *)
 
 fun secure_references_in_class kp = (
-    let
-	val ctx = kp
-	val buildphase = false
-	val walker = (fn (x, _) => ((secure_reference ctx buildphase x), ()))
-	val (_, _) = (walk_in_class {walker = E_Walker walker} (kp, ()))
-    in
-	()
-    end)
+    (*
+    if (class_is_simple_type kp) then
+	let
+	    val ctx = kp
+	    val buildphase = false
+	    val vamp = (fn (x, _) => ((secure_reference ctx buildphase x), ()))
+	    val ewalk = (walk_in_expression vamp)
+	    val (_, _) = (walk_in_simple_type ewalk (kp, ()))
+	in
+	    ()
+	end
+    else
+    *)
+	let
+	    val ctx = kp
+	    val buildphase = false
+	    val efix = (fn (x, _) => ((secure_reference ctx buildphase x), ()))
+	    val ewalk = (walk_in_expression efix)
+	    val qwalk = (walk_in_equation (fn (q, a) => (q, a)) ewalk)
+	    val swalk = (walk_in_statement (fn (s, a) => (s, a)) ewalk)
+	    val walker = {q_vamp = qwalk, s_vamp = swalk}
+	    val (_, _) = (walk_in_class walker (kp, ()))
+	in
+	    ()
+	end)
 
 (* Resolves variable references in a package or an instance.  It
    returns true if some instances are processed, to repeat the process
@@ -147,14 +165,32 @@ fun replace_outer_in_instance (k0, acc0) = (
     else
 	let
 	    val _ = if (not (class_is_primitive k0)) then () else raise Match
-
-	    val subj = (subject_of_class k0)
-	    val ctx = k0
-	    val walker = (fn (w, _) => ((replace_outer_reference w), ()))
-	    val (k1, _) = (walk_in_class {walker = E_Walker walker} (k0, ()))
-	    val _ = (store_to_instance_tree subj k1)
 	in
-	    acc0
+	    (*
+	    if (class_is_simple_type k0) then
+		let
+		    val subj = (subject_of_class k0)
+		    val vamp = (fn (w, _) => ((replace_outer_reference w), ()))
+		    val ewalk = (walk_in_expression vamp)
+		    val (k1, _) = (walk_in_simple_type ewalk (k0, ()))
+		    val _ = (store_to_instance_tree subj k1)
+		in
+		    acc0
+		end
+	    else
+	    *)
+		let
+		    val subj = (subject_of_class k0)
+		    val efix = (fn (w, _) => ((replace_outer_reference w), ()))
+		    val ewalk = (walk_in_expression efix)
+		    val qwalk = (walk_in_equation (fn (q, a) => (q, a)) ewalk)
+		    val swalk = (walk_in_statement (fn (s, a) => (s, a)) ewalk)
+		    val walker = {q_vamp = qwalk, s_vamp = swalk}
+		    val (k1, _) = (walk_in_class walker (k0, ()))
+		    val _ = (store_to_instance_tree subj k1)
+		in
+		    acc0
+		end
 	end)
 
 fun replace_outer () = (

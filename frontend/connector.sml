@@ -26,9 +26,9 @@ val fold_constants_in_expression = folder.fold_constants_in_expression
 val explicitize_range = folder.explicitize_range
 
 val walk_in_class = walker.walk_in_class
+val walk_in_expression = walker.walk_in_expression
 val walk_in_equation = walker.walk_in_equation
-val Q_Walker = walker.Q_Walker
-val E_Walker = walker.E_Walker
+val walk_in_statement = walker.walk_in_statement
 
 (* ================================================================ *)
 
@@ -52,9 +52,9 @@ fun replace_iterator_in_expression kp env (w, _) = (
 
 fun replace_iterator_in_equation kp env q0 = (
     let
-	val walker = (replace_iterator_in_expression kp env)
-	val ctx = {walker = E_Walker walker}
-	val (q1, _) = (walk_in_equation ctx kp (q0, ()))
+	val efix = (replace_iterator_in_expression kp env)
+	val qfix = (fn (q, a) => (q, a))
+	val (q1, _) = (walk_in_equation qfix efix (q0, ()))
     in
 	q1
     end)
@@ -131,13 +131,20 @@ fun expand_equations_in_instance (k0, acc0) = (
     else
 	let
 	    val _ = if (not (class_is_primitive k0)) then () else raise Match
-
-	    val subj = (subject_of_class k0)
-	    val walker = (fn (q, x) => ((expand_equations k0 [] q), []))
-	    val ctx = {walker = Q_Walker walker}
-	    val (k1, acc1) = (walk_in_class ctx (k0, acc0))
 	in
-	    acc1
+	    (*
+	    if (class_is_simple_type k0) then
+		acc0
+	    else
+	    *)
+		let
+		    val qfix = (fn (q, _) => ((expand_equations k0 [] q), []))
+		    val sfix = (fn (s, a) => (s, a))
+		    val walker = {q_vamp = qfix, s_vamp = sfix}
+		    val (k1, acc1) = (walk_in_class walker (k0, acc0))
+		in
+		    acc1
+		end
 	end)
 
 fun expand_equations_for_connects () = (
@@ -195,13 +202,22 @@ fun collect_connects_in_instance (k0, acc0) = (
     else
 	let
 	    val _ = if (not (class_is_primitive k0)) then () else raise Match
-
-	    val subj = (subject_of_class k0)
-	    val walker = (collect_connects_in_equation k0)
-	    val ctx = {walker = Q_Walker walker}
-	    val (k1, acc1) = (walk_in_class ctx (k0, acc0))
 	in
-	    acc1
+	    (*
+	    if (class_is_simple_type k0) then
+		acc0
+	    else
+	    *)
+		let
+		    val efix = (fn (e, a) => (e, a))
+		    val qfix = (collect_connects_in_equation k0)
+		    val qwalk = (walk_in_equation qfix efix)
+		    val sfix = (fn (s, a) => (s, a))
+		    val walker = {q_vamp = qwalk, s_vamp = sfix}
+		    val (k1, acc1) = (walk_in_class walker (k0, acc0))
+		in
+		    acc1
+		end
 	end)
 
 fun collect_connects () = (
