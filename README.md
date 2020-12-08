@@ -6,24 +6,26 @@ __Baby-Modelica comes with ABSOLUTELY NO WARRANTY.__
 
 Baby-Modelica is a simple parser of the Modelica language
 specification 3.4.  Its intended use is to create data extraction
-tools for Modelica models.  The parser can dump a flat model.  A
-generated flat model is to be reloadable by Modelica compliers.
-Current status is a pre-zero version, we are working towards version
-zero.  The version number of Baby-Modelica is the last digits,
-appended to the version number of the Modelica language specification.
+tools for Modelica models.  The parser can dump a flat model, and a
+generated flat model is hopefully to be re-readble by Modelica
+compliers.  Current status is a pre-zero version, and we are working
+towards version zero.  The version number of Baby-Modelica is the last
+digits, appended to the version number of the Modelica language
+specification.
 
 Baby-Modelica is written in SML'97 (Standard ML) and developed mainly
-with Poly/ML (on SUNOS 5.11/amd64) and tested with SML/NJ.  It uses a
-modified BYACC parser generator (not ml-yacc), which needs be obtained
-separately.
+with Poly/ML (on SUNOS 5.11/amd64), but it may work with SML/NJ or
+MLton.  It uses a modified BYACC parser generator (not ml-yacc), which
+needs be obtained separately.
 
 See [https://www.modelica.org](https://www.modelica.org) for
 information of Modelica.
 
 If someone might be unfamiliar with SML, see
 [http://sml-family.org](http://sml-family.org).  Poly/ML is at
-[https://www.polyml.org](https://www.polyml.org) and SML/NJ is at
-[https://smlnj.org](https://smlnj.org).
+[https://www.polyml.org](https://www.polyml.org), SML/NJ is at
+[https://smlnj.org](https://smlnj.org), and MLton is at
+[https://mlton.org](https://mlton.org).
 
 ----
 

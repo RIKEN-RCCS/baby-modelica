@@ -79,6 +79,8 @@ sig
     val fetch_instance_tree_node : subject_t -> instance_node_t option
     val descend_instance_tree :
 	(id_t * int list) list -> instance_node_t -> instance_node_t option
+    val descend_instance_tree_node :
+	id_t -> instance_node_t -> component_slot_t option
 
     val traverse_tree :
 	(definition_body_t * 'a list -> 'a list)
@@ -216,7 +218,7 @@ val model_root_node = instance_tree
 
 (* Accesses a component in the instance_tree at an index.  An access
    with index=[] means either as a scalar or as an array.  An array is
-   returned as a Def_Mock_Array. *)
+   returned as a dummy node containing a Def_Mock_Array. *)
 
 fun access_component subj (Slot (v, dim, ee, dummy)) (index : int list) = (
     case (index, dim) of
@@ -251,6 +253,18 @@ fun access_component subj (Slot (v, dim, ee, dummy)) (index : int list) = (
 
 fun find_component id components = (
     (List.find (fn (Slot (x, _, _, _)) => (x = id)) components))
+
+(* Descends the instance_tree by one step. *)
+
+fun descend_instance_tree_node id (node0 : instance_node_t) = (
+    let
+	val (subj, kx, cx) = node0
+	val components = (! cx)
+    in
+	case (find_component id components) of
+	    NONE => NONE
+	  | SOME slot => SOME slot
+    end)
 
 (* Accesses an instance_tree node by a part of a subject.  It may
    return an instance_tree node or NONE. *)

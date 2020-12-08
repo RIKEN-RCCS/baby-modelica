@@ -500,6 +500,9 @@ and walk_in_constraint ewalk ((h0 : constraint_t), acc0) = (
 	(h1, acc2)
     end)
 
+(* Applies a function to each equation in the post-order as well as it
+   applies a function to an expression when it encounters. *)
+
 fun walk_in_equation qvamp (ewalk : 'a e_vamper_t) (q0, acc0) = (
     let
 	val walk_x = ewalk
@@ -568,6 +571,9 @@ fun walk_in_equation qvamp (ewalk : 'a e_vamper_t) (q0, acc0) = (
 		(qvamp (q1, acc3))
 	    end)
     end)
+
+(* Applies a function to each statement in the post-order as well as
+   it applies a function to an expression when it encounters. *)
 
 fun walk_in_statement svamp (ewalk : 'a e_vamper_t) (s0, acc0) = (
     let

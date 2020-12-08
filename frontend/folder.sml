@@ -14,7 +14,7 @@ sig
     type expression_t
     type id_t
 
-    val fold_constants_in_expression :
+    val fold_constants :
 	definition_body_t -> bool -> (id_t * expression_t) list
 	-> expression_t -> expression_t
 
@@ -38,7 +38,7 @@ val expression_is_literal = expression.expression_is_literal
 (*val unary_operator = operator.unary_operator*)
 (*val binary_operator = operator.binary_operator*)
 (*val relational_operator = operator.relational_operator*)
-val fold_constants_on_operator = operator.fold_constants_on_operator
+val fold_operator_application = operator.fold_operator_application
 val fold_pseudo_split = operator.fold_pseudo_split
 val bool_order = operator.bool_order
 val enumerator_order = operator.enumerator_order
@@ -205,7 +205,7 @@ fun expression_is_constant__ w = (
 fun value_of_reference w0 = (
     case w0 of
 	Vref (_, []) => raise Match
-      | Vref (NONE, []) => raise Match
+      | Vref (NONE, _) => raise Match
       | Vref (SOME _, _) => (
 	let
 	    val subj = (reference_as_subject w0)
@@ -216,13 +216,14 @@ fun value_of_reference w0 = (
 	end)
       | _ => raise Match)
 
-(* Returns a pair of an expression and a class.  It does not repeat
-   simplifying when oneshot=true. *)
+(* Simplifies an expression.  It does not repeat simplifying when
+   oneshot=true.  An environment holds bindings of iterator variables,
+   or it is null and ignored.  It assumes entries in an environment
+   are already simplified. *)
 
-fun fold_expression ctx oneshot w0 = (
+fun fold_expression ctx oneshot env w0 = (
     let
-	val walk_x = (fold_expression ctx oneshot)
-	val walk_x = (fold_expression ctx oneshot)
+	val walk_x = (fold_expression ctx oneshot env)
 	val walk_n_x = (fn (n, x) => (n, (walk_x x)))
 	val walk_x_x = (fn (x, y) => ((walk_x x), (walk_x y)))
 	val walk_x_option = (Option.map walk_x)
@@ -239,7 +240,7 @@ fun fold_expression ctx oneshot w0 = (
 	  | Vref (NONE, _) => raise Match
 	  | Vref (SOME _, _) => (
 	    let
-		val (w1, literals) = (fold_subscripts ctx oneshot w0)
+		val (w1, literals) = (fold_subscripts ctx oneshot env w0)
 	    in
 		if (not literals) then
 		    w1
@@ -260,7 +261,7 @@ fun fold_expression ctx oneshot w0 = (
 		    (* DO NOT REPEAT FOLDING. *)
 		    w1
 		else
-		    (fold_constants_on_operator (f1, xx1))
+		    (fold_operator_application (f1, xx1))
 	    end)
 	  | ITE cc0 => (
 	    let
@@ -360,22 +361,29 @@ fun fold_expression ctx oneshot w0 = (
 	    end)
 	  | Component_Ref _ => w0
 	  | Instance (dim, kk, _) => w0
-	  | Iref _ => w0
+	  | Iref id => (
+	    if (null env) then
+		w0
+	    else
+		case (List.find (fn (v, x) => (v = id)) env) of
+		    NONE => raise Match
+		  | SOME (_, NIL) => w0
+		  | SOME (_, x) => x)
 	  | Array_fill (x, n) => w0
 	  | Array_diagonal x => w0
     end)
 
-(* Tries to simplify in array subscripts, and returns a variable
+(* Tries to simplify array subscripts.  It returns a variable
    reference and a boolean indicating indices are all literals. *)
 
-and fold_subscripts ctx oneshot w0 = (
+and fold_subscripts ctx oneshot env w0 = (
     case w0 of
 	Vref (_, []) => raise Match
       | Vref (NONE, _) => raise Match
       | Vref (SOME ns, rr0) => (
 	let
 	    fun mapr f (x0, x1) = (x0, f x1)
-	    val convert = (fold_expression ctx oneshot)
+	    val convert = (fold_expression ctx oneshot env)
 	    val rr1 = (map (mapr (map convert)) rr0)
 	    val ok = (List.all ((List.all expression_is_literal) o #2) rr1)
 	in
@@ -384,13 +392,15 @@ and fold_subscripts ctx oneshot w0 = (
       | _ => raise Match)
 
 (* Simplifies an expression.  It does not repeat simplifying when
-   oneshot=true.  It is to allow the resolver routines to assure
-   referenced variables are instantiated in the build-phase. *)
+   oneshot=true.  It is to give a chance that the resolver routines to
+   assure referenced variables are instantiated in the build-phase.
+   An environment holds iterator bindings of for-equations. *)
 
-fun fold_constants_in_expression kp oneshot env0 w0 = (
+fun fold_constants kp oneshot env w0 = (
     let
+	val _= if ((not oneshot) orelse (null env)) then () else raise Match
 	val ctx = {k = kp}
-	val w1 = (fold_expression ctx oneshot w0)
+	val w1 = (fold_expression ctx oneshot env w0)
 	val _ = tr_expr_vvv (";; fold_constants ("^
 			     (expression_to_string w0) ^"=>"^
 			     (expression_to_string w1) ^")")

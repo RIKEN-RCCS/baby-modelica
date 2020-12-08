@@ -7,6 +7,7 @@ structure expression
 : sig
     type number_type_t
     type expression_t
+    type equation_t
 
     val bool_order : expression_t -> int
     val bool_nth : int -> expression_t
@@ -24,6 +25,8 @@ structure expression
     val range_nth : expression_t -> expression_t -> int list -> expression_t
 
     val expression_is_literal : expression_t -> bool
+
+    val find_iterator_range : expression_t -> equation_t list -> int option
 end = struct
 
 open ast plain
@@ -33,7 +36,9 @@ fun tr_expr (s : string) = if true then (print (s ^"\n")) else ()
 fun tr_expr_vvv (s : string) = if false then (print (s ^"\n")) else ()
 
 val instance_tree = classtree.instance_tree
+val class_tree = classtree.class_tree
 val traverse_tree = classtree.traverse_tree
+val descend_instance_tree_node = classtree.descend_instance_tree_node
 
 val take_enumarator_element = simpletype.take_enumarator_element
 
@@ -280,5 +285,176 @@ fun expression_is_literal w = (
       | Iref _ => false
       | Array_fill _ => false
       | Array_diagonal _ => false)
+
+(* ================================================================ *)
+
+(* Scans primary expressions with an iterator v=Iref, while it skips
+   subexpressions when an iterator is hidden by another one.  It calls
+   f on Vref and g on Iref (every expression, not taking the iterator
+   into consideration), but skips other primary expressions. *)
+
+fun scan_for_iterator_e v (f, g) (w, acc0) = (
+    let
+	val scan_e = scan_for_iterator_e v (f, g)
+
+	fun scan_may_be_hidden_e ((x, uu0), acc0) = (
+	    case uu0 of
+		[] => (scan_e (x, acc0))
+	      | (id, r) :: uu1 => (
+		let
+		    val acc1 = (scan_e (r, acc0))
+		in
+		    if (v = Iref id) then
+			acc1
+		    else
+			(scan_may_be_hidden_e ((x, uu1), acc1))
+		end))
+    in
+	case w of
+	    NIL => acc0
+	  | Colon => acc0
+	  | Otherwise => acc0
+	  | Scoped _ => raise Match
+	  | Vref (_, []) => raise Match
+	  | Vref (NONE, _) => raise Match
+	  | Vref (SOME _, rr) => (f (w, acc0))
+	  | Opr _ => acc0
+	  | App (x, xx) => (foldl scan_e acc0 (x :: xx))
+	  | ITE cc => (
+	    (foldl (fn ((x, y), acc) => (foldl scan_e acc [x, y])) acc0 cc))
+	  | Der xx => (foldl scan_e acc0 xx)
+	  | Pure xx => (foldl scan_e acc0 xx)
+	  | Closure (n, xx) => (foldl scan_e acc0 xx)
+	  | L_Number _ => acc0
+	  | L_Bool _ => acc0
+	  | L_Enum _ => acc0
+	  | L_String _ => acc0
+	  | Array_Triple (x, y, NONE) => (foldl scan_e acc0 [x, y])
+	  | Array_Triple (x, y, SOME z) => (foldl scan_e acc0 [x, y, z])
+	  | Array_Constructor xx => (foldl scan_e acc0 xx)
+	  | Array_Comprehension (x, uu) => (
+	    (scan_may_be_hidden_e ((x, uu), acc0)))
+	  | Array_Concatenation xx => (
+	    (foldl (fn (yy, acc) => (foldl scan_e acc yy)) acc0 xx))
+	  | Tuple xx => raise error_tuple_in_rhs
+	  | Reduction_Argument (x, uu) => (
+	    (scan_may_be_hidden_e ((x, uu), acc0)))
+	  | Named_Argument (n, x) => (scan_e (x, acc0))
+	  | Pseudo_Split (x, s) => (scan_e (x, acc0))
+	  | Component_Ref (x, c) => (scan_e (x, acc0))
+	  | Instance _ => acc0
+	  | Iref _ => (g (w, acc0))
+	  | Array_fill (x, y) => (foldl scan_e acc0 [x, y])
+	  | Array_diagonal x => (scan_e (x, acc0))
+    end)
+
+fun scan_for_iterator_q v (f, g) (q, acc0) = (
+    let
+	val scan_e = scan_for_iterator_e v (f, g)
+	val scan_q = scan_for_iterator_q v (f, g)
+
+	fun scan_may_be_hidden_q ((qq, uu0), acc0) = (
+	    case uu0 of
+		[] => (foldl scan_q acc0 qq)
+	      | (id, r) :: uu1 => (
+		let
+		    val acc1 = (scan_e (r, acc0))
+		in
+		    if (v = Iref id) then
+			acc1
+		    else
+			(scan_may_be_hidden_q ((qq, uu1), acc1))
+		end))
+    in
+	case q of
+	    Eq_Eq ((x, y), _, _) => (foldl scan_e acc0 [x, y])
+	  | Eq_Connect ((x, y), _, _) => (foldl scan_e acc0 [x, y])
+	  | Eq_If (cc, _, _) => (
+	    (foldl
+		 (fn ((x, qq), acc) => (foldl scan_q (scan_e (x, acc)) qq))
+		 acc0 cc))
+	  | Eq_When (cc, _, _) => (
+	    (foldl
+		 (fn ((x, qq), acc) => (foldl scan_q (scan_e (x, acc)) qq))
+		 acc0 cc))
+	  | Eq_For ((uu, qq), _, _) => (
+	    (scan_may_be_hidden_q ((qq, uu), acc0)))
+	  | Eq_App ((e, ee), _, _) => (
+	    (foldl scan_e acc0 (e :: ee)))
+    end)
+
+(* Tests an iterator v=Iref appears in an expression. *)
+
+fun contains_iterator v w = (
+    let
+	fun f (x, acc) = acc
+	fun g (x, acc) = (v = x) orelse acc
+    in
+	(scan_for_iterator_e v (f, g) (w, false))
+    end)
+
+fun unique_range (vv0 : int option list) : int option = (
+    let
+	val vv1 = (List.mapPartial (fn v => v) vv0)
+    in
+	case (list_all_equal (op =) vv1) of
+	    NONE => raise error_varying_iterator_range
+	  | SOME NONE => NONE
+	  | SOME (SOME v) => SOME v
+    end)
+
+fun find_range_in_reference_loop v (node0, rr0) : int option = (
+    let
+	fun select bitmap dim = (
+	    (foldl (fn ((b, x), acc) => if b then x :: acc else acc)
+		   [] (ListPair.zip (bitmap, dim))))
+    in
+	case rr0 of
+	    [] => NONE
+	  | (c as (id, ss)) :: rr1 => (
+	    case (descend_instance_tree_node id node0) of
+		NONE => raise Match
+	      | SOME (Slot (_, dim, array, _)) => (
+		let
+		    val _ = if ((length ss) <= (length dim)) then ()
+			    else raise Match
+
+		    val bitmap = (map (contains_iterator v) ss)
+		    val gg0 = (map SOME (select bitmap dim))
+		    val rrx = (map (fn node => (node, rr1)) array)
+		    val gg1 = (map (find_range_in_reference_loop v) rrx)
+		in
+		    (unique_range (gg0 @ gg1))
+		end))
+    end)
+
+(* Returns a range value as an integer for an iterator v=Iref, when an
+   iterator is found in the subscripts.  It is not called when an
+   iterator is hidden by another nested iteration. *)
+
+fun find_range_in_reference v (w, acc0) : int option = (
+    case w of
+	Vref (_, []) => raise Match
+      | Vref (NONE, _) => raise Match
+      | Vref (SOME ns, rr0) => (
+	let
+	    val root = if (ns = PKG) then class_tree else instance_tree
+	    val g0 = (find_range_in_reference_loop v (root, rr0))
+	in
+	    (unique_range [g0, acc0])
+	end)
+      | _ => raise Match)
+
+(* Returns a range value (as an integer) of an iterator v=Iref. *)
+
+fun find_iterator_range v qq = (
+    let
+	fun f (x, acc) = (find_range_in_reference v (x, acc))
+	fun g (x, acc) = acc
+    in
+	(foldl (scan_for_iterator_q v (f, g)) NONE qq)
+    end)
+
+(* ================================================================ *)
 
 end

@@ -19,8 +19,8 @@ sig
 	-> expression_t
     *)
 
-    val fold_constants_on_operator :
-	(expression_t * expression_t list) -> expression_t
+    val fold_operator_application :
+	expression_t * expression_t list -> expression_t
 
     val obtain_array_dimension :
 	expression_t -> int list * bool
@@ -313,7 +313,7 @@ fun fold_on_global_function (name, args) = (
 	  | _ => rawvalue
     end)
 
-fun fold_constants_on_operator (f, args) = (
+fun fold_operator_application (f, args) = (
     let
 	val rawvalue = App (f, args)
 	val pow = Math.pow

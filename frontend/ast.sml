@@ -405,18 +405,19 @@ and element_union_t
    not in an expression.  Scoped is an expression in a scope.  Vref
    represents a component reference which includes array indexing.  A
    first optional slot indicates whether it is resolved.  Opr
-   represends predefined operators.  L_Number, L_String, L_Bool, and
-   L_Enum are literals.  L_Number has a slot indicating Real or
-   Integer.  Real literals are represented by strings to make syntax
-   trees eqtype in SML.  L_Enum is introduced when enumerations are
-   processed.  Reduction_Argument is an argument list for reductions.
-   Note that arguments to Array_Constructor is non-empty.
-   Pseudo_Split is an array indexing, that is introduced at rewriting
-   a non-each modifier on an array.  Component_Ref is a component
-   reference, that is introduced at rewriting a modifier of class
-   copying.  It is with an array dimension which is null for a scalar
-   component.  Iref is an iterator variable reference.  Others,
-   Array_fill, Array_diagonal, etc. are predefined functions. *)
+   represents predefined operators.  Closure is a partially applied
+   function.  L_Number, L_String, L_Bool, and L_Enum are literals.
+   L_Number has a slot indicating Real or Integer.  Real literals are
+   represented by strings to make syntax trees eqtype in SML.  L_Enum
+   is introduced when enumerations are processed.  Reduction_Argument
+   is an argument list for reductions.  Note that arguments to
+   Array_Constructor is non-empty.  Pseudo_Split is an array indexing,
+   that is introduced at rewriting a non-each modifier on an array.
+   Component_Ref is a component reference, that is introduced at
+   rewriting a modifier of class copying.  It is with an array
+   dimension which is null for a scalar component.  Iref is an
+   iterator variable reference.  Others, Array_fill, Array_diagonal,
+   etc. are predefined functions. *)
 
 and expression_t
     = NIL

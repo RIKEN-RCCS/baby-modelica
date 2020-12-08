@@ -333,4 +333,10 @@ val error_range_on_array = Match
 
 val error_range_on_class = Match
 
+val error_bad_reference = Match
+
+val error_varying_iterator_range = Match
+
+val error_unknown_iterator_range = Match
+
 end

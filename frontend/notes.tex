@@ -120,9 +120,9 @@ the_specification.
 \begin{itemize}
 
 \item The_implementation is written in SML~'97 (Standard ML).  The
-code is developed with Poly/ML and SML/NJ (on SunOS~5.11/amd64).
-Sometimes the code is twisted because SML does not allow forward
-references of names.
+code is developed mainly with Poly/ML (on SunOS~5.11/amd64), but it
+may work with SML/NJ or MLton.  Sometimes the code is twisted because
+SML does not allow forward references of names.
 
 \item The_implementation uses a modified BYACC parser generator (not
 ml-yacc), which can be obtained separately.
@@ -158,6 +158,9 @@ other errors are often synonyms of the Match exception.
 exception.  The definition of {ModelicaServices.Integer\_inf} in
 MSL~3.2.3 is in 32~bits, and it is no problem for 64~bit SML
 implementations.
+
+\item (* The code for expansion for-equations and implicit iterator
+ranges is not tested at all *).
 
 \end{itemize}
 
@@ -525,6 +528,15 @@ concatenating an identity of a package and a name given after
 redeclarations.  See Fact~\ref{record-class-identity}.
 The_implementation does not identify functions this way, because
 modifications of values change the function.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Implicit Iterator Ranges}
+
+A range of an implicit iterator is taken as a subscript part of an
+expression that includes an iterator.  It checks the occurrence only
+but ignores the expression.  See
+Section~\ref{sec:implicit-iterator-ranges}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -3185,14 +3197,18 @@ handling by nesting iterators.
 evaluated once for each for-equation, and is evaluated in the scope
 immediately enclosing the for-equation.\end{qquote}
 
-\subsubsection*{Implicit iterator ranges}
+\subsubsection*{Implicit iterator ranges}\label{sec:implicit-iterator-ranges}
 
 A range expression of an iterator is optional, and the range is
-inferred from the uses of an iterator.  Implicit iterator ranges are
-allowed in every {\it{}for}-iteration, that is, loops in equations and
-statements, reductions, and array constructors.  Implicit ranges are
-accepted for arrays with dimensions of Integer, Boolean, and
-enumeration.  See the example in \specref{4.8.5}.
+inferred from the uses of an iterator.  Implicit ranges are accepted
+for arrays with dimensions of Integer, Boolean, and enumeration.
+Implicit iterator ranges are allowed in any {\it{}for}-iteration in
+equations, statements, reductions, and array constructors.
+
+It is assumed that the range of an implicit iterator is inferred by
+the range of the subscript where an iterator occurs.
+
+See the example in \specref{4.8.5}.
 %%%%
 \begin{quote}
 \begin{lstlisting}[aboveskip=-\baselineskip]
@@ -4945,24 +4961,26 @@ __Baby-Modelica comes with ABSOLUTELY NO WARRANTY.__
 
 Baby-Modelica is a simple parser of the Modelica language
 specification 3.4.  Its intended use is to create data extraction
-tools for Modelica models.  The parser can dump a flat model.  A
-generated flat model is to be reloadable by Modelica compliers.
-Current status is a pre-zero version, we are working towards version
-zero.  The version number of Baby-Modelica is the last digits,
-appended to the version number of the Modelica language specification.
+tools for Modelica models.  The parser can dump a flat model, and a
+generated flat model is hopefully to be re-readble by Modelica
+compliers.  Current status is a pre-zero version, and we are working
+towards version zero.  The version number of Baby-Modelica is the last
+digits, appended to the version number of the Modelica language
+specification.
 
 Baby-Modelica is written in SML'97 (Standard ML) and developed mainly
-with Poly/ML (on SUNOS 5.11/amd64) and tested with SML/NJ.  It uses a
-modified BYACC parser generator (not ml-yacc), which needs be obtained
-separately.
+with Poly/ML (on SUNOS 5.11/amd64), but it may work with SML/NJ or
+MLton.  It uses a modified BYACC parser generator (not ml-yacc), which
+needs be obtained separately.
 
 See [https://www.modelica.org](https://www.modelica.org) for
 information of Modelica.
 
 If someone might be unfamiliar with SML, see
 [http://sml-family.org](http://sml-family.org).  Poly/ML is at
-[https://www.polyml.org](https://www.polyml.org) and SML/NJ is at
-[https://smlnj.org](https://smlnj.org).
+[https://www.polyml.org](https://www.polyml.org), SML/NJ is at
+[https://smlnj.org](https://smlnj.org), and MLton is at
+[https://mlton.org](https://mlton.org).
 
 ----
 

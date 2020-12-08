@@ -21,8 +21,9 @@ val instance_tree = classtree.instance_tree
 val traverse_tree = classtree.traverse_tree
 
 val expression_is_literal = expression.expression_is_literal
+val find_iterator_range = expression.find_iterator_range
 
-val fold_constants_in_expression = folder.fold_constants_in_expression
+val fold_constants = folder.fold_constants
 val explicitize_range = folder.explicitize_range
 
 val walk_in_class = walker.walk_in_class
@@ -31,6 +32,8 @@ val walk_in_equation = walker.walk_in_equation
 val walk_in_statement = walker.walk_in_statement
 
 (* ================================================================ *)
+
+(* Tests a connector equation appears in an equation. *)
 
 fun contains_connects (q0, contains0) = (
     let
@@ -47,26 +50,31 @@ fun contains_connects (q0, contains0) = (
 	    (foldl contains_connects contains0 qq))
     end)
 
-fun replace_iterator_in_expression kp env (w, _) = (
-    ((fold_constants_in_expression kp false env w), ()))
+(* Replaces iterator references.  Folding constants with an
+   environment replaces iterators. *)
 
-fun replace_iterator_in_equation kp env q0 = (
+fun replace_iterators kp env q0 = (
     let
-	val efix = (replace_iterator_in_expression kp env)
+	fun mapl f (x0, x1) = (f x0, x1)
+	val efix = (mapl (fold_constants kp false env))
 	val qfix = (fn (q, a) => (q, a))
 	val (q1, _) = (walk_in_equation qfix efix (q0, ()))
     in
 	q1
     end)
 
+(* Simplifies equations by choosing a branch of if-equations and
+   unrolling for-equations, when they contain connect equations.  Note
+   that it checks containment of a connect multiple times. *)
+
 fun expand_equations kp env q0 = (
     let
-	fun branch env0 cc0 = (
+	fun branch env0 cc0 : equation_t list = (
 	    case cc0 of
 		[] => []
 	      | (w0, qq0) :: cc1 => (
 		let
-		    val w1 = (fold_constants_in_expression kp false env0 w0)
+		    val w1 = (fold_constants kp false env0 w0)
 		in
 		    if (not (expression_is_literal w1)) then
 			raise error_conditional_containing_connect
@@ -87,38 +95,55 @@ fun expand_equations kp env q0 = (
 			  | _ => raise Match
 		end))
 
-	fun range (qq0, aa, ww) env0 rr0 : equation_t = (
+	fun unroll qq0 env0 rr0 : equation_t list = (
 	    case rr0 of
 		[] => (
+		(map (replace_iterators kp env0) qq0))
+	      | (v, Colon) :: rr1 => (
+		case (find_iterator_range (Iref v) qq0) of
+		    NONE => raise error_unknown_iterator_range
+		  | SOME n => (
+		    let
+			val vv = (map z_literal (z_seq 1 1 n))
+		    in
+			(map (fn x =>
+				 Eq_If ([(Otherwise,
+					  (unroll qq0 ((v, x) :: env0) rr1))],
+				    Annotation [], Comment []))
+			     vv)
+		    end))
+	      | (v, w0) :: rr1 => (
 		let
-		    val qq1 = (map (replace_iterator_in_equation kp env0) qq0)
+		    val w1 = (fold_constants kp false env0 w0)
+		    val vv = (explicitize_range w1)
+		in
+		    (map (fn x =>
+			     Eq_If ([(Otherwise,
+				      (unroll qq0 ((v, x) :: env0) rr1))],
+				    Annotation [], Comment []))
+			 vv)
+		end))
+    in
+	if (not (contains_connects (q0, false))) then
+	    q0
+	else
+	    case q0 of
+		Eq_Eq _ => q0
+	      | Eq_Connect _ => q0
+	      | Eq_If (cc0, aa, ww) => (
+		let
+		    val qq1 = (branch env cc0)
 		in
 		    Eq_If ([(Otherwise, qq1)], aa, ww)
 		end)
-	      | (v, Colon) :: rr1 => (raise NOTYET)
-	      | (v, w0) :: rr1 => (
+	      | Eq_When _ => q0
+	      | Eq_App _ => q0
+	      | Eq_For ((rr0, qq0), aa, ww) => (
 		let
-		    val w1 = (fold_constants_in_expression kp false env0 w0)
-		    val vv = (explicitize_range w1)
-		    val qq1 = (map (fn x => (range (qq0, aa, ww)
-						   ((v, x) :: env0) rr1)) vv)
+		    val qq1 = (unroll qq0 env rr0)
 		in
 		    Eq_If ([(Otherwise, qq1)], aa, ww)
-		end))
-    in
-	case q0 of
-	    Eq_Eq _ => q0
-	  | Eq_Connect _ => q0
-	  | Eq_If (cc0, aa, ww) => (
-	    let
-		val qq1 = (branch env cc0)
-	    in
-		Eq_If ([(Otherwise, qq1)], aa, ww)
-	    end)
-	  | Eq_When _ => q0
-	  | Eq_App _ => q0
-	  | Eq_For ((rr0, qq0), aa, ww) => (
-	    (range (qq0, aa, ww) env rr0))
+		end)
     end)
 
 fun expand_equations_in_instance (k0, acc0) = (
@@ -217,6 +242,7 @@ fun collect_connects () = (
 
 fun xcollect () = (
     let
+	val _ = (expand_equations_for_connects ())
 	val cc0 = (collect_connects ())
 	val cc1 = (make_unions (op =) cc0)
     in
