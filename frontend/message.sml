@@ -339,4 +339,6 @@ val error_varying_iterator_range = Match
 
 val error_unknown_iterator_range = Match
 
+val error_when_contains_connects = Match
+
 end

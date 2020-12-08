@@ -44,7 +44,11 @@ fun contains_connects (q0, contains0) = (
 	    Eq_Eq _ => contains0
 	  | Eq_Connect _ => true
 	  | Eq_If (cc, _, _) => (foldl contains_connects_x_qq contains0 cc)
-	  | Eq_When (cc, _, _) => contains0
+	  | Eq_When (cc, _, _) => (
+	    if (foldl contains_connects_x_qq false cc) then
+		raise error_when_contains_connects
+	    else
+		contains0)
 	  | Eq_App _ => contains0
 	  | Eq_For ((_, qq), _, _) => (
 	    (foldl contains_connects contains0 qq))

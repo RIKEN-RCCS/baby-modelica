@@ -159,8 +159,8 @@ exception.  The definition of {ModelicaServices.Integer\_inf} in
 MSL~3.2.3 is in 32~bits, and it is no problem for 64~bit SML
 implementations.
 
-\item (* The code for expansion for-equations and implicit iterator
-ranges is not tested at all *).
+\item (* The code for expanding for-equations and finding implicit
+iterator ranges is not tested at all *).
 
 \end{itemize}
 
@@ -599,7 +599,7 @@ See Rule~\ref{model-nesting} for the binary roles of a class.
 The scope is flat in most cases, spanning from the main (non-base)
 class to base classes where the class and variable names are distinct.
 But, class names and constants are visible via enclosing classes.  An
-enclosing class is defined to each class.
+enclosing class is defined to each (base) class.
 
 %%%%%%%%%%%%%%%%
 
@@ -2455,6 +2455,10 @@ and the flow direction is considered reversed (a value is negated) for
 the connector.  Note that determination of an outside_connector must
 respect the place where the connector is declared, and inner/outer
 declarations should be ignored for that.
+
+\begin{QFACT} (?) An outside_connector can be syntactically
+distinguished as a use of a non-composite name like $x$ in
+$\mathrm{connect}(x,...)$.\end{QFACT}
 
 \subsubsection*{Connection restrictions}
 
