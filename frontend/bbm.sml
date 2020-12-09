@@ -3,11 +3,13 @@
 
 (* Baby-Modelica *)
 
-(* The files "loader", "finder", "seeker", and "syntaxer" implement
-   the main part of modifier applications.  The files "operator",
-   "folder", and "builder" implement instantiations.  Instantiations
-   build an instance_tree, and work not in phases but as a rather
-   complex single step.  Later processings proceed in small phases. *)
+(* The files "loader", "finder", and "seeker" implement class name
+   finding for importing and extending.  The files "refiner" and
+   "blender" implement modifier applications.  The files "binder",
+   "builder", and "postbinder" implement instantiations.
+   Instantiations build an instance_tree, and work not in phases but
+   as a rather complex single step.  Following processings proceed in
+   small phases. *)
 
 (* The code is fairly functional, and most of the state is stored in
    instance_tree, loaded_classes, class_bindings and dummy_inners.
@@ -32,7 +34,7 @@ use "loader.sml" ;
 use "finder.sml" ;
 use "seeker.sml" ;
 use "refiner.sml" ;
-use "syntaxer.sml" ;
+use "blender.sml" ;
 
 use "small1.sml" ;
 use "dumper.sml" ;
@@ -41,10 +43,12 @@ use "walker.sml" ;
 use "expression.sml" ;
 use "operator.sml" ;
 use "folder.sml" ;
+
 use "binder.sml" ;
 use "builder.sml" ;
 use "postbinder.sml" ;
 
 use "connector.sml" ;
+(*use "syntaxer.sml" ;*)
 
 use "flatdumper.sml" ;
