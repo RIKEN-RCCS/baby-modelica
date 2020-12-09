@@ -3,6 +3,11 @@
 
 (* Baby-Modelica *)
 
+(* The code is fairly functional, and most of the state is stored in
+   instance_tree, class_tree, loaded_classes, class_bindings and
+   dummy_inners.  The contents of the instance_tree evolve in steps.
+   In addition, the lexer/parser part is full of state. *)
+
 (* The files "loader", "finder", and "seeker" implement class name
    finding for importing and extending.  The files "refiner" and
    "blender" implement modifier applications.  The files "binder",
@@ -10,11 +15,6 @@
    Instantiations build an instance_tree, and work not in phases but
    as a rather complex single step.  Following processings proceed in
    small phases. *)
-
-(* The code is fairly functional, and most of the state is stored in
-   instance_tree, loaded_classes, class_bindings and dummy_inners.
-   Note that the lexer/parser part is full of state.  The contents of
-   the instance_tree evolve in steps. *)
 
 use "hashtable.sml" ;
 use "plain.sml" ;
@@ -49,6 +49,6 @@ use "builder.sml" ;
 use "postbinder.sml" ;
 
 use "connector.sml" ;
-(*use "syntaxer.sml" ;*)
+use "syntaxer.sml" ;
 
 use "flatdumper.sml" ;

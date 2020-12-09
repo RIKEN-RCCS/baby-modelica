@@ -1,7 +1,7 @@
-(* syntaxer.sml -*-Coding: us-ascii-unix;-*- *)
+(* blender.sml -*-Coding: us-ascii-unix;-*- *)
 (* Copyright (C) 2018-2020 RIKEN R-CCS *)
 
-(* CLASS BUILDER.  Syntaxing resolves base classes and applies
+(* CLASS BUILDER.  This collects base classes and applies
    modifiers. *)
 
 structure cooker :
