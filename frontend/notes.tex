@@ -2452,13 +2452,13 @@ the connector definition.
 An outside_connector is an aspect of a connector when it is connected
 in a declaring class.  It is an internal connection to the connector,
 and the flow direction is considered reversed (a value is negated) for
-the connector.  Note that determination of an outside_connector must
-respect the place where the connector is declared, and inner/outer
-declarations should be ignored for that.
+that connection.
 
-\begin{QFACT} (?) An outside_connector can be syntactically
-distinguished as a use of a non-composite name like $x$ in
-$\mathrm{connect}(x,...)$.\end{QFACT}
+\begin{QFACT} (?) Determination of an outside_connector must respect
+the place where the connector is declared, and inner/outer
+declarations should be ignored for that.  An outside_connector can be
+syntactically distinguished by a use of a non-composite name like $x$
+in $\mathrm{connect}(x,...)$.\end{QFACT}
 
 \subsubsection*{Connection restrictions}
 
@@ -2473,6 +2473,10 @@ have parameter expressions for the array expression.]\end{qquote}
 \begin{qquote} (\specref{8.3.2}\/) The expression of a for-equation
 shall be a vector expression. ... The expression of a for-equation
 shall be a parameter expression.\end{qquote}
+
+\subsubsection*{Stream connectors}
+
+See \specref{15}.
 
 %%%%%%%%%%%%%%%%
 

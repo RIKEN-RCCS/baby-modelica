@@ -3,13 +3,11 @@
 
 (* CONNECTOR HANDLING. *)
 
-structure connector
-(*
-: sig
-xcollect
-end
-*)
-= struct
+structure connector :
+sig
+    type expression_t
+    val xconnect : unit -> (ast.expression_t * bool) list list
+end = struct
 
 open ast plain
 open small1
@@ -242,9 +240,7 @@ fun collect_connects_in_instance (k0, acc0) = (
 fun collect_connects () = (
     (traverse_tree collect_connects_in_instance (instance_tree, [])))
 
-(* ================================================================ *)
-
-fun xcollect () = (
+fun connect_connects () = (
     let
 	val _ = (expand_equations_for_connects ())
 	val cc0 = (collect_connects ())
@@ -252,5 +248,9 @@ fun xcollect () = (
     in
 	cc1
     end)
+
+(* ================================================================ *)
+
+fun xconnect () = (connect_connects ())
 
 end

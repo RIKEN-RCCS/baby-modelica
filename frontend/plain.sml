@@ -248,4 +248,10 @@ fun make_unions eq bag = (
 	(foldl (fn (x, uu) => (merge_if_intersects eq x uu)) [] bag)
     end)
 
+(* Filters list elements by a list of booleans. *)
+
+fun list_select bitmap xx = (
+    (foldl (fn ((b, x), acc) => if b then x :: acc else acc)
+	   [] (ListPair.zip (bitmap, xx))))
+
 end
