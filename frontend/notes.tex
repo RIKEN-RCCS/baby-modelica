@@ -2964,6 +2964,11 @@ end M;
 See also Section~\ref{class-equality}.  (* CHECK: Function calls may
 require stricter equality. *)
 
+\subsubsection*{Casting}
+
+A record constructor can take a class instance, and it is called
+casting.  See~\specref{12.6.1}.
+
 \subsubsection*{equalityConstraint}
 
 A function $\mathit{equalityConstraint}$ can be defined in types and
@@ -3072,7 +3077,7 @@ are redeclarations.\end{qquote}
 $\mathit{lower~bound}>\mathit{upper~bound}$, such as $x[1{:}0]$, is an
 empty array.\end{QFACT}
 
-See \specref{10.7}\/ for empty arrays.  This may actually appear
+See~\specref{10.7}\/ for empty arrays.  This may actually appear
 (under some condition) in Interfaces.PartialMedium.BaseProperties (in
 Media/package.mo).
 
@@ -3132,7 +3137,7 @@ a one dimensional array (vector) of Real, Integer, Boolean, and
 enumerators.  For numbers, they create Integer vectors if all elements
 are Integers, or Real vectors otherwise.  Triple argument ones are not
 defined for Boolean and enumerations.  They may create an empty
-vector.  See \specref{10.4.3}\/ and also \specref{3.2}.
+vector.  See~\specref{10.4.3}\/ and also \specref{3.2}.
 
 \subsubsection*{Array constructors}
 
@@ -3145,7 +3150,7 @@ constructor returns).
 \subsubsection*{Predefined functions on arrays}\label{sec:array-size}
 
 $\mathrm{ndims}\,(A)=0$ and $\mathrm{size}\,(A)=\{\}$ (an empty array)
-for a scalar $A$ (See \specref{10.3.1}\/).
+for a scalar $A$ (See~\specref{10.3.1}\/).
 
 Functions are defined to create certain arrays: {identity},
 {diagonal}, {zeros}, {ones}, {fill}, and {linspace}
@@ -3278,7 +3283,7 @@ functions.
 
 \subsubsection*{List of operators}
 
-The operators can be overloaded.  See \specref{14}.  The set of the
+The operators can be overloaded.  See~\specref{14}.  The set of the
 overloaded operators is fixed.
 
 \begin{quote}
