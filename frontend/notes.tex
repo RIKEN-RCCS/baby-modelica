@@ -241,9 +241,9 @@ returns an identifier for {\bf{}initial}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\section{Syntaxing}
+\section{Resolving}
 
-Syntaxing handles modifier applications in a model for elaboration.
+Resolving handles modifier applications in a model for elaboration.
 
 %%%%%%%%%%%%%%%%
 
@@ -254,7 +254,7 @@ Syntaxing handles modifier applications in a model for elaboration.
 \item The_implementation directly handles a short_class_definition as
 a class {\it{}refining\/} which represents modifier applications,
 although it is defined as an expansion to a class definition with an
-extends-clause in~\specref{4.5.1}.
+extends-clause in \specref{4.5.1}.
 
 \item Mutual extendings are ignored (not errors).
 
@@ -537,6 +537,19 @@ A range of an implicit iterator is taken as a subscript part of an
 expression that includes an iterator.  It checks the occurrence only
 but ignores the expression.  See
 Section~\ref{sec:implicit-iterator-ranges}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Syntaxing}
+
+The_implementation performs simple transformations to make a flat
+model.
+
+\subsection{Stream connectors}
+
+inStream(v) is replaced by a new variable with some associated
+equations like a $\mathit{mix}$ variable in \specref{15} (the variable
+is suffixed by \verb'_inStream').
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -2398,7 +2411,7 @@ ordered by the inclusion relation: $$\mathit{constant} \subset
 \mathit{parameter} \subset \mathit{discrete} \subset
 \mathit{continuous}\;.$$ Continuous means unconstrained, and declaring
 continuous integers is valid.  The ordering is used in class
-compatibility.  It is described in \specref{3.8} and \specref{6.3}.
+compatibility.  It is described in \specref{3.8}\/ and \specref{6.3}.
 
 \begin{QFACT}\label{parameters} The ordering strict.  However, it can
 be treated as $\mathit{parameter}=\mathit{constant}$ for translation
@@ -2477,6 +2490,19 @@ shall be a parameter expression.\end{qquote}
 \subsubsection*{Stream connectors}
 
 See \specref{15}.
+
+A stream connector contains a single scalar real
+{\it{}flow_variable\/} and some real {\it{}stream_variables\/} (which
+can be arrays).  The $\mathbf{stream}$ can prefix a record then the
+components are considered as stream_variables.
+
+inStream(v) and actualStream(v) take a $\mathbf{stream}$ variable
+(which may be an array).
+
+\subsubsection*{Connector components}
+
+A connector may contain integers, reals, connectors, and records, but
+not models.
 
 %%%%%%%%%%%%%%%%
 
@@ -2967,14 +2993,14 @@ require stricter equality. *)
 \subsubsection*{Casting}
 
 A record constructor can take a class instance, and it is called
-casting.  See~\specref{12.6.1}.
+casting.  See \specref{12.6.1}.
 
 \subsubsection*{equalityConstraint}
 
 A function $\mathit{equalityConstraint}$ can be defined in types and
 records.  $\mathit{equalityConstraint(...)}=0$ is added as equations,
 when it is defined (0 in the RHS is used for an array of zeros).
-See~\specref{9.4.1}.
+See \specref{9.4.1}.
 
 %%%%%%%%%%%%%%%%
 
@@ -3077,7 +3103,7 @@ are redeclarations.\end{qquote}
 $\mathit{lower~bound}>\mathit{upper~bound}$, such as $x[1{:}0]$, is an
 empty array.\end{QFACT}
 
-See~\specref{10.7}\/ for empty arrays.  This may actually appear
+See \specref{10.7}\/ for empty arrays.  This may actually appear
 (under some condition) in Interfaces.PartialMedium.BaseProperties (in
 Media/package.mo).
 
@@ -3137,7 +3163,7 @@ a one dimensional array (vector) of Real, Integer, Boolean, and
 enumerators.  For numbers, they create Integer vectors if all elements
 are Integers, or Real vectors otherwise.  Triple argument ones are not
 defined for Boolean and enumerations.  They may create an empty
-vector.  See~\specref{10.4.3}\/ and also \specref{3.2}.
+vector.  See \specref{10.4.3}\/ and also \specref{3.2}.
 
 \subsubsection*{Array constructors}
 
@@ -3150,11 +3176,11 @@ constructor returns).
 \subsubsection*{Predefined functions on arrays}\label{sec:array-size}
 
 $\mathrm{ndims}\,(A)=0$ and $\mathrm{size}\,(A)=\{\}$ (an empty array)
-for a scalar $A$ (See~\specref{10.3.1}\/).
+for a scalar $A$ (See \specref{10.3.1}\/).
 
 Functions are defined to create certain arrays: {identity},
 {diagonal}, {zeros}, {ones}, {fill}, and {linspace}
-(See~\specref{10.3.3}\/).  Note that {identity}, {zeros} and {ones}
+(See \specref{10.3.3}\/).  Note that {identity}, {zeros} and {ones}
 return an integer array, and {linspace} returns a real array.
 
 Some can be easily defined by others.
@@ -3283,7 +3309,7 @@ functions.
 
 \subsubsection*{List of operators}
 
-The operators can be overloaded.  See~\specref{14}.  The set of the
+The operators can be overloaded.  See \specref{14}.  The set of the
 overloaded operators is fixed.
 
 \begin{quote}
@@ -3526,7 +3552,7 @@ not for arrays.  Moreover, equality on class instances is not defined.
 \begin{qquote} (\specref{3.5}\/) Relational operators ... are only
 defined for scalar operands of simple types.\end{qquote}
 
-The ordering of elements of simple_types is defined in~\specref{3.5}.
+The ordering of elements of simple_types is defined in \specref{3.5}.
 On numbers, the arguments may be promoted from {Integer} to {Real}, if
 the types of the arguments differ.  Boolean is ordered as
 $\mathit{false}<\mathit{true}$.  A set of enumerators is ordered by
@@ -3537,8 +3563,8 @@ relational operator).
 \paragraph{Remark}
 
 The predefined operators are defined for the simple_types, although
-\specref{14.3} and \specref{14.4} refer to the predefined_types.  The
-predefined_types excluding the simple_types cannot have operators,
+\specref{14.3}\/ and \specref{14.4}\/ refer to the predefined_types.
+The predefined_types excluding the simple_types cannot have operators,
 because they are not operator records.
 
 \paragraph{Remark}
