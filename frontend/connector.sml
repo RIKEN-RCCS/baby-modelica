@@ -1,7 +1,8 @@
 (* connector.sml -*-Coding: us-ascii-unix;-*- *)
 (* Copyright (C) 2018-2020 RIKEN R-CCS *)
 
-(* CONNECTOR HANDLING. *)
+(* CONNECTOR HANDLING.  It also removes inStream(v) and
+   actualStream(v). *)
 
 structure connector :
 sig
@@ -28,6 +29,16 @@ val walk_in_class = walker.walk_in_class
 val walk_in_expression = walker.walk_in_expression
 val walk_in_equation = walker.walk_in_equation
 val walk_in_statement = walker.walk_in_statement
+
+(* ================================================================ *)
+
+(* Operators in Connectors package (equation operators).  Root true is
+   for root(), Root false is potentialRoot(). *)
+
+datatype connectors_t
+    = Connect
+    | Branch
+    | Root of bool
 
 (* ================================================================ *)
 
@@ -177,8 +188,9 @@ fun expand_equations_for_connects () = (
 fun drop_subscripts rr = (
     (map (fn (id, _) => id) rr))
 
-(* Tests if a reference is a component.  It ignores subscripts but it
-   is precise. *)
+(* Tests if a reference is a component of a class specified by a
+   subject (true when a reference is a class itself).  It ignores
+   subscripts but it is precise. *)
 
 fun reference_is_component subj w = (
     case w of
@@ -187,13 +199,45 @@ fun reference_is_component subj w = (
       | Vref (SOME ns0, rr0) => (
 	let
 	    val rr1 = (drop_subscripts rr0)
-	    val (prefix, _) = (split_last rr1)
 	    val Subj (ns1, cc0) = subj
 	    val cc1 = (drop_subscripts cc0)
 	in
-	    (ns0 = ns1) andalso (cc1 = prefix)
+	    (ns0 = ns1) andalso (list_prefix (op =) cc1 rr1)
 	end)
       | _ => raise Match)
+
+val reference_is_connector_component = reference_is_component
+
+(*
+fun reference_is_connector_component subj w = (
+    case w of
+	Vref (_, []) => raise Match
+      | Vref (NONE, _) => raise Match
+      | Vref (SOME ns0, rr0) => (
+	let
+	    val rr1 = (drop_subscripts rr0)
+	    val Subj (ns1, cc0) = subj
+	    val cc1 = (drop_subscripts cc0)
+	in
+	    if (not ((ns0 = ns1) andalso (list_prefix (op =) cc1 rr1))) then
+		false
+	    else
+		case (List.drop rr0 (length cc0)) of
+		    [] => false
+		  | (id, ss) :: _ => (
+		    let
+			val component = (compose_subject defining id [])
+			val k0 = surely (fetch_from_instance_tree component)
+		    in
+			case k0 of
+			    Def_Outer_Alias _ =>
+			  | Def_Mock_Array _ =>
+			  | _ => (class_is_connector k0)
+
+		    end)
+	end)
+      | _ => raise Match)
+*)
 
 fun collect_connects_in_equation kp (q0, acc0) = (
     let
@@ -203,8 +247,8 @@ fun collect_connects_in_equation kp (q0, acc0) = (
 	    Eq_Eq _ => (q0, acc0)
 	  | Eq_Connect ((x, y), aa, ww) => (
 	    let
-		val cx = (reference_is_component subj x)
-		val cy = (reference_is_component subj y)
+		val cx = (reference_is_connector_component subj x)
+		val cy = (reference_is_connector_component subj y)
 	    in
 		(q0, ([(x, cx), (y, cy)] :: acc0))
 	    end)

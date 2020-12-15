@@ -109,11 +109,9 @@ fun refer_in_variable kp (d as Defvar _) subj rr = (
 (* Resolves a variable reference in the given package/instance.  It is
    passed to binding routines.  It adds a prefix to "x.y" as
    "a.b.x.y", when "a.b" is a class B and B contains a declaration of
-   "x".  It also resolves functions and constants.  It is called with
-   buildphase=true when an expression appears in a variable
-   declaration (in array dimension expressions). *)
+   "x".  It also resolves functions and constants. *)
 
-fun make_reference kp (buildphase_ : bool) w0 = (
+fun make_reference kp (_ : bool) w0 = (
     case w0 of
 	Vref (_, []) => raise Match
       | Vref (NONE, rr as (id, ss_) :: rr1) => (

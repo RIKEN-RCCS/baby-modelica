@@ -37,10 +37,10 @@ val store_to_instance_tree = classtree.store_to_instance_tree
 val assert_stored_in_instance_tree = classtree.assert_stored_in_instance_tree
 val unwrap_array_of_instances = classtree.unwrap_array_of_instances
 val subject_to_instance_tree_path = classtree.subject_to_instance_tree_path
-val component_is_alias = classtree.component_is_alias
-val dereference_alias_component = classtree.dereference_alias_component
+val component_is_outer_alias = classtree.component_is_outer_alias
+val dereference_outer_alias = classtree.dereference_outer_alias
 val fetch_instance_tree_node = classtree.fetch_instance_tree_node
-val instantiate_alias = classtree.instantiate_alias
+val instantiate_outer_alias = classtree.instantiate_outer_alias
 
 val find_name_initial_part = finder.find_name_initial_part
 val list_elements = finder.list_elements
@@ -286,9 +286,9 @@ and secure_reference_loop ctx buildphase (retrying : bool) path0 node0 = (
 			 ctx buildphase true path0 node0)
 		end)
 	      | SOME (slot as Slot (_, dim, nodes, dummy)) => (
-		if (component_is_alias slot) then
+		if (component_is_outer_alias slot) then
 		    let
-			val node1 = (dereference_alias_component slot)
+			val node1 = (dereference_outer_alias slot)
 		    in
 			(secure_reference_loop
 			     ctx buildphase true path0 node1)
@@ -368,7 +368,7 @@ and instantiate_element kp binding = (
 		let
 		    val kx = surely (fetch_from_instance_tree truesubj)
 		    val var = if (class_is_package kx) then PKG else VAR
-		    val k0 = (instantiate_alias var subj truesubj)
+		    val k0 = (instantiate_outer_alias var subj truesubj)
 		in
 		    ([], [k0])
 		end)

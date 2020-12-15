@@ -100,6 +100,8 @@ datatype analogical_t = Flow | Stream | Effort
 
 datatype variability_t = Constant | Parameter | Discrete | Continuous
 
+(* (It may better Modeless be Acausal). *)
+
 datatype input_or_output_t = Input | Output | Modeless
 
 type each_or_final_t = {Each : bool, Final : bool}
@@ -253,8 +255,8 @@ and type_marker_t = ENUM | MAIN | BASE | SIMP
    slot is an enclosing class (for a package).  Field abbreviation is:
    Def_Body(mk,j,cs,nm,ee,aa,ww).  Def_Der is a derivative definition.
    Def_Body and Def_Der represent the classes after syntaxing.
-   Def_Primitive is primitive types.  Def_Alias is an outer reference
-   of an inner-outer which is a record left in the
+   Def_Primitive is primitive types.  Def_Outer_Alias is an outer
+   reference of an inner-outer which is a record left in the
    class_tree/instance_tree.  Def_Name specifies a class name in the
    language.  Def_Scoped replaces Def_Name by attaching scope
    information.  Def_Refine represents class modifications, either
@@ -290,7 +292,7 @@ and definition_body_t
        * name_t * id_t list * annotation_t * comment_t)
     | Def_Primitive of
       (primitive_type_t * (*value*) expression_t)
-    | Def_Alias of instantiation_t * subject_t * subject_t
+    | Def_Outer_Alias of instantiation_t * subject_t * subject_t
     | Def_Name of name_t
     | Def_Scoped of (name_t * scope_t)
     | Def_Refine of
@@ -304,7 +306,7 @@ and definition_body_t
     | Def_Replaced of
       (definition_body_t
        * (visibility_t * element_prefixes_t
-	  * element_union_t * constraint_t option))
+	  * element_sum_t * constraint_t option))
     | Def_Displaced of class_tag_t * (*enclosing*) subject_t
     | Def_In_File
     | Def_Mock_Array of
@@ -395,7 +397,7 @@ and annotation_t = Annotation of modifier_t list
 (* A naming element in a class is either a class definition or a
    variable declaration. *)
 
-and element_union_t
+and element_sum_t
     = EL_Class of class_definition_t
     | EL_State of variable_declaration_t
 
@@ -461,7 +463,7 @@ and constraint_t = (definition_body_t * modifier_t list
 and enum_list_t = (id_t * annotation_t * comment_t) list
 
 type binding_element_t = (visibility_t * element_prefixes_t
-			  * element_union_t * constraint_t option)
+			  * element_sum_t * constraint_t option)
 
 (* An entry of an element list (definitions/declarations).  It is
    stored in the class_bindings table.  The identifier slot is a

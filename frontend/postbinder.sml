@@ -19,7 +19,7 @@ val instance_tree = classtree.instance_tree
 val fetch_class_by_scope = classtree.fetch_class_by_scope
 val store_to_instance_tree = classtree.store_to_instance_tree
 val fetch_from_instance_tree = classtree.fetch_from_instance_tree
-val component_is_alias = classtree.component_is_alias
+val component_is_outer_alias = classtree.component_is_outer_alias
 val traverse_tree = classtree.traverse_tree
 val replace_outer_reference = classtree.replace_outer_reference
 
@@ -109,7 +109,7 @@ fun bind_instances_loop (scanning : bool) node0 = (
 	val changes0 = (bind_in_instance scanning kp)
 	(* KEEP ORDERING. *)
 	val c0 = (! cx)
-	val components = (List.filter (not o component_is_alias) c0)
+	val components = (List.filter (not o component_is_outer_alias) c0)
 
 	val _ = if (null components) then ()
 		else if (not (class_is_simple_type kp)) then ()

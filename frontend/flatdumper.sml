@@ -19,7 +19,6 @@ val package_root_node = classtree.package_root_node
 val model_root_node = classtree.model_root_node
 val subject_to_instance_tree_path = classtree.subject_to_instance_tree_path
 val extract_base_classes = classtree.extract_base_classes
-val component_is_alias = classtree.component_is_alias
 val traverse_tree = classtree.traverse_tree
 
 val simple_type_attribute = simpletype.simple_type_attribute

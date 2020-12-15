@@ -67,7 +67,7 @@ fun find_predefined_variable v = (
 
 (* ================================================================ *)
 
-fun make_dummy_inner (cv0 : element_union_t) subj = (
+fun make_dummy_inner (cv0 : element_sum_t) subj = (
     let
 	val _ = (warn_no_inner cv0)
 	val id = (name_of_element_union cv0)
@@ -288,10 +288,10 @@ and look_for_inner_in_class (cooker : cooker_t) cv0 subj0 = (
 	    ((x = id) andalso (z = Public) andalso (Inner = true)))
 
 	val _ = tr_find (";; look_for_inner ("^
-			 (id_to_string (name_of_naming cv0))
+			 (id_to_string (name_of_element_union cv0))
 			 ^" in "^ (subject_print_string subj0) ^")")
 
-	val id = (name_of_naming cv0)
+	val id = (name_of_element_union cv0)
 	val kp = surely (fetch_from_instance_tree subj0)
 	val _ = if (class_is_instance kp) then () else raise Match
 	val _ = (assert_match_subject subj0 kp)
