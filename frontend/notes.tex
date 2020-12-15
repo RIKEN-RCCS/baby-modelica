@@ -159,8 +159,11 @@ exception.  The definition of {ModelicaServices.Integer\_inf} in
 MSL~3.2.3 is in 32~bits, and it is no problem for 64~bit SML
 implementations.
 
+\item (* Array subscripts ":" to connector references are not
+handled. *).
+
 \item (* The code for expanding for-equations and finding implicit
-iterator ranges is not tested at all *).
+iterator ranges is not tested at all. *).
 
 \end{itemize}
 
@@ -2454,12 +2457,6 @@ See \specref{3.8.3}\/ for discrete values.
 A connect-equation connects variables including component connectors
 declared in the connector.
 
-\subsubsection*{Expandable_connectors}
-
-An expandable_connector will automatically include the names of
-variables which are used in connect-equations but are not declared in
-the connector definition.
-
 \subsubsection*{Outside_connectors}
 
 An outside_connector is an aspect of a connector when it is connected
@@ -2469,9 +2466,11 @@ that connection.
 
 \begin{QFACT} (?) Determination of an outside_connector must respect
 the place where the connector is declared, and inner/outer
-declarations should be ignored for that.  An outside_connector can be
-syntactically distinguished by a use of a non-composite name like $x$
-in $\mathrm{connect}(x,...)$.\end{QFACT}
+declarations should be ignored for that.  An outside_connector is
+distinguished by the use of a name that a connector $c$ is declared
+and connected in a class and appears in the first part of a composite
+name such as in $\mathrm{connect}(c,...)$ or
+$\mathrm{connect}(c.d,...)$.\end{QFACT}
 
 \subsubsection*{Connection restrictions}
 
@@ -2501,8 +2500,36 @@ inStream(v) and actualStream(v) take a $\mathbf{stream}$ variable
 
 \subsubsection*{Connector components}
 
-A connector may contain integers, reals, connectors, and records, but
-not models.
+A connector may contain simple_types, connectors, records, and
+operator_records, but not models.
+
+\subsubsection*{Expandable_connectors}
+
+An expandable_connector is a set of connectors, and it only is
+connected to other ones.  All components in an expandable_connector
+are implicitly considered as connectors.  A component will be included
+for the outside use of an expandable_connector even if it is not
+declared in the definition.  Additionally, an expandable_connector is
+first considered empty until a declared component is included by using
+it explicitly.
+
+\begin{qquote} (\specref{9.1.3}\/) $\bullet$\,expandable connectors
+can only be connected to other expandable connectors.\end{qquote}
+
+\begin{qquote} (\specref{9.1.3}\/) $\bullet$\,All components in an
+expandable connector are seen as connector instances even if they are
+not declared as such\end{qquote}
+
+\begin{qquote} (\specref{9.1.3}\/) Before generating connection
+equations non-parameter scalar variables and non-parameter array
+elements declared in expandable connectors are marked as only being
+potentially present.\end{qquote}
+
+\subsubsection*{Operator_record components}
+
+(?) A connection component of an operator_record is used as an
+aggregate in generated equations with defined eqaulity, summation, or
+negation.
 
 %%%%%%%%%%%%%%%%
 
@@ -2869,8 +2896,6 @@ kind can be extend by $\mathbf{class}$.
 \begin{QFACT}\label{kind1} It is required to check base classes
 respect the restriction.\end{QFACT}
 
-
-
 %%%%%%%%%%%%%%%%
 
 \subsection{Predefined_classes}
@@ -2948,12 +2973,33 @@ annotations.
 
 \item [AssertionLevel] is an enumeration.
 
-\item [Connections] is a package.  It contains functions
-$\mathit{branch}$, $\mathit{root}$, $\mathit{potentialRoot}$,
-$\mathit{isRoot}$, and $\mathit{rooted}$.  It is described in
-\specref{9.4}.
+\item [Connections] is a package.
 
 \end{description}
+
+\subsubsection*{Connections}
+
+Connections is a package is used to remove overdetermined equations.
+It is described in \specref{9.4}.  An overdetermined_type/record is a
+type/record defining $\mathit{equalityConstraint}(x,y)$.  Connections
+works with overdetermined_type/record.  It contains equation_operators
+$\mathit{branch}$, $\mathit{root}$, and $\mathit{potentialRoot}$
+(appear as equations), and boolean-valued operators $\mathit{isRoot}$
+and $\mathit{rooted}$ (appear as functions).
+
+Overdetermined equations have cycles in the undirected graph of
+overdetermined_types/records as nodes and connections as edges.  A
+graph is reduced to a tree by removing some of the edges by replacing
+them with weaker contraints.
+
+Equation_operators in Connections are used to specify trees in a graph
+of connections.  $\mathit{branch}(m.c.r,m.c.r)$ makes an edge between
+overdetermined_types/records.  $\mathit{root}(m.c.r)$ specifies a root
+of a tree of overdetermined_types/records.
+$\mathbf{connect}(m.c,m.c)$ creates weak edges for the
+overdetermined_types/records in the connectors.  Some weak edges may
+be marked (as removed), and the equality of marked edges are replaced
+by $\mathit{equalityConstraint}(x,y)$ equations.
 
 %%%%%%%%%%%%%%%%
 
@@ -3677,6 +3723,21 @@ connectors, operator_records) and arrays of them, and functions.
 \begin{qquote} (\specref{12.2}\/) $\bullet$ A function may only
 contain components of the restricted classes type, record, operator
 record, and function; i.e. no model or block components.\end{qquote}
+
+\subsubsection*{(?) No results}
+
+An output of an empty array is used to return no values.  See an
+example in \specref{9.4.3.1}.
+
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+function equalityConstraint
+    input AC_Angle theta1;
+    input AC_Angle theta2;
+    output Real residue[0] "No constraints"
+    algorithm
+\end{lstlisting}
+\end{quote}
 
 %%%%%%%%%%%%%%%%
 
@@ -4643,6 +4704,9 @@ getInstanceName()
 
 \noindent $\mathrm{der}\,(...)$ accepts only one argument, although it
 can accept a list of arguments by the syntax definition.
+
+inStream(v) and actualStream(v) introduce a new state variable and
+equations related to a given steam variable $v$.
 
 \subsubsection*{Event-related operators}
 (\specref{3.7.3}\/)
