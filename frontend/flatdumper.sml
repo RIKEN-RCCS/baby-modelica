@@ -208,6 +208,7 @@ fun expression_to_string w = (
 	    in
 		("(Component_Ref "^ s0 ^", "^ s1 ^")")
 	    end)
+	  (*
 	  | Instance (d, kk, _) => (
 	    let
 		val class_name = (subject_to_string o subject_of_class)
@@ -224,6 +225,21 @@ fun expression_to_string w = (
 			[] => ("(Instance ["^ ds ^"])")
 		      | (k :: _) => (
 			("(Instance ["^ ds ^"] "^ (class_name k) ^")"))
+	    end)
+	  *)
+	  | Instances ([], [subj]) => (
+	    ("(Instance "^ (subject_to_string subj) ^")"))
+	  | Instances ([], _) => raise Match
+	  | Instances (dim, subjs) => (
+	    let
+		val _ = if (not (null dim)) then () else raise Match
+		val ds = ((String.concatWith ",")
+			      (map Int.toString dim))
+	    in
+		case subjs of
+		    [] => ("(Instance ["^ ds ^"])")
+		  | (subj :: _) => (
+		    ("(Instance ["^ ds ^"] "^ (subject_to_string subj) ^")"))
 	    end)
 	  | Iref v => (id_to_string v)
 	  | Array_fill (e, n) => (

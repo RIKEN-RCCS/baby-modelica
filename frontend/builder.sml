@@ -52,7 +52,6 @@ val commute_modifier_over_subscript = refiner.commute_modifier_over_subscript
 val walk_in_expression = walker.walk_in_expression
 
 val fold_constants = folder.fold_constants
-val value_of_instance = folder.value_of_instance
 
 val obtain_array_dimension = operator.obtain_array_dimension
 

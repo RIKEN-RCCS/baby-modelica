@@ -200,11 +200,11 @@ fun list_shortest ll = (
 			    (x, xlen)))
 		   (h, (length h)) tl))))
 
-(* Returns an offset for an index.  It is row-major.  An index is
-   1-origin.  Call it with offset=0.  ([i+1,j+1,k+1] in an [4,3,2]
-   array is (3*2*i+2*j+k).  It accepts an index shorter than a
-   dimension, in which case it returns a start offset of a
-   subarray. *)
+(* Returns an offset for an index.  An array is row-major, and an
+   index is 1-origin.  Call it with offset=0.  (An offset of
+   [i+1,j+1,k+1] in a [4,3,2] array is (3*2*i+2*j+k).  It accepts an
+   index shorter than a dimension, in which case it returns a start
+   offset of a subarray. *)
 
 fun array_index dimension0 index0 offset = (
     case (dimension0, index0) of
@@ -217,6 +217,11 @@ fun array_index dimension0 index0 offset = (
 
 fun array_size dimension = (
     (array_index dimension [] 1))
+
+(* Drops the first n dimensions. *)
+
+fun array_drop_columns dimension count = (
+    (List.drop (dimension, count)))
 
 fun list_prefix eq x y = (
     ((length x) <= (length y)) andalso (List.all eq (ListPair.zip (x, y))))

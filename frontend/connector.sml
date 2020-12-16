@@ -1,8 +1,8 @@
 (* connector.sml -*-Coding: us-ascii-unix;-*- *)
 (* Copyright (C) 2018-2020 RIKEN R-CCS *)
 
-(* CONNECTOR HANDLING.  It also removes inStream(v) and
-   actualStream(v). *)
+(* CONNECTOR HANDLING.  It removes the uses of the Connects package
+   and inStream(v) and actualStream(v). *)
 
 structure connector :
 sig

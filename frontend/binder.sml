@@ -265,7 +265,8 @@ and bind_in_expression ctx buildphase binder w0 = (
 	    Pseudo_Split ((walk_x x), s))
 	  | Component_Ref (x, v) => (
 	    Component_Ref ((walk_x x), v))
-	  | Instance (d, kk, _) => w0
+	  (*| Instance _ => w0*)
+	  | Instances _ => w0
 	  | Iref _ => w0
 	  | Array_fill (e, s) => (
 	    Array_fill ((walk_x e), (walk_x s)))

@@ -90,6 +90,61 @@ datatype predefined_operator_t
 type part_name_t = subject_t * class_tag_t
 type scope_t = subject_t * class_tag_t
 
+(* Expressions.  NIL is an empty element in an output-expression-list.
+   Colon is a [:] in a subscript.  Otherwise is a truth for an
+   else-part condition.  NIL, Colon, and Otherwise appear alone, and
+   not in an expression.  Scoped is an expression in a scope.  Vref
+   represents a component reference which includes array indexing.  A
+   first optional slot indicates whether it is resolved.  Opr
+   represents predefined operators.  Closure is a partially applied
+   function.  L_Number, L_String, L_Bool, and L_Enum are literals.
+   L_Number has a slot indicating Real or Integer.  Real literals are
+   represented by strings to make syntax trees eqtype in SML.  L_Enum
+   is introduced when enumerations are processed.  Reduction_Argument
+   is an argument list for reductions.  Note that arguments to
+   Array_Constructor is non-empty.  Pseudo_Split is an array indexing,
+   that is introduced at rewriting a non-each modifier on an array.
+   Component_Ref is a component reference, that is introduced at
+   rewriting a modifier of class copying.  It is with an array
+   dimension which is null for a scalar component.  Instances refers
+   to instances, and also it internally refers to a function.  Iref is
+   an iterator variable reference.  Others, Array_fill,
+   Array_diagonal, etc. are predefined functions. *)
+
+datatype expression_t
+    = NIL
+    | Colon
+    | Otherwise
+    | Scoped of expression_t * scope_t
+    | Vref of instantiation_t option * component_and_subscript_t list
+    | Opr of predefined_operator_t
+    | App of expression_t * expression_t list
+    | ITE of (expression_t * expression_t) list
+    | Der of expression_t list
+    | Pure of expression_t list
+    | Closure of name_t * expression_t list
+    | L_Number of number_type_t * string
+    | L_Bool of bool
+    | L_Enum of class_tag_t * id_t
+    | L_String of string
+    | Array_Triple of expression_t * expression_t * expression_t option
+    | Array_Constructor of expression_t list
+    | Array_Comprehension of expression_t * for_index_t list
+    | Array_Concatenation of expression_t list list
+    | Tuple of expression_t list
+    | Reduction_Argument of expression_t * for_index_t list
+    | Named_Argument of name_t * expression_t
+    | Pseudo_Split of expression_t * int list
+    | Component_Ref of expression_t * id_t
+    | Instances of int list * subject_t list
+    | Iref of id_t
+    | Array_fill of expression_t * expression_t
+    | Array_diagonal of expression_t
+
+withtype for_index_t = id_t * expression_t
+
+and component_and_subscript_t = id_t * expression_t list
+
 datatype visibility_t = Protected | Public
 
 datatype analogical_t = Flow | Stream | Effort
@@ -401,61 +456,7 @@ and element_sum_t
     = EL_Class of class_definition_t
     | EL_State of variable_declaration_t
 
-(* Expressions.  NIL is an empty element in an output-expression-list.
-   Colon is a [:] in a subscript.  Otherwise is a truth for an
-   else-part condition.  NIL, Colon, and Otherwise appear alone, and
-   not in an expression.  Scoped is an expression in a scope.  Vref
-   represents a component reference which includes array indexing.  A
-   first optional slot indicates whether it is resolved.  Opr
-   represents predefined operators.  Closure is a partially applied
-   function.  L_Number, L_String, L_Bool, and L_Enum are literals.
-   L_Number has a slot indicating Real or Integer.  Real literals are
-   represented by strings to make syntax trees eqtype in SML.  L_Enum
-   is introduced when enumerations are processed.  Reduction_Argument
-   is an argument list for reductions.  Note that arguments to
-   Array_Constructor is non-empty.  Pseudo_Split is an array indexing,
-   that is introduced at rewriting a non-each modifier on an array.
-   Component_Ref is a component reference, that is introduced at
-   rewriting a modifier of class copying.  It is with an array
-   dimension which is null for a scalar component.  Iref is an
-   iterator variable reference.  Others, Array_fill, Array_diagonal,
-   etc. are predefined functions. *)
-
-and expression_t
-    = NIL
-    | Colon
-    | Otherwise
-    | Scoped of expression_t * scope_t
-    | Vref of instantiation_t option * component_and_subscript_t list
-    | Opr of predefined_operator_t
-    | App of expression_t * expression_t list
-    | ITE of (expression_t * expression_t) list
-    | Der of expression_t list
-    | Pure of expression_t list
-    | Closure of name_t * expression_t list
-    | L_Number of number_type_t * string
-    | L_Bool of bool
-    | L_Enum of class_tag_t * id_t
-    | L_String of string
-    | Array_Triple of expression_t * expression_t * expression_t option
-    | Array_Constructor of expression_t list
-    | Array_Comprehension of expression_t * for_index_t list
-    | Array_Concatenation of expression_t list list
-    | Tuple of expression_t list
-    | Reduction_Argument of expression_t * for_index_t list
-    | Named_Argument of name_t * expression_t
-    | Pseudo_Split of expression_t * int list
-    | Component_Ref of expression_t * id_t
-    | Instance of int list * definition_body_t list * definition_body_t option
-    | Iref of id_t
-    | Array_fill of expression_t * expression_t
-    | Array_diagonal of expression_t
-
-withtype for_index_t = id_t * expression_t
-
-and component_and_subscript_t = id_t * expression_t list
-
-and subscripts_t = expression_t list
+withtype subscripts_t = expression_t list
 
 and constraint_t = (definition_body_t * modifier_t list
 		    * annotation_t * comment_t)

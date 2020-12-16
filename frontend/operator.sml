@@ -82,6 +82,7 @@ fun operator_is_boolean f = ((operator_type f) = BOOLEAN_UOP
 fun operator_is_relational f = ((operator_type f) = RELATIONAL_OP)
 fun operator_is_concat f = ((operator_type f) = STRING_CONCAT_OP)
 
+(*
 fun global_function_name k = (
     case k of
 	Def_Body (mk, j, cs, (tag, n, x), ee, aa, ww) => (
@@ -89,8 +90,14 @@ fun global_function_name k = (
 	    Ctag [name] => SOME name
 	  | _ => NONE)
       | _ => NONE)
+*)
 
-fun empty_global_function name = (
+fun global_function_name k = (
+    case k of
+	Instances ([], [Subj (ns, [(Id name, [])])]) => SOME name
+      | _ => NONE)
+
+fun empty_global_function__ name = (
     let
 	val subj = Subj (PKG, [(Id name, [])])
 	val tag = Ctag [name]
@@ -115,9 +122,9 @@ fun expression_is_integer x = (*AHO*) false
 fun expression_is_constant x = (*AHO*) false
 
 (* Calculates the dimension of an (array) expression.  It returns a
-   pair (dim,true) if completely known, with dim=[] indicating a
-   scalar, or a pair (dim,false) if partially known, with dim=[]
-   indicating completely unknown.  IT SHOULD ACCEPT A VAST SET OF
+   pair (dim,true) if completely known or a pair (dim,false) if
+   partially known, where ([],true) indicates a scalar and ([],false)
+   indicates completely unknown.  IT SHOULD ACCEPT A VAST SET OF
    EXPRESSIONS, BUT CURRENTLY, IT ONLY ACCEPTS A SMALL SET.  It should
    accept user-defined functions, constructors of arrays and matrices
    {"{}", "[]"}, predefined functions {array, identity, diagonal,
@@ -217,7 +224,17 @@ fun obtain_array_dimension w : int list * bool = (
 		(dim1, true)
 	    end))
       | Component_Ref _ => raise NOTYET
-      | Instance (dim, kk, _) => (dim, true)
+      (*| Instance (dim, kk, _) => (dim, true)*)
+      | Instances ([], [subj]) => (
+	let
+	    val k = surely (fetch_from_instance_tree subj)
+	in
+	    case k of
+		Def_Mock_Array (dim, array, dummy) => (dim, true)
+	      | _ => ([], true)
+	end)
+      | Instances ([], _) => raise Match
+      | Instances (dim, subjs) => (dim, true)
       | Iref v => raise NOTYET
       | Array_fill (e, n) => (
 	if (not (expression_is_literal n)) then
@@ -239,10 +256,10 @@ fun obtain_array_dimension w : int list * bool = (
 
 fun predefined_size_a a = (
     let
-	val body = (empty_global_function "size")
-	val f = Instance ([], [body], NONE)
-	fun app x = App (f, [x])
-	val original = (app a)
+	(*val body = (empty_global_function "size")*)
+	(*val f = Instance ([], [body], NONE)*)
+	val f = Instances ([], [Subj (PKG, [(Id "size", [])])])
+	val original = App (f, [a])
 	val (dim, fully) = (obtain_array_dimension a)
 	val ee = (map z_literal dim)
     in
@@ -254,10 +271,10 @@ fun predefined_size_a a = (
 
 fun predefined_size_a_i a i = (
     let
-	val body = (empty_global_function "size")
-	val f = Instance ([], [body], NONE)
-	fun app x = App (f, [x, i])
-	val original = (app a)
+	(*val body = (empty_global_function "size")*)
+	(*val f = Instance ([], [body], NONE)*)
+	val f = Instances ([], [Subj (PKG, [(Id "size", [])])])
+	val original = App (f, [a, i])
     in
 	if (not (expression_is_literal i)) then
 	    original
@@ -292,9 +309,10 @@ fun predefined_diagonal v = (
 
 fun fold_on_global_function (name, args) = (
     let
-	val body = (empty_global_function name)
-	val f = Instance ([], [body], NONE)
-	val rawvalue = App (f, args)
+	(*val body = (empty_global_function name)*)
+	(*val f = Instance ([], [body], NONE)*)
+	val f = Instances ([], [Subj (PKG, [(Id name, [])])])
+	val original = App (f, args)
     in
 	case name of
 	    "size" => (
@@ -310,12 +328,12 @@ fun fold_on_global_function (name, args) = (
 	    case args of
 		[v] => (predefined_diagonal v)
 	      | _ => raise error_bad_syntax)
-	  | _ => rawvalue
+	  | _ => original
     end)
 
 fun fold_operator_application (f, args) = (
     let
-	val rawvalue = App (f, args)
+	val original = App (f, args)
 	val pow = Math.pow
     in
 	case f of
@@ -385,26 +403,26 @@ fun fold_operator_application (f, args) = (
 			  | Opr_le => L_Bool (cc <= 0)
 			  | _ => raise Match
 		    end)
-		  | _ => rawvalue
+		  | _ => original
 	    else if (operator_is_boolean n) then
 		case n of
 		    Opr_not => (
 		    case args of
 			[L_Bool x] => L_Bool (not x)
-		      | _ => rawvalue)
+		      | _ => original)
 		  | Opr_and => (
 		    case args of
 			[L_Bool x, L_Bool y] => L_Bool (x andalso y)
-		      | _ => rawvalue)
+		      | _ => original)
 		  | Opr_ior => (
 		    case args of
 			[L_Bool x, L_Bool y] => L_Bool (x orelse y)
-		      | _ => rawvalue)
+		      | _ => original)
 		  | _ => raise Match
 	    else if (operator_is_concat n) then
 		case args of
 		    [L_String sx, L_String sy] => L_String (sx ^ sy)
-		  | _ => rawvalue
+		  | _ => original
 	    else if (operator_is_unary n) then
 		case args of
 		    [L_Number (Z, sx)] => (
@@ -431,7 +449,7 @@ fun fold_operator_application (f, args) = (
 			  | Opr_neg_ew => (r_literal (~ x))
 			  | _ => raise Match
 		    end)
-		  | _ => rawvalue
+		  | _ => original
 	    else if (operator_is_binary n) then
 		case args of
 		    [L_Number (Z, sx), L_Number (Z, sy)] => (
@@ -470,14 +488,18 @@ fun fold_operator_application (f, args) = (
 			  | Opr_expt_ew => (r_literal (pow (x, y)))
 			  | _ => raise Match
 		    end)
-		  | _ => rawvalue
+		  | _ => original
 	    else
 		raise Match)
-	  | Instance ([], [kp], NONE) => (
-	    case (global_function_name kp) of
-		NONE => rawvalue
+	  (*| Instance ([], [kp], NONE) => ( *)
+	  (*case (global_function_name kp) of*)
+	  (*NONE => original*)
+	  (*| SOME v => (fold_on_global_function (v, args)))*)
+	  | Instances _ => (
+	    case (global_function_name f) of
+		NONE => original
 	      | SOME v => (fold_on_global_function (v, args)))
-	  | _ => rawvalue
+	  | _ => original
     end)
 
 (* ================================================================ *)
@@ -488,13 +510,14 @@ fun subarray_of_instances (index : int list) (dim0, kk0, dummy) = (
 		else raise error_bad_index
 	val _ = if (ListPair.all (fn (i, d) => (i <= d)) (index, dim0)) then ()
 		else raise error_bad_index
-	val dim1 = (List.drop (dim0, (length index)))
-	(*val size = (foldl (fn (a, m) => (m * a)) 1 dim1)*)
+	val dim1 = (array_drop_columns dim0 (length index))
 	val size = (array_size dim1)
 	val offset = (array_index dim0 index 0)
 	val kk1 = (List.take ((List.drop (kk0, offset)), size))
+	val subjs = (map subject_of_class kk1)
     in
-	(Instance (dim1, kk1, dummy))
+	(*Instance (dim1, kk1, dummy)*)
+	Instances (dim1, subjs)
     end)
 
 fun fold_pseudo_split w0 = (
@@ -554,8 +577,24 @@ fun fold_pseudo_split w0 = (
 	  | Pseudo_Split (x, ss) => (
 	    (Pseudo_Split (x, (merge_subscripts index ss))))
 	  | Component_Ref _ => raise NOTYET
-	  | Instance (dim, kk, dummy) => (
-	    (subarray_of_instances index (dim, kk, dummy)))
+          (*| Instance (dim, kk, dummy) => ( *)
+	  (*(subarray_of_instances index (dim, kk, dummy)))*)
+          | Instances ([], [subj]) => (
+	    let
+		val k = surely (fetch_from_instance_tree subj)
+	    in
+		case k of
+		    Def_Mock_Array (dim, array, dummy) => (
+		    (subarray_of_instances index (dim, array, dummy)))
+		  | _ => raise error_split_to_scalar
+	    end)
+          | Instances ([], _) => raise Match
+          | Instances (dim, subjs) => (
+	    let
+		val array = (map (surely o fetch_from_instance_tree) subjs)
+	    in
+		(subarray_of_instances index (dim, array, NONE))
+	    end)
 	  | Iref v => raise error_split_to_scalar
 	  | Array_fill _ => w0
 	  | Array_diagonal _ => w0)

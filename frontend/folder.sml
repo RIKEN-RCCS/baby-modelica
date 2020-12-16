@@ -18,9 +18,6 @@ sig
 	definition_body_t -> bool -> (id_t * expression_t) list
 	-> expression_t -> expression_t
 
-    val value_of_instance :
-	expression_t -> definition_body_t -> expression_t
-
     val explicitize_range : expression_t -> expression_t list
 end = struct
 
@@ -99,12 +96,13 @@ fun primitive_type_is_string p = (
 	P_String => true
       | _ => false)
 
-(* Takes a value of a class (kp) for an original variable reference
-   (x0).  It takes a value-attribute of a simple-type. *)
+(* Takes a value of a class (kp) for an original reference (w0).  It
+   takes a value-attribute of a simple-type.  Or, it converts a
+   function reference to an Instances expression. *)
 
-fun value_of_instance x0 kp = (
+fun value_of_instance w0 kp = (
     case kp of
-	Def_Body (mk, j, cs, (c, n, x), ee, aa, ww) => (
+	Def_Body (mk, subj, cs, (c, n, x), ee, aa, ww) => (
 	if (not (class_is_simple_type kp)) then
 	    let
 		val _ = if (class_is_package kp) then
@@ -114,7 +112,9 @@ fun value_of_instance x0 kp = (
 			    if (step_is_at_least E5 kp) then ()
 			    else raise Match
 	    in
-		Instance ([], [kp], NONE)
+		(*Instance ([], [kp], NONE)*)
+		(*w0*)
+		Instances ([], [subj])
 	    end
 	else
 	    let
@@ -122,7 +122,7 @@ fun value_of_instance x0 kp = (
 		val v = (simple_type_attribute kp (Id "value"))
 	    in
 		if (v = NIL) then
-		    x0
+		    w0
 		else
 		    v
 	    end)
@@ -132,75 +132,20 @@ fun value_of_instance x0 kp = (
 	    val vv = (map (value_of_instance NIL) array)
 	in
 	    if ((array_size dim) = 0) then
-		Instance (dim, array, dummy)
+		(*Instance (dim, array, dummy)*)
+		(*w0*)
+		Instances ([0], [])
 	    else if (List.exists (fn v => (v = NIL)) vv) then
-		Instance (dim, array, dummy)
+		(*Instance (dim, array, dummy)*)
+		(*w0*)
+		Instances (dim, (map subject_of_class array))
 	    else
 		(make_explicit_array dim vv)
 	end)
-      | Def_Der _ => x0
+      | Def_Der _ => w0
       | Def_Primitive (P_Enum tag_, L_Enum (tag, v)) => L_Enum (tag, v)
       | Def_Primitive _ => raise Match
       | _ => raise Match)
-
-(* Tests if it is a constant after constant folding. *)
-
-fun expression_is_constant__ w = (
-    let
-	fun check variability initialvalue = (
-	    case variability of
-		Continuous => (expression_is_constant__ initialvalue)
-	      | Discrete => (expression_is_constant__ initialvalue)
-	      | Parameter => (
-		if (not (expression_is_constant__ initialvalue)) then
-		    raise error_no_value_to_constant
-		else
-		    true)
-	      | Constant => (
-		if (not (expression_is_constant__ initialvalue)) then
-		    raise error_no_value_to_constant
-		else
-		    true))
-    in
-	case w of
-	    NIL => false
-	  | Colon => raise Match
-	  | Otherwise => raise Match
-	  | Scoped _ => raise Match
-	  | Vref (_, []) => raise Match
-	  | Vref (NONE, _) => raise Match
-	  | Vref (SOME _, _) => false
-	  | Opr _ => raise Match
-	  | App (x0, a0) => false
-	  | ITE c0 => false
-	  | Der a0 => false
-	  | Pure a0 => (List.all expression_is_constant__ a0)
-	  | Closure (n, a0) => false
-	  | L_Number x => true
-	  | L_Bool x => true
-	  | L_Enum _ => raise Match
-	  | L_String s => true
-	  | Array_Triple (x0, y0, z0) => (
-	    case z0 of
-		NONE => (
-		(List.all expression_is_constant__ [x0, y0]))
-	      | SOME z1 => (
-		(List.all expression_is_constant__ [x0, y0, z1])))
-	  | Array_Constructor a0 => (List.all expression_is_constant__ a0)
-	  | Array_Comprehension (x0, u0) => false
-	  | Array_Concatenation a0 => (
-	    (List.all (List.all expression_is_constant__) a0))
-	  | Tuple a0 => (List.all expression_is_constant__ a0)
-	  | Reduction_Argument (x0, u0) => false
-	  | Named_Argument (n, x0) => (expression_is_constant__ x0)
-	  | Pseudo_Split (x0, s) => (expression_is_constant__ x0)
-	  | Component_Ref _ => raise NOTYET
-	  | Instance _ => raise NOTYET
-	  | Iref v => raise NOTYET
-	  | Array_fill (x, n) => ((expression_is_constant__ x)
-				  andalso (expression_is_constant__ n))
-	  | Array_diagonal x => (expression_is_constant__ x)
-    end)
 
 fun value_of_reference w0 = (
     case w0 of
@@ -360,7 +305,8 @@ fun fold_expression ctx oneshot env w0 = (
 		    (fold_pseudo_split w1)
 	    end)
 	  | Component_Ref _ => w0
-	  | Instance (dim, kk, _) => w0
+	  (*| Instance (dim, kk, _) => w0*)
+	  | Instances _ => w0
 	  | Iref id => (
 	    if (null env) then
 		w0
@@ -434,6 +380,21 @@ fun explicitize_range w = (
 	      | L_Bool _ => (r_literal (Real.fromInt (bool_order w)))
 	      | L_Enum _ => (r_literal (Real.fromInt (enumerator_order w)))
 	      | _ => raise error_non_scalar_literal)
+
+	fun range_by_type k = (
+	    case k of
+		Def_Mock_Array _ => raise error_range_on_array
+	      | _ => (
+		if (class_is_boolean k) then
+		    (map z_literal [0, 1])
+		else if (class_is_enumeration_definition k) then
+		    case (take_enumarator_element k) of
+			NONE => raise error_enum_unspecified
+		      | SOME [] => raise Match
+		      | SOME vv => (
+			(map z_literal (z_seq 1 1 (length vv))))
+		else
+		    raise error_range_on_class))
     in
 	if (not (expression_is_literal w)) then
 	    raise error_range_iterator
@@ -474,18 +435,15 @@ fun explicitize_range w = (
 		    (map z_scalar_literal ee))
 	      | Array_Comprehension (x, rr) => raise NOTYET
 	      | Array_Concatenation _ => raise error_not_vector
-	      | Instance ([], [k], NONE) => (
-		if (class_is_boolean k) then
-		    (map z_literal [0, 1])
-		else if (class_is_enumeration_definition k) then
-		    case (take_enumarator_element k) of
-			NONE => raise error_enum_unspecified
-		      | SOME [] => raise Match
-		      | SOME vv => (
-			(map z_literal (z_seq 1 1 (length vv))))
-		else
-		    raise error_range_on_class)
-	      | Instance (_, _, _) => raise error_range_on_array
+	      (*| Instance ([], [k], NONE) => (range_by_type k)*)
+	      (*| Instance (_, _, _) => raise error_range_on_array*)
+	      | Instances ([], [subj]) => (
+		let
+		    val k = surely (fetch_from_instance_tree subj)
+		in
+		    (range_by_type k)
+		end)
+	      | Instances (_, _) => raise error_range_on_array
 	      | _ => raise Match
     end)
 
