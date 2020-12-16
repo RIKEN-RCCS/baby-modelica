@@ -77,8 +77,6 @@ sig
 	subject_t * class_tag_t -> subject_t * definition_body_t
 
     val fetch_instance_tree_node : subject_t -> instance_node_t option
-    val descend_instance_tree :
-	(id_t * int list) list -> instance_node_t -> instance_node_t option
     val descend_instance_tree_node :
 	id_t -> instance_node_t -> component_slot_t option
 
@@ -316,8 +314,8 @@ fun descend_instance_tree_step__ (id, index) (node0 : instance_node_t) = (
 
 (* Finds an instance or an array of instances, by descending an
    instance_tree.  It may return a temporarily created dummy node,
-   when it returns an array of instances.  It trails an outer alias
-   when it encounters. *)
+   when it returns an array of instances.  It trails an inner-outer
+   alias. *)
 
 fun descend_instance_tree path0 (node0 : instance_node_t) = (
     case path0 of
@@ -377,7 +375,8 @@ fun fetch_instance_tree_node subj : instance_node_t option = (
 	(descend_instance_tree path root)
     end)
 
-(* Fetchs an instance in the instance_tree. *)
+(* Fetchs an instance in the instance_tree.  It trails an inner-outer
+   alias, thus, it never returns an inner-outer alias. *)
 
 fun fetch_from_instance_tree subj : definition_body_t option = (
     case (fetch_instance_tree_node subj) of

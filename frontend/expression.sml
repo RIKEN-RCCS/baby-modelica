@@ -428,9 +428,9 @@ fun find_range_in_reference_loop v (node0, rr0) : int option = (
 		end))
     end)
 
-(* Returns a range value as an integer for an iterator v=Iref, when an
-   iterator is found in the subscripts.  It is not called when an
-   iterator is hidden by another nested iteration. *)
+(* Returns an iterator range as an integer for an iterator v=Iref,
+   when an iterator is found in the subscripts.  It is not called when
+   an iterator is hidden by another nested iteration. *)
 
 fun find_range_in_reference v (w, acc0) : int option = (
     case w of

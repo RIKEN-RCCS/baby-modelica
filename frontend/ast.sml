@@ -255,10 +255,8 @@ and type_marker_t = ENUM | MAIN | BASE | SIMP
    slot is an enclosing class (for a package).  Field abbreviation is:
    Def_Body(mk,j,cs,nm,ee,aa,ww).  Def_Der is a derivative definition.
    Def_Body and Def_Der represent the classes after syntaxing.
-   Def_Primitive is primitive types.  Def_Outer_Alias is an outer
-   reference of an inner-outer which is a record left in the
-   class_tree/instance_tree.  Def_Name specifies a class name in the
-   language.  Def_Scoped replaces Def_Name by attaching scope
+   Def_Primitive is primitive types.  Def_Name specifies a class name
+   in the language.  Def_Scoped replaces Def_Name by attaching scope
    information.  Def_Refine represents class modifications, either
    from a short class definition or from an extends-clause.
    Def_Refine holds component_prefixes but it usually only uses a
@@ -279,7 +277,9 @@ and type_marker_t = ENUM | MAIN | BASE | SIMP
    created for file/directory entries when a "package.mo" is loaded.
    It is a pair of an outer reference and a matching inner reference.
    Def_Mock_Array is temporarily used to represent an array of
-   instances, which is created on accessing the instance_tree. *)
+   instances, which is created on accessing the instance_tree.
+   Def_Outer_Alias is a record left in the instance_tree to map an
+   outer reference to an inner. *)
 
 and definition_body_t
     = Def_Body of
@@ -292,7 +292,6 @@ and definition_body_t
        * name_t * id_t list * annotation_t * comment_t)
     | Def_Primitive of
       (primitive_type_t * (*value*) expression_t)
-    | Def_Outer_Alias of instantiation_t * subject_t * subject_t
     | Def_Name of name_t
     | Def_Scoped of (name_t * scope_t)
     | Def_Refine of
@@ -311,6 +310,7 @@ and definition_body_t
     | Def_In_File
     | Def_Mock_Array of
       (int list * definition_body_t list * definition_body_t option)
+    | Def_Outer_Alias of instantiation_t * subject_t * subject_t
 
 (* Import_Clause has an ID pair (v0,v1) for importing v1=pkg.v0.  Or,
    it is a "*"-form import if the ID part is NONE.  Element_Class and

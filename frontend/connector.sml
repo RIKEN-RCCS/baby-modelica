@@ -40,6 +40,26 @@ datatype connectors_t
     | Branch
     | Root of bool
 
+(* Tests a class is a connector. *)
+
+fun class_is_connector k = (
+    case k of
+	Def_Body (mk, j, (t, p, q), nm, ee, aa, ww) => (
+	(t = Connector orelse (t = Expandable_Connector)))
+      | Def_Der _ => false
+      | Def_Primitive _ => raise Match
+      | Def_Name _ => raise Match
+      | Def_Scoped _ => raise Match
+      | Def_Refine _ => raise Match
+      | Def_Extending _ => raise Match
+      | Def_Replaced _ => raise Match
+      | Def_Displaced _ => raise Match
+      | Def_In_File => raise Match
+      | Def_Mock_Array (_, [], SOME x) => (class_is_connector x)
+      | Def_Mock_Array (_, array, dummy) => (
+	(List.all class_is_connector array))
+      | Def_Outer_Alias _ => raise Match)
+
 (* ================================================================ *)
 
 (* Tests a connector equation appears in an equation. *)
@@ -192,7 +212,7 @@ fun drop_subscripts rr = (
    subject (true when a reference is a class itself).  It ignores
    subscripts but it is precise. *)
 
-fun reference_is_component subj w = (
+fun reference_is_component__ subj w = (
     case w of
 	Vref (_, []) => raise Match
       | Vref (NONE, _) => raise Match
@@ -206,38 +226,34 @@ fun reference_is_component subj w = (
 	end)
       | _ => raise Match)
 
-val reference_is_connector_component = reference_is_component
+(* Tests if a reference refers inside a class and a referenced
+   component (the first part of the name in the class) is a
+   connector. *)
 
-(*
 fun reference_is_connector_component subj w = (
     case w of
 	Vref (_, []) => raise Match
       | Vref (NONE, _) => raise Match
       | Vref (SOME ns0, rr0) => (
 	let
-	    val rr1 = (drop_subscripts rr0)
 	    val Subj (ns1, cc0) = subj
 	    val cc1 = (drop_subscripts cc0)
+	    val rr1 = (drop_subscripts rr0)
 	in
 	    if (not ((ns0 = ns1) andalso (list_prefix (op =) cc1 rr1))) then
 		false
 	    else
-		case (List.drop rr0 (length cc0)) of
+		case (List.drop (rr0, (length cc0))) of
 		    [] => false
 		  | (id, ss) :: _ => (
 		    let
-			val component = (compose_subject defining id [])
-			val k0 = surely (fetch_from_instance_tree component)
+			val component = (compose_subject subj id [])
+			val k = surely (fetch_from_instance_tree component)
 		    in
-			case k0 of
-			    Def_Outer_Alias _ =>
-			  | Def_Mock_Array _ =>
-			  | _ => (class_is_connector k0)
-
+			(class_is_connector k)
 		    end)
 	end)
       | _ => raise Match)
-*)
 
 fun collect_connects_in_equation kp (q0, acc0) = (
     let
