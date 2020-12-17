@@ -341,4 +341,6 @@ val error_unknown_iterator_range = Match
 
 val error_when_contains_connects = Match
 
+val error_connector_in_package = Match
+
 end

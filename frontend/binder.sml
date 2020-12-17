@@ -77,7 +77,7 @@ fun extend_reference subj rr1 = (
 	    val _ = (assert_no_subscript_to_subject subj)
 	    val _ = (assert_match_subject_name id1 subj)
 	    val Subj (ns, _) = subj
-	    val rr0 = (subject_as_reference subj)
+	    val Vref (_, rr0) = (subject_as_reference subj)
 	    val (prefix, _) = (split_last rr0)
 	in
 	    Vref (SOME ns, (prefix @ rr1))

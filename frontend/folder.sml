@@ -112,9 +112,10 @@ fun value_of_instance w0 kp = (
 			    if (step_is_at_least E5 kp) then ()
 			    else raise Match
 	    in
-		(*Instance ([], [kp], NONE)*)
-		(*w0*)
-		Instances ([], [subj])
+		if (class_is_package kp) then
+		    w0
+		else
+		    Instances ([], [subj])
 	    end
 	else
 	    let
@@ -132,11 +133,9 @@ fun value_of_instance w0 kp = (
 	    val vv = (map (value_of_instance NIL) array)
 	in
 	    if ((array_size dim) = 0) then
-		(*Instance (dim, array, dummy)*)
 		(*w0*)
 		Instances ([0], [])
 	    else if (List.exists (fn v => (v = NIL)) vv) then
-		(*Instance (dim, array, dummy)*)
 		(*w0*)
 		Instances (dim, (map subject_of_class array))
 	    else

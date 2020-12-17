@@ -92,9 +92,16 @@ fun global_function_name k = (
       | _ => NONE)
 *)
 
+(*
 fun global_function_name k = (
     case k of
 	Instances ([], [Subj (ns, [(Id name, [])])]) => SOME name
+      | _ => NONE)
+*)
+
+fun global_function_name f = (
+    case f of
+	Vref (SOME PKG, [(Id name, [])]) => SOME name
       | _ => NONE)
 
 fun empty_global_function__ name = (
@@ -491,14 +498,18 @@ fun fold_operator_application (f, args) = (
 		  | _ => original
 	    else
 		raise Match)
-	  (*| Instance ([], [kp], NONE) => ( *)
-	  (*case (global_function_name kp) of*)
-	  (*NONE => original*)
-	  (*| SOME v => (fold_on_global_function (v, args)))*)
+	  (*
 	  | Instances _ => (
 	    case (global_function_name f) of
 		NONE => original
-	      | SOME v => (fold_on_global_function (v, args)))
+	      | SOME name => (fold_on_global_function (name, args)))
+	  *)
+	  | Vref (_, []) => raise Match
+	  | Vref (NONE, _) => raise Match
+	  | Vref (SOME _, _) => (
+	    case (global_function_name f) of
+		NONE => original
+	      | SOME name => (fold_on_global_function (name, args)))
 	  | _ => original
     end)
 

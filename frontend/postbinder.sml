@@ -32,7 +32,6 @@ val walk_in_equation = walker.walk_in_equation
 val walk_in_statement = walker.walk_in_statement
 
 val secure_reference = builder.secure_reference
-val secure_subject = builder.secure_subject
 
 (* ================================================================ *)
 
@@ -44,7 +43,7 @@ fun secure_references_in_class kp = (
 	val ewalk = (walk_in_expression efix)
 	val qwalk = (walk_in_equation (fn (q, a) => (q, a)) ewalk)
 	val swalk = (walk_in_statement (fn (s, a) => (s, a)) ewalk)
-	val walker = {q_vamp = qwalk, s_vamp = swalk}
+	val walker = {vamp_q = qwalk, vamp_s = swalk}
 	val (_, _) = (walk_in_class walker (kp, ()))
     in
 	()
@@ -82,10 +81,9 @@ fun bind_in_instance (scanning : bool) k0 = (
 	    if ((kind_is_record k1) andalso (class_is_instance k1)) then
 		let
 		    val record = (class_name_of_instance k1)
+		    val var = (subject_as_reference record)
 		    val ctx = k1
-		    val k2 = case (fetch_from_instance_tree record) of
-				 SOME kx => kx
-			       | NONE => (secure_subject ctx record)
+		    val _ = (secure_reference ctx false var)
 		in
 		    true
 		end
@@ -159,7 +157,7 @@ fun replace_outer_in_instance (k0, acc0) = (
 		val ewalk = (walk_in_expression efix)
 		val qwalk = (walk_in_equation (fn (q, a) => (q, a)) ewalk)
 		val swalk = (walk_in_statement (fn (s, a) => (s, a)) ewalk)
-		val walker = {q_vamp = qwalk, s_vamp = swalk}
+		val walker = {vamp_q = qwalk, vamp_s = swalk}
 		val (k1, _) = (walk_in_class walker (k0, ()))
 		val _ = (store_to_instance_tree subj k1)
 	    in

@@ -191,8 +191,8 @@ datatype class_kind_t
     | Type
     | Record
     | Operator_Record
-    | Connector
-    | Expandable_Connector
+    | Connector of (*expandable*) bool
+    (*| Expandable_Connector*)
     | Package
     | Function of (*pure*) bool
     | Operator
@@ -470,8 +470,7 @@ type binding_element_t = (visibility_t * element_prefixes_t
    stored in the class_bindings table.  The identifier slot is a
    variable/class name.  The first subject slot is a composite name,
    which is a composition of a defining class and a name.  The second
-   subject slot points to an inner element when this element is
-   outer. *)
+   subject slot points to an inner when this element is an outer. *)
 
 datatype naming_t
     = Naming of (id_t * subject_t * subject_t option * (*imported*) bool

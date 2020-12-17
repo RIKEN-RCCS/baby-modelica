@@ -1430,11 +1430,11 @@ and yyreduce (yylex : yylexstate_t -> int * yyv_t * yylexstate_t)
 | 17 =>
 (* line 404 "modelica-grammar.y" *)
 (#yyval yysm) := VS_CLASS_PREFIX (
-		(Connector, no_class_prefixes))
+		(Connector false, no_class_prefixes))
 | 18 =>
 (* line 406 "modelica-grammar.y" *)
 (#yyval yysm) := VS_CLASS_PREFIX (
-		(Expandable_Connector, no_class_prefixes))
+		(Connector true, no_class_prefixes))
 | 19 =>
 (* line 408 "modelica-grammar.y" *)
 (#yyval yysm) := VS_CLASS_PREFIX (

@@ -272,9 +272,8 @@ fun subject_print_string (Subj (ns, cc0)) = (
 fun subject_as_reference (Subj (ns, cc0)) = (
     let
 	fun mapr f (x0, x1) = (x0, (f x1))
-	(*val cc1 = (attach_dot_of_package_root ns cc0)*)
     in
-	(map (mapr (map z_literal)) cc0)
+	Vref (SOME ns, (map (mapr (map z_literal)) cc0))
     end)
 
 (* Checks if a class is in a processed form, which can appear in the
@@ -993,5 +992,28 @@ fun class_name_of_instance k = (
       | Def_Displaced _ => raise Match
       | Def_In_File => raise Match
       | Def_Mock_Array _ => raise Match)
+
+(* Tests a class is a connector.  It only returns true on expandable
+   connectors when expandable=true. *)
+
+fun class_is_connector expandable k = (
+    case k of
+	Def_Body (mk, j, (t, p, q), nm, ee, aa, ww) => (
+	case t of
+	    Connector x => ((not expandable) orelse x)
+	  | _ => false)
+      | Def_Der _ => false
+      | Def_Primitive _ => false
+      | Def_Name _ => raise Match
+      | Def_Scoped _ => raise Match
+      | Def_Refine _ => raise Match
+      | Def_Extending _ => raise Match
+      | Def_Replaced _ => raise Match
+      | Def_Displaced _ => raise Match
+      | Def_In_File => raise Match
+      | Def_Mock_Array (_, [], SOME x) => (class_is_connector expandable x)
+      | Def_Mock_Array (_, array, dummy) => (
+	(List.all (class_is_connector expandable) array))
+      | Def_Outer_Alias _ => raise Match)
 
 end

@@ -11,18 +11,18 @@ sig
     type equation_t
     type statement_t
     type definition_body_t
-    type 'a e_vamper_t
+    type 'a x_vamper_t
     type 'a q_vamper_t
     type 'a s_vamper_t
     type 'a vamper_t
 
     val walk_in_expression :
-	'a e_vamper_t -> expression_t * 'a -> expression_t * 'a
+	'a x_vamper_t -> expression_t * 'a -> expression_t * 'a
     val walk_in_equation :
-	'a q_vamper_t -> 'a e_vamper_t
+	'a q_vamper_t -> 'a x_vamper_t
 	-> equation_t * 'a -> equation_t * 'a
     val walk_in_statement :
-	'a s_vamper_t -> 'a e_vamper_t
+	'a s_vamper_t -> 'a x_vamper_t
 	-> statement_t * 'a -> statement_t * 'a
     val walk_in_class :
 	'a vamper_t -> definition_body_t * 'a -> definition_body_t * 'a
@@ -36,10 +36,10 @@ open plain
 open ast
 open small0
 
-type 'a e_vamper_t = expression_t * 'a -> expression_t * 'a
+type 'a x_vamper_t = expression_t * 'a -> expression_t * 'a
 type 'a q_vamper_t = equation_t * 'a -> equation_t * 'a
 type 'a s_vamper_t = statement_t * 'a -> statement_t * 'a
-type 'a vamper_t = {q_vamp : 'a q_vamper_t, s_vamp : 'a s_vamper_t}
+type 'a vamper_t = {vamp_q : 'a q_vamper_t, vamp_s : 'a s_vamper_t}
 
 val expression_to_string = dumper.expression_to_string
 
@@ -112,9 +112,9 @@ fun walk_in_n_xx walk ((n, xx0), acc0) = (
    Otherwise, Opr, and literals.  It need be called after resolving
    variable references. *)
 
-fun walk_in_expression (vamp_e : 'a e_vamper_t) (w0, acc0) = (
+fun walk_in_expression (vamp_x : 'a x_vamper_t) (w0, acc0) = (
     let
-	val walk_x = (walk_in_expression vamp_e)
+	val walk_x = (walk_in_expression vamp_x)
 	val walk_n_x = (walk_in_n_x walk_x)
 	val walk_x_x = (walk_in_x_x walk_x)
 	val walk_x_option = (walk_in_x_option walk_x)
@@ -136,7 +136,7 @@ fun walk_in_expression (vamp_e : 'a e_vamper_t) (w0, acc0) = (
 		val (rr1, acc1) = (map_along walk_subscript (rr0, acc0))
 		val w1 = Vref (SOME ns, rr1)
 	    in
-		(vamp_e (w1, acc1))
+		(vamp_x (w1, acc1))
 	    end)
 	  | Opr _ => (w0, acc0)
 	  | App (f0, aa0) => (
@@ -145,35 +145,35 @@ fun walk_in_expression (vamp_e : 'a e_vamper_t) (w0, acc0) = (
 		val (aa1, acc2) = (map_along walk_x (aa0, acc1))
 		val w1 = App (f1, aa1)
 	    in
-		(vamp_e (w1, acc2))
+		(vamp_x (w1, acc2))
 	    end)
 	  | ITE cc0 => (
 	    let
 		val (cc1, acc1) = (map_along walk_x_x (cc0, acc0))
 		val w1 = (simplify_ite (ITE cc1))
 	    in
-		(vamp_e (w1, acc1))
+		(vamp_x (w1, acc1))
 	    end)
 	  | Der aa0 => (
 	    let
 		val (aa1, acc1) = (map_along walk_x (aa0, acc0))
 		val w1 = Der aa1
 	    in
-		(vamp_e (w1, acc1))
+		(vamp_x (w1, acc1))
 	    end)
 	  | Pure aa0 => (
 	    let
 		val (aa1, acc1) = (map_along walk_x (aa0, acc0))
 		val w1 = Pure aa1
 	    in
-		(vamp_e (w1, acc1))
+		(vamp_x (w1, acc1))
 	    end)
 	  | Closure (n, aa0) => (
 	    let
 		val (aa1, acc1) = (map_along walk_x (aa0, acc0))
 		val w1 = Closure (n, aa1)
 	    in
-		(vamp_e (w1, acc1))
+		(vamp_x (w1, acc1))
 	    end)
 	  | L_Number _ => (w0, acc0)
 	  | L_Bool _ => (w0, acc0)
@@ -186,14 +186,14 @@ fun walk_in_expression (vamp_e : 'a e_vamper_t) (w0, acc0) = (
 		val (z1, acc3) = (walk_x_option (z0, acc2))
 		val w1 = Array_Triple (x1, y1, z1)
 	    in
-		(vamp_e (w1, acc3))
+		(vamp_x (w1, acc3))
 	    end)
 	  | Array_Constructor xx0 => (
 	    let
 		val (xx1, acc1) = (map_along walk_x (xx0, acc0))
 		val w1 = Array_Constructor xx1
 	    in
-		(vamp_e (w1, acc1))
+		(vamp_x (w1, acc1))
 	    end)
 	  | Array_Comprehension (x0, uu0) => (
 	    let
@@ -201,21 +201,21 @@ fun walk_in_expression (vamp_e : 'a e_vamper_t) (w0, acc0) = (
 		val (uu1, acc2) = (map_along walk_n_x (uu0, acc1))
 		val w1 = Array_Comprehension (x1, uu1)
 	    in
-		(vamp_e (w1, acc2))
+		(vamp_x (w1, acc2))
 	    end)
 	  | Array_Concatenation xx0 => (
 	    let
 		val (xx1, acc1) = (map_along walk_xx (xx0, acc0))
 		val w1 = Array_Concatenation xx1
 	    in
-		(vamp_e (w1, acc1))
+		(vamp_x (w1, acc1))
 	    end)
 	  | Tuple xx0 => (
 	    let
 		val (xx1, acc1) = (map_along walk_x (xx0, acc0))
 		val w1 = Tuple xx1
 	    in
-		(vamp_e (w1, acc1))
+		(vamp_x (w1, acc1))
 	    end)
 	  | Reduction_Argument (x0, uu0) => (
 	    let
@@ -223,46 +223,46 @@ fun walk_in_expression (vamp_e : 'a e_vamper_t) (w0, acc0) = (
 		val (uu1, acc2) = (map_along walk_n_x (uu0, acc1))
 		val w1 = Reduction_Argument (x1, uu1)
 	    in
-		(vamp_e (w1, acc2))
+		(vamp_x (w1, acc2))
 	    end)
 	  | Named_Argument (n, x0) => (
 	    let
 		val (x1, acc1) = (walk_x (x0, acc0))
 		val w1 = Named_Argument (n, x1)
 	    in
-		(vamp_e (w1, acc1))
+		(vamp_x (w1, acc1))
 	    end)
 	  | Pseudo_Split (x0, ss) => (
 	    let
 		val (x1, acc1) = (walk_x (x0, acc0))
 		val w1 = Pseudo_Split (x1, ss)
 	    in
-		(vamp_e (w1, acc1))
+		(vamp_x (w1, acc1))
 	    end)
 	  | Component_Ref (x0, id) => (
 	    let
 		val (x1, acc1) = (walk_x (x0, acc0))
 		val w1 = Component_Ref (x1, id)
 	    in
-		(vamp_e (w1, acc1))
+		(vamp_x (w1, acc1))
 	    end)
-	  (*| Instance _ => (vamp_e (w0, acc0))*)
-	  | Instances _ => (vamp_e (w0, acc0))
-	  | Iref _ => (vamp_e (w0, acc0))
+	  (*| Instance _ => (vamp_x (w0, acc0))*)
+	  | Instances _ => (vamp_x (w0, acc0))
+	  | Iref _ => (vamp_x (w0, acc0))
 	  | Array_fill (x0, y0) => (
 	    let
 		val (x1, acc1) = (walk_x (x0, acc0))
 		val (y1, acc2) = (walk_x (y0, acc1))
 		val w1 = Array_fill (x1, y1)
 	    in
-		(vamp_e (w1, acc2))
+		(vamp_x (w1, acc2))
 	    end)
 	  | Array_diagonal x0 => (
 	    let
 		val (x1, acc1) = (walk_x (x0, acc0))
 		val w1 = Array_diagonal x1
 	    in
-		(vamp_e (w1, acc1))
+		(vamp_x (w1, acc1))
 	    end)
     end)
 
@@ -305,7 +305,7 @@ and walk_in_class_element (vamp : 'a vamper_t) kp (e0 : element_t, acc0) = (
 		((c, k1), acc1)
 	    end)
 
-	val {q_vamp, s_vamp} = vamp
+	val {vamp_q, vamp_s} = vamp
 	val package = (class_is_package kp)
     in
 	case e0 of
@@ -324,7 +324,7 @@ and walk_in_class_element (vamp : 'a vamper_t) kp (e0 : element_t, acc0) = (
 		    val _ = tr_expr (";; - [walk] Walk in equations in ("^
 				     (class_print_name kp) ^")")
 
-		    val (qq1, acc1) = (map_along q_vamp (qq0, acc0))
+		    val (qq1, acc1) = (map_along vamp_q (qq0, acc0))
 		    val e1 = Element_Equations (u, qq1)
 		in
 		    (e1, acc1)
@@ -337,7 +337,7 @@ and walk_in_class_element (vamp : 'a vamper_t) kp (e0 : element_t, acc0) = (
 		    val _ = tr_expr (";; - [walk] Walk in statements in ("^
 				     (class_print_name kp) ^")")
 
-		    val (ss1, acc1) = (map_along s_vamp (ss0, acc0))
+		    val (ss1, acc1) = (map_along vamp_s (ss0, acc0))
 		    val e1 = Element_Algorithms (u, ss1)
 		in
 		    (e1, acc1)
@@ -410,9 +410,9 @@ and walk_in_primitive_type (vamp : 'a vamper_t) (k0, acc0) = (
     case k0 of
 	Def_Primitive (ty, x0) => (
 	let
-	    val {q_vamp, s_vamp} = vamp
+	    val {vamp_q, vamp_s} = vamp
 	    val dummy0 = Eq_Eq ((x0, NIL), Annotation [], Comment [])
-	    val (dummy1, acc1) = (q_vamp (dummy0, acc0))
+	    val (dummy1, acc1) = (vamp_q (dummy0, acc0))
 	in
 	    case dummy1 of
 		Eq_Eq ((x1, _), _, _) => (
@@ -504,7 +504,7 @@ and walk_in_constraint ewalk ((h0 : constraint_t), acc0) = (
 (* Applies a function to each equation in the post-order as well as it
    applies a function to an expression when it encounters. *)
 
-fun walk_in_equation qvamp (ewalk : 'a e_vamper_t) (q0, acc0) = (
+fun walk_in_equation qvamp (ewalk : 'a x_vamper_t) (q0, acc0) = (
     let
 	val walk_x = ewalk
 	val walk_m = (walk_in_modifier walk_x)
@@ -576,7 +576,7 @@ fun walk_in_equation qvamp (ewalk : 'a e_vamper_t) (q0, acc0) = (
 (* Applies a function to each statement in the post-order as well as
    it applies a function to an expression when it encounters. *)
 
-fun walk_in_statement svamp (ewalk : 'a e_vamper_t) (s0, acc0) = (
+fun walk_in_statement svamp (ewalk : 'a x_vamper_t) (s0, acc0) = (
     let
 	val walk_x = ewalk
 	val walk_m = (walk_in_modifier walk_x)

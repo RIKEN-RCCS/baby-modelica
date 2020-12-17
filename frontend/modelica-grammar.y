@@ -402,9 +402,9 @@ class_kind_
 	| BLOCK {
 		(Block, no_class_prefixes)}
 	| CONNECTOR {
-		(Connector, no_class_prefixes)}
+		(Connector false, no_class_prefixes)}
 	| EXPANDABLE CONNECTOR {
-		(Expandable_Connector, no_class_prefixes)}
+		(Connector true, no_class_prefixes)}
 	| TYPE {
 		(Type, no_class_prefixes)}
 	| PACKAGE {

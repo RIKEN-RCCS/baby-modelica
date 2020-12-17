@@ -14,8 +14,6 @@ sig
 
     val secure_reference :
 	definition_body_t -> bool -> expression_t -> expression_t
-    val secure_subject :
-	definition_body_t -> subject_t -> definition_body_t
 
     val xreset : unit -> unit
     val xload : string -> class_definition_t
@@ -38,6 +36,7 @@ val assert_stored_in_instance_tree = classtree.assert_stored_in_instance_tree
 val unwrap_array_of_instances = classtree.unwrap_array_of_instances
 val subject_to_instance_tree_path = classtree.subject_to_instance_tree_path
 val component_is_outer_alias = classtree.component_is_outer_alias
+val component_is_expandable = classtree.component_is_expandable
 val dereference_outer_alias = classtree.dereference_outer_alias
 val fetch_instance_tree_node = classtree.fetch_instance_tree_node
 val instantiate_outer_alias = classtree.instantiate_outer_alias
@@ -234,10 +233,11 @@ and secure_reference_in_expression ctx buildphase w0 = (
 (* Makes each package/instance in a composite variable reference be
    accessible in the class_tree/instance_tree.  It secures all array
    elements and thus ignores array subscripts (and it can be done
-   without folding constants).  At each step, it descends a part of a
-   reference in the tree.  The next part can be a package, a constant,
-   or an instance, where it is an instance only when the current node
-   is an instance. *)
+   without folding constants).  It does not secure inside an
+   expandable connector (because it can contain undeclared elements).
+   At each step, it descends a part of a reference in the tree.  The
+   next part can be a package, a constant, or an instance, where it is
+   an instance only when the current node is an instance. *)
 
 and secure_reference ctx buildphase w0 = (
     case w0 of
@@ -246,16 +246,15 @@ and secure_reference ctx buildphase w0 = (
       | Vref (SOME ns, rr0) => (
 	let
 	    val root = if (ns = PKG) then class_tree else instance_tree
-	    val rr1 = (pseudo_reference_path rr0)
-	    (*val rr2 = (drop_dot_of_package_root ns rr1)*)
-	    val nodes = (secure_reference_loop ctx buildphase false rr1 root)
+	    val path = (pseudo_reference_path rr0)
+	    val nodes = (secure_reference_loop ctx false path root)
 	in
 	    w0
 	end)
       | Iref _ => w0
       | _ => w0)
 
-and secure_reference_loop ctx buildphase (retrying : bool) path0 node0 = (
+and secure_reference_loop ctx (retrying : bool) path0 node0 = (
     case path0 of
 	[] => [node0]
       | ((id, ss) :: path1) => (
@@ -282,7 +281,7 @@ and secure_reference_loop ctx buildphase (retrying : bool) path0 node0 = (
 		    val (dim, array) = (instantiate_class_in_class kp id)
 		in
 		    (secure_reference_loop
-			 ctx buildphase true path0 node0)
+			 ctx true path0 node0)
 		end)
 	      | SOME (slot as Slot (_, dim, nodes, dummy)) => (
 		if (component_is_outer_alias slot) then
@@ -290,22 +289,20 @@ and secure_reference_loop ctx buildphase (retrying : bool) path0 node0 = (
 			val node1 = (dereference_outer_alias slot)
 		    in
 			(secure_reference_loop
-			     ctx buildphase true path0 node1)
+			     ctx true path0 node1)
 		    end
+		else if (component_is_expandable slot) then
+		    nodes
 		else
-		    let
-			val _ = (check_reference_subscripts slot ss)
-		    in
-			(List.concat
-			     (map (secure_reference_loop
-				       ctx buildphase false path1) nodes))
-		    end)
+		    (List.concat
+			 (map (secure_reference_loop
+				   ctx false path1) nodes)))
 	end))
 
 (* Checks an access is proper about scalar or array.  It is an error
    an access to a scalar instance has subscripts. *)
 
-and check_reference_subscripts (Slot (v, dim, nodes, dummy)) ss = (
+and check_reference_subscripts__ (Slot (v, dim, nodes, dummy)) ss = (
     case (dim, nodes) of
 	([], []) => raise Match
       | ([], [(_, kx, _)]) => (
@@ -431,13 +428,14 @@ and settle_dimension kp ss mm = (
    a referenced package.  It returns a single class because it is a
    package. *)
 
-fun secure_subject ctx subj = (
+fun secure_package_subject__ ctx subj = (
     let
 	val Subj (tree, cc) = subj
 	val root = if (tree = PKG) then class_tree else instance_tree
-	val path = (map (fn (id, ss) => (id, [])) cc)
+	(*val path = (map (fn (id, ss) => (id, [])) cc)*)
+	val path = (pseudo_reference_path cc)
 	val buildphase = false
-	val nodes = (secure_reference_loop ctx buildphase false path root)
+	val nodes = (secure_reference_loop ctx false path root)
     in
 	case nodes of
 	    [node] => (

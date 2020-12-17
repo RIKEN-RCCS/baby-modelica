@@ -86,6 +86,7 @@ sig
 
     val dereference_outer_alias : component_slot_t -> instance_node_t
     val component_is_outer_alias : component_slot_t -> bool
+    val component_is_expandable : component_slot_t -> bool
 
     val clear_syntaxer_tables : unit -> unit
 
@@ -234,6 +235,16 @@ fun component_is_outer_alias (Slot (id, dim, nodes, dummy)) = (
 	    Def_Outer_Alias _ => true
 	  | _ => false)
       | _ => false)
+
+(* Tests if subcomponents are expandable connectors.  It returns false
+   if nodes is empty, though it does not matter. *)
+
+fun component_is_expandable (Slot (id, dim, nodes, dummy)) = (
+    let
+	fun check (subj, kx, cx) = (class_is_connector true (! kx))
+    in
+	(List.exists check nodes)
+    end)
 
 fun outer_alias_of_component (Slot (id, dim, nodes, dummy)) = (
     case nodes of

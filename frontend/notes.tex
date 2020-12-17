@@ -171,6 +171,9 @@ iterator ranges is not tested at all. *).
 \item The package Connectors cannot be extended.  It is handled
 nominally.
 
+\item (?) Translation-time constants cannot depend on variables in
+expandable connectors.
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%
@@ -2986,20 +2989,22 @@ annotations.
 \subsubsection*{Connections}
 
 Connections is a package is used to remove overdetermined equations.
-It is described in \specref{9.4}.  An overdetermined_type/record is a
-type/record defining $\mathit{equalityConstraint}(x,y)$.  Connections
-works with overdetermined_type/record.  It contains equation_operators
+It is described in \specref{9.4}.  A type/record defining
+$\mathit{equalityConstraint}(x,y)$ is called
+overdetermined_type/record.  Connections works with
+overdetermined_types/records.  It contains equation_operators
 $\mathit{branch}$, $\mathit{root}$, and $\mathit{potentialRoot}$
 (appear as equations), and boolean-valued operators $\mathit{isRoot}$
 and $\mathit{rooted}$ (appear as functions).
 
-Overdetermined equations have cycles in the undirected graph of
-overdetermined_types/records as nodes and connections as edges.  A
-graph is reduced to a tree by removing some of the edges by replacing
-them with weaker contraints.
+Connecting connectors may induce an undirected graph of
+overdetermined_types/records in connectors as nodes and equality as
+edges.  Such a graph may have cycles when the equations are
+overdetermined.  A graph is reduced to trees by removing some of the
+edges by replacing them with weaker contraints.  Operators in
+Connections are used to specify trees in the graph.
 
-Equation_operators in Connections are used to specify trees in a graph
-of connections.  $\mathit{branch}(m.c.r,m.c.r)$ makes an edge between
+$\mathit{branch}(m.c.r,m.c.r)$ makes an edge between
 overdetermined_types/records.  $\mathit{root}(m.c.r)$ specifies a root
 of a tree of overdetermined_types/records.
 $\mathbf{connect}(m.c,m.c)$ creates weak edges for the
