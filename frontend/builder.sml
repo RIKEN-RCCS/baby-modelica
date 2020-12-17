@@ -198,16 +198,37 @@ and instantiate_at_index (subj0, k0) mm0 index = (
 	    val subj1 = (compose_subject_with_index subj0 index)
 	    val mm1 = (commute_modifier_over_subscript index mm0)
 	    val k1 = Def_Refine (x0, v, ts0, q0, ([], mm1), aa0, ww0)
-	    val (dim, array, dummy)
-		= (instantiate_with_dimension (subj1, k1))
+	    val (dim, array, dummy) = (instantiate_with_dimension (subj1, k1))
 	in
 	    (dim, array)
 	end)
       | _ => raise Match)
 
-(* Tries to fold constants to be a literal value.  Folding constants
-   needs to be one-step, because binding variables is required at each
-   step. *)
+(* Determines a dimension of a declaration.  It needs looking at the
+   RHS in cases like "A~x[:]=e". *)
+
+and settle_dimension kp ss mm = (
+    if (not (List.exists (fn x => (x = Colon)) ss)) then
+	(map dimension_to_int ss)
+    else
+	let
+	    val size = (length ss)
+	    val x0 = (find_initializer_value mm)
+	    val x2 = (simplify_expression kp true x0)
+	    val (dim, fully) = (obtain_array_dimension x2)
+	in
+	    if (size <= (length dim)) then
+		dim
+	    else
+		if (fully) then
+		    raise error_dimensions_mismatch
+		else
+		    raise error_non_constant_array_dimension
+	end)
+
+(* Tries to fold constants to a literal value.  Folding constants
+   needs to be step-by-step, because resolving new variables is
+   necessary at each step. *)
 
 and simplify_expression ctx buildphase w0 = (
     let
@@ -239,7 +260,7 @@ and secure_reference_in_expression ctx buildphase w0 = (
    next part can be a package, a constant, or an instance, where it is
    an instance only when the current node is an instance. *)
 
-and secure_reference ctx buildphase w0 = (
+and secure_reference ctx buildphase_ w0 = (
     case w0 of
 	Vref (_, []) => raise Match
       | Vref (NONE, _) => raise Match
@@ -370,13 +391,13 @@ and instantiate_element kp binding = (
 		end)
 	      | NONE => (
 		let
-		    val (dim, array) = (instantiate_subelement kp binding)
+		    val (dim, array) = (instantiate_named_element kp binding)
 		in
 		    (dim, array)
 		end))
     end)
 
-and instantiate_subelement kp binding = (
+and instantiate_named_element kp binding = (
     case binding of
 	Naming (id, subj, NONE, _, (z, r, EL_Class dx, h)) => (
 	let
@@ -399,28 +420,6 @@ and instantiate_subelement kp binding = (
 	    (dim, array)
 	end)
       | Naming (id, subj, SOME _, _, _) => raise Match)
-
-(* Determines a dimension of a declaration, which needs looking at the
-   RHS in cases like "A~x[:]=e". *)
-
-and settle_dimension kp ss mm = (
-    if (not (List.exists (fn x => (x = Colon)) ss)) then
-	(map dimension_to_int ss)
-    else
-	let
-	    val size = (length ss)
-	    val x0 = (find_initializer_value mm)
-	    val x2 = (simplify_expression kp true x0)
-	    val (dim, fully) = (obtain_array_dimension x2)
-	in
-	    if (size <= (length dim)) then
-		dim
-	    else
-		if (fully) then
-		    raise error_dimensions_mismatch
-		else
-		    raise error_non_constant_array_dimension
-	end)
 
 (* ================================================================ *)
 
@@ -495,7 +494,7 @@ fun traverse_with_instantiation (subj0, k0) = (
 		end))
 
 	and traverse kx = (
-	    if (class_is_alias kx) then
+	    if (class_is_outer_alias kx) then
 		()
 	    else if (class_is_simple_type kx) then
 		()

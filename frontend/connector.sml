@@ -1,8 +1,9 @@
 (* connector.sml -*-Coding: us-ascii-unix;-*- *)
 (* Copyright (C) 2018-2020 RIKEN R-CCS *)
 
-(* CONNECTOR HANDLING.  It removes the uses of "Connections",
-   "inStream()", "actualStream()", and "cardinality()". *)
+(* CONNECTOR HANDLING.  It removes the uses of "connect",
+   "Connections", "inStream()", "actualStream()", and
+   "cardinality()". *)
 
 structure connector :
 sig
@@ -121,7 +122,7 @@ fun expand_expandables_in_equation kp (q0, acc0) = (
     end)
 
 fun expand_expandables_in_instance (k0, acc0) = (
-    if (class_is_alias k0) then
+    if (class_is_outer_alias k0) then
 	acc0
     else if (class_is_enumerator_definition k0) then
 	acc0
@@ -270,7 +271,7 @@ fun expand_equations kp env q0 = (
     end)
 
 fun expand_equations_in_instance (k0, acc0) = (
-    if (class_is_alias k0) then
+    if (class_is_outer_alias k0) then
 	acc0
     else if (class_is_enumerator_definition k0) then
 	acc0
@@ -365,7 +366,7 @@ fun collect_connects_in_equation kp (q0, acc0) = (
     end)
 
 fun collect_connects_in_instance (k0, acc0) = (
-    if (class_is_alias k0) then
+    if (class_is_outer_alias k0) then
 	acc0
     else if (class_is_enumerator_definition k0) then
 	acc0

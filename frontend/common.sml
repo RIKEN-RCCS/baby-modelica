@@ -464,12 +464,11 @@ fun tag_is_root tag = (
 
 (* Tests if a class is a record of an inner-outer matching. *)
 
-fun class_is_alias k = (
+fun class_is_outer_alias k = (
     case k of
 	Def_Body _ => false
       | Def_Der _ => false
       | Def_Primitive _ => false
-      | Def_Outer_Alias _ => true
       | Def_Name _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
@@ -477,7 +476,8 @@ fun class_is_alias k = (
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
       | Def_In_File => raise Match
-      | Def_Mock_Array _ => raise Match)
+      | Def_Mock_Array _ => raise Match
+      | Def_Outer_Alias _ => true)
 
 (* ================================================================ *)
 

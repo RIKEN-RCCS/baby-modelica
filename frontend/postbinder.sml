@@ -49,15 +49,15 @@ fun secure_references_in_class kp = (
 	()
     end)
 
-(* Resolves variable references in a package or an instance.  It
-   returns true if some instances are processed, to repeat the process
-   until it stabilizes.  It, with scanning=true, processes all
-   instances, becuase the building routine may leave some instances in
+(* Resolves variable references in a package/instance.  It returns
+   true if some instances are processed, so that it can repeat the
+   process until it stabilizes.  It, with scanning=true, processes all
+   instances, because the building routine may leave some instances in
    a partially resolved state (such as simple-types, whose value
    attribute is only resolved). *)
 
 fun bind_in_instance (scanning : bool) k0 = (
-    if (class_is_alias k0) then
+    if (class_is_outer_alias k0) then
 	false
     else if (class_is_enumerator_definition k0) then
 	false
@@ -141,7 +141,7 @@ fun bind_model scanning = (
 (* ================================================================ *)
 
 fun replace_outer_in_instance (k0, acc0) = (
-    if (class_is_alias k0) then
+    if (class_is_outer_alias k0) then
 	acc0
     else if (class_is_enumerator_definition k0) then
 	acc0

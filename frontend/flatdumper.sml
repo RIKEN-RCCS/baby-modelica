@@ -274,7 +274,7 @@ fun collect_variables root = (
 		let
 		    val subj = (subject_of_class kp)
 		in
-		    if (class_is_alias kp) then
+		    if (class_is_outer_alias kp) then
 			(* THIS WILL BE REMOVED. *)
 			acc
 		    else if (class_is_enumerator_definition kp) then
@@ -303,7 +303,7 @@ fun collect_variables root = (
 fun collect_enumerations root = (
     let
 	fun collect (kp, acc) = (
-	    if (class_is_alias kp) then
+	    if (class_is_outer_alias kp) then
 		(* THIS WILL BE REMOVED. *)
 		acc
 	    else if (class_is_enumerator_definition kp) then
@@ -331,7 +331,7 @@ fun collect_records root = (
 	    (kind_is_record k) andalso (class_is_package k))
 
 	fun collect (kp, acc) = (
-	    if (class_is_alias kp) then
+	    if (class_is_outer_alias kp) then
 		(* THIS WILL BE REMOVED. *)
 		acc
 	    else if (class_is_enumerator_definition kp) then
@@ -362,7 +362,7 @@ fun collect_functions root = (
 	      | _ => raise Match)
 
 	fun collect (kp, acc) = (
-	    if (class_is_alias kp) then
+	    if (class_is_outer_alias kp) then
 		(* THIS WILL BE REMOVED. *)
 		acc
 	    else if (class_is_enumerator_definition kp) then
@@ -419,7 +419,7 @@ fun collect_equations initial () = (
 	(* Include equations in simple-types. *)
 
 	fun collect (kp, acc) = (
-	    if (class_is_alias kp) then
+	    if (class_is_outer_alias kp) then
 		(* THIS WILL BE REMOVED. *)
 		acc
 	    else
