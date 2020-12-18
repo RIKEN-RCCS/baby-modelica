@@ -18,38 +18,34 @@ datatype name_t = Name of string list
 datatype id_t = Id of string
 
 (* instantiation_t indicates a class is used as either a package or a
-   state variable.  A class is marked by PKG initially, then is
+   state variable.  A class is marked by PKG initially, then it is
    assigned with PKG/VAR at instantiation. *)
 
 datatype instantiation_t = PKG | VAR
 
 (* class_tag_t is a fully-qualified class name which refers to a
-   lexical definition of a class in files. *)
+   lexical position of a class in files. *)
 
 datatype class_tag_t = Ctag of string list
 
 (* A subject refers to a name rooted at either a package or a model.
-   Package-rooted names are ".P.P.P" and model-rooted names are
-   "v[i].v[i].v[i]" with subscripts optional.  It includes a constant
-   reference via packages "P.c[i]", and a package reference via
-   instances "v[i].P".  Note that a class-tag, in contrast, refers to
-   a class in lexical definitions. *)
+   The package root is the unnamed-enclosing-class.  Package-rooted
+   names are ".P.P.P" and model-rooted names are "v[i].v[i].v[i]" with
+   subscripts optional.  It includes a constant reference via packages
+   "P.c[i]", and a package reference via instances "v[i].P". *)
 
 datatype subject_t = Subj of instantiation_t * (id_t * int list) list
 
+(* part_name_t names a main/base part of a class.  A subject specifies
+   a main class, and a tag specifies a base part of it.  A part_name
+   is often used as a scope. *)
+
+type part_name_t = subject_t * class_tag_t
+type scope_t = subject_t * class_tag_t
+
+(* Real (R) or integer (Z). *)
+
 datatype number_type_t = R | Z
-
-(* primitive_type_t is stored in Def_Primitive.  Each corresponds to a
-   simple-type.  Even the simple-types have structures, that is, they
-   have attributes.  The attributes of them are described by the
-   corresponding primitive types.  Note that the primitive types also
-   represent values in constant folding. *)
-
-datatype primitive_type_t
-    = P_Number of number_type_t
-    | P_Boolean
-    | P_String
-    | P_Enum of class_tag_t
 
 (* The predefined operators.  Other overloaded operators are
    represented by functions.  It is used like Opr~Opr_add.  "ew"
@@ -82,13 +78,6 @@ datatype predefined_operator_t
     | Opr_lt
     | Opr_ge
     | Opr_le
-
-(* part_name_t names a main/base part of a class.  A subject specifies
-   a main class, and a tag specifies a base part of it.  A part_name
-   is often used as a scope. *)
-
-type part_name_t = subject_t * class_tag_t
-type scope_t = subject_t * class_tag_t
 
 (* Expressions.  NIL is an empty element in an output-expression-list.
    Colon is a [:] in a subscript.  Otherwise is a truth for an
@@ -179,20 +168,19 @@ type element_prefixes_t
 type modifier_prefixes_t
      = {Final : bool, Replaceable : bool, Each : bool}
 
-(* Implied is used at internally introducing modifiers.  See the
+(* Implied is used by internally introduced modifiers.  See the
    copy_type definition. *)
 
 datatype class_kind_t
     = Bad_Kind
     | Implied
+    | Type
     | Class
     | Model
     | Block
-    | Type
     | Record
     | Operator_Record
     | Connector of (*expandable*) bool
-    (*| Expandable_Connector*)
     | Package
     | Function of (*pure*) bool
     | Operator
@@ -239,6 +227,18 @@ datatype cook_step_t = E0 | E1 | E2 | E3 | E4 | E5
    redeclarations in-elements. *)
 
 datatype redeclaration_source_t = In_Modifiers | In_Elements
+
+(* primitive_type_t is stored in Def_Primitive.  Each corresponds to a
+   simple-type.  Even the simple-types have structures, that is, they
+   have attributes.  The attributes of them are described by the
+   corresponding primitive types.  Note that the primitive types also
+   represent values in constant folding. *)
+
+datatype primitive_type_t
+    = P_Number of number_type_t
+    | P_Boolean
+    | P_String
+    | P_Enum of class_tag_t
 
 (* Equations.  Eq_List is introduced temporarily. *)
 
@@ -486,9 +486,9 @@ type constraint_no_comment_t = (definition_body_t * modifier_t list)
 
 type class_definition_list_t = (name_t * class_definition_t list)
 
-(* Parser stack elements.  It includes lexical tokens: identifiers,
-   keywords, reserved characters, operators, and relations.  They are
-   passed as VS_TOKEN from the lexer (including quoted-strings). *)
+(* vs_t is a parser stack element.  It includes lexical tokens:
+   identifiers, keywords, reserved characters, operators, and
+   relations.  They are passed as VS_TOKEN from the lexer. *)
 
 datatype vs_t
     = VS_NOTHING of unit
@@ -568,8 +568,8 @@ val copy_type : type_prefixes_t = (Implied, no_class_prefixes)
 val no_each_or_final : each_or_final_t = {Each=false, Final=false}
 
 (*val xxx_null_class = Defclass ((Id "", bad_tag), Def_Displaced bad_tag)*)
-
 (*fun syntax_error (s : string) = (raise (SyntaxError s))*)
+
 fun syntax_error (s : string) = (raise (Fail s))
 
 fun make_predefinition_body enum body aa ww = (
