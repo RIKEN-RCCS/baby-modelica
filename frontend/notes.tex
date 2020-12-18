@@ -547,8 +547,15 @@ modifications of values change the function.
 
 A range of an implicit iterator is taken as a subscript part of an
 expression that includes an iterator.  It checks the occurrence only
-but ignores the expression.  See
+but ignores the surrounding expressions if any.  See
 Section~\ref{sec:implicit-iterator-ranges}.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Expandable connectors}
+
+Instantiation of expandable connectors is delayed, while usual classes
+are instantiated as the model hierarchy.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

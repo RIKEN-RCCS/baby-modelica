@@ -524,8 +524,14 @@ fun class_print_name k = (
       | Def_In_File => raise Match
       | Def_Mock_Array _ => raise Match)
 
+(* Replaces subscripts in a subject or a reference.  It drops with
+   both subscript expressions and integers. *)
+
 fun pseudo_reference_path path = (
     (map (fn (id, ss) => (id, [])) path))
+
+fun drop_subscripts rr = (
+    (map (fn (id, _) => id) rr))
 
 fun body_name_at_step k = (
     (class_print_name k) ^"@"^ (cook_step_to_string (cook_step k)))

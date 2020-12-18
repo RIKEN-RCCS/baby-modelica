@@ -48,7 +48,7 @@ use "binder.sml" ;
 use "builder.sml" ;
 use "postbinder.sml" ;
 
-use "connector.sml" ;
 use "syntaxer.sml" ;
+use "connector.sml" ;
 
 use "flatdumper.sml" ;
