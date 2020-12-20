@@ -172,7 +172,7 @@ iterator ranges is not tested at all. *).
 nominally.
 
 \item (?) Translation-time constants cannot depend on variables in
-expandable connectors.
+expandable_connectors.
 
 \end{itemize}
 
@@ -208,21 +208,20 @@ but it seems not).  There is an accompanying paper~\cite{paredis2010}.
 
 \section{Parsing}
 
+{Parsing} is simply done by a BYACC generated parser.
+
 %%%%%%%%%%%%%%%%
 
 \subsection{Code tips}
 
 \begin{itemize}
 
-\item The rules in {\it{}Modelica Concrete Syntax\/} in
+\item The rule set in {\it{}Modelica Concrete Syntax\/} defined in
 the_specification is used essentially verbatim.
 
 \item The keywords {\bf{}end} and {\bf{}initial} appearing in the
 {\it{}primary\/} expression of the syntax rules cause conflicts in
 BYACC\@.
-
-%% \item The_implementation internally introduces a $\mathrm{ENUM}$ kind
-%% and uses it in place of $\mathbf{type}$.
 
 \end{itemize}
 
@@ -255,7 +254,7 @@ returns an identifier for {\bf{}initial}.
 
 \section{Resolving}
 
-Resolving handles modifier applications in a model for elaboration.
+{Resolving} handles modifier applications in a model for elaboration.
 
 %%%%%%%%%%%%%%%%
 
@@ -437,9 +436,9 @@ Fact~\ref{parameters}.
 
 \subsection{Instantiating by one big pass}
 
-Instantiating is a bit complex procedure.  It works top down in order
-to handle modifiers and inner-outer matching, while it is usually
-natural to work bottom up because each submodel only knows and
+{Instantiating} is a bit complex procedure.  It works top down in
+order to handle modifiers and inner-outer matching, while it is
+usually natural to work bottom up because each submodel only knows and
 accesses their components but does not care its users.  In addition,
 chains of dependency in name resolutions and simultaneous constant
 folding complicate the procedure.  That is, determining array
@@ -552,17 +551,18 @@ Section~\ref{sec:implicit-iterator-ranges}.
 
 %%%%%%%%%%%%%%%%
 
-\subsection{Expandable connectors}
+\subsection{Expandable_connectors}
 
-Instantiation of expandable connectors is delayed, while usual classes
+Instantiation of expandable_connectors is delayed, while usual classes
 are instantiated as the model hierarchy.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Syntaxing}
 
-The_implementation performs simple transformations to make a flat
-model.
+{Syntaxing} performs simple transformations to make a flat model.  It
+rewrites connect_equations to equations.  In that rewriting, it
+expands if-equations and for-equations that include connect_equations.
 
 \subsection{Stream connectors}
 
@@ -2240,7 +2240,8 @@ until the end of class elements.  It is public, when sections may be
 started with none of them.  That is, sections of equations and
 algorithms have no distinction of public/protected.
 
-(?) Check the visibility of import/extends-clauses and redeclarations.
+(?) (*CHECK*) Check the visibility of import/extends-clauses and
+redeclarations.
 
 %%%%%%%%%%%%%
 
@@ -2391,7 +2392,7 @@ $\mathbf{within}\;A$.
 
 \begin{quote}
 \begin{lstlisting}[aboveskip=-\baselineskip]
-(CHECK)
+(*CHECK*)
 /* File A: */
 package A = B(M(x=10));
 
@@ -2468,9 +2469,12 @@ See \specref{3.8.3}\/ for discrete values.
 
 \subsection{Connectors}
 
+A connector is a type or a record that is marked to be used in
+connect_equations.
+
 \subsubsection*{Nesting connectors}
 
-A connect-equation connects variables including component connectors
+A connect_equation connects variables including component connectors
 declared in the connector.
 
 \subsubsection*{Outside_connectors}
@@ -2478,21 +2482,24 @@ declared in the connector.
 An outside_connector is an aspect of a connector when it is connected
 in a declaring class.  It is an internal connection to the connector,
 and the flow direction is considered reversed (a value is negated) for
-that connection.
+that connection.  An opposite is an inside_connector.  Each connector
+is considered separate as the inside/outside ones, but they share the
+same variables.
 
-\begin{QFACT} (?) Determination of an outside_connector must respect
-the place where the connector is declared, and inner/outer
-declarations should be ignored for that.  An outside_connector is
-distinguished by the use of a name that a connector $c$ is declared
-and connected in a class and appears in the first part of a composite
-name such as in $\mathrm{connect}(c,...)$ or
-$\mathrm{connect}(c.d,...)$.\end{QFACT}
+\begin{QFACT} Determination of an outside_connector must respect the
+place where the connector is declared, and inner/outer declarations
+should be ignored for that.  An outside_connector is distinguished by
+the use of a connector that is declared and connected in the class
+(the connector appears in the first part of a composite name).  Both
+$c$ and $c.d$ are outside_connectors when they are used in
+$\mathrm{connect}(c,...)$ or $\mathrm{connect}(c.d,...)$ in the class
+declaring $c$.\end{QFACT}
 
 \subsubsection*{Connection restrictions}
 
 Connect equations are fixed at translation-time.
 
-\begin{qquote} (\specref{9.3}\/) $\bullet$\,The connect-equations (and
+\begin{qquote} (\specref{9.3}\/) $\bullet$\,The connect_equations (and
 the special functions for overdetermined connectors) may only be used
 in equations and may not be used inside if-equations with
 non-parametric condition, or in when-equations. [For-equations always
@@ -2541,6 +2548,10 @@ equations non-parameter scalar variables and non-parameter array
 elements declared in expandable connectors are marked as only being
 potentially present.\end{qquote}
 
+(*CHECK*) Declared components of an expandable_connector cannot be
+used in connect_equations unless they are connected to connectors not
+in some expandable_connectors.
+
 \subsubsection*{Operator_record components}
 
 (?) A connection component of an operator_record is used as an
@@ -2562,7 +2573,7 @@ Is the value of $x$ dependes on a condition?
 %%%%
 \begin{quote}
 \begin{lstlisting}[aboveskip=-\baselineskip]
-(CHECK)
+(*CHECK*)
 package A
     Real x=1;
     model M
@@ -2642,7 +2653,7 @@ short-class definition does not influence its type, but is applied to
 components declared of this type or types derived from it; see also
 section 4.5.2.\end{qquote}
 
-(?) CHECK: The equality of functions is by textual (defined?).  The
+(?) (*CHECK*) The equality of functions is by textual (defined?).  The
 overloading resolution is based on a set of functions (requiring
 uniqueness), thus, the equality of functions needs be defined.
 
@@ -2705,7 +2716,7 @@ value.  (This rule does not apply to redeclarations.)
 \item Conditional components are only compatible with conditional
 components, where the conditions are semantically the same.
 
-\item Class kinds must satisfy kinds compatibility.
+\item Class_kinds must satisfy kinds compatibility.
 
 \item An enumeration is only compatible with an enumeration.  A
 compatible enumeration (except for enumeration(:)) must have the same
@@ -2749,13 +2760,15 @@ Function compatibility is defined in \specref{6.5}.
 
 %%%%%%%%%%%%%%%%
 
-\subsection{Class kinds}
+\subsection{Class_kinds}
 
-\subsubsection*{Class kinds}\label{sec:class-kinds}
-
-The table in \specref{4.6}\/ shows the class kinds.  Every kind is
+The table in \specref{4.6}\/ shows the class_kinds.  Every kind is
 syntactically the same as a class, but some restrictions on its
 contents apply to the class with regard to its kind.
+
+\subsubsection*{Class_kinds}\label{sec:class-kinds}
+
+The following is the copy of the table in \specref{4.6}.
 
 \begin{quote}
 \begin{description}
@@ -2765,27 +2778,31 @@ extending a type.
 
 \item[model] is a general collection of elements.
 
-\item[class] is a collection that contains extends-clauses, class
-definitions, and annotations.  Note that it is a synonym of
+\item[class] is a restricted collection that contains extends-clauses,
+class definitions, and annotations.  Note that it was a synonym of
 $\mathbf{model}$ by the old definition, and some_implementations
 accept other elements.  See Quote~\ref{quo:class-is-restricted}.
 
-\item[block] is restricted $\mathbf{model}$, whose connectors are
-directed by $\mathbf{input}$/$\mathbf{output}$.
+\item[block] is a restricted {model}, whose connectors are directed by
+$\mathbf{input}$/$\mathbf{output}$.
 
 \item[record] is a record in a usual sense.  A component of a record
 is a type, a record, or an array of them.  It contains no
-equation/algorithm sections nor protected sections.
+equation/algorithm sections nor protected sections (but it can contain
+functions).
 
 \item[package] contains similar elements as $\mathbf{record}$ that is
 restricted to contain constants/parameters but no variables.
+(*CHECK*) It can contain protected sections.
 
-\item[connector] contains the same elements as $\mathbf{record}$,
-which is allowed to use $\mathbf{connect}$ on it.
+\item[connector] is either a {type} or a {record}, but it is allowed
+to connect on it.  It is similar to $\mathbf{record}$, when
+$\mathbf{connector}$ is used in a (long class) definition.  Connector
+declarations may be implicit in expandable_connectors.
 
 \item[expandable_connector] is $\mathbf{connector}$.
 
-\item[operator record] contains the same elements as
+\item[operator_record] contains the same elements as
 $\mathbf{record}$, but with an operator-overloading.
 
 \item[operator] contains similar elements as $\mathbf{package}$, that
@@ -2793,14 +2810,14 @@ is restricted to contain only functions as definitions.
 
 \item[operator_function] is $\mathbf{operator}$ with one function.
 
-\item[function] is a function in a usual sense.  It can contain either
-one algorithm section or one external interface.  It does not contain
-equation sections nor initial algorithm sections.  It can contain
-component declarations (variables) of $\mathbf{type}$,
-$\mathbf{record}$, $\mathbf{operator~record}$, and
-$\mathbf{function}$.  Only functions can contain an external
-interface.  See (\specref{12.2}\/).  (?) Functions can contain only
-input/output variables.
+\item[function] is a function in a usual sense.  It is syntactically a
+package (not an instance).  It can contain either one algorithm
+section or one external interface.  It does not contain equation
+sections nor initial algorithm sections.  It can contain component
+declarations (variables) of $\mathbf{type}$, $\mathbf{record}$,
+$\mathbf{operator~record}$, and $\mathbf{function}$.  Only functions
+can contain an external interface.  See (\specref{12.2}\/).  (?)
+Functions can contain only input/output variables.
 
 \end{description}
 \end{quote}
@@ -2846,7 +2863,7 @@ $\mathbf{expandable~connector}$, $\mathbf{function}$.  Conversely, the
 classes that do not contain states are: $\mathbf{package}$,
 $\mathbf{operator}$, and $\mathbf{operator~function}$.\end{QFACT}
 
-\subsubsection*{Extending and class kinds}
+\subsubsection*{Extending and class_kinds}
 
 The table in \specref{7.1.3}\/ shows the restrictions on derived vs.\@
 base class relations.  It shows that one class can extend some class.
@@ -3051,8 +3068,8 @@ end M;
 \end{lstlisting}
 \end{quote}
 
-See also Section~\ref{class-equality}.  (* CHECK: Function calls may
-require stricter equality. *)
+See also Section~\ref{class-equality}.  (*CHECK*) Function calls may
+require stricter equality.
 
 \subsubsection*{Casting}
 
@@ -4433,7 +4450,7 @@ In addition to the syntactic keywords above, the type names are
 reserved and cannot be redefined (See Quote~\ref{quo:reserved-words}).
 These names have overloaded meanings.
 
-(* Check the status of "constructor". *)
+(*CHECK*) Check the status of "constructor".
 
 %%%%%%%%%%%%%%%%
 
