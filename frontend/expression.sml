@@ -370,7 +370,7 @@ fun scan_for_iterator_q v (f, g) (q, acc0) = (
     in
 	case q of
 	    Eq_Eq ((x, y), _, _) => (foldl scan_e acc0 [x, y])
-	  | Eq_Connect ((x, y), _, _) => (foldl scan_e acc0 [x, y])
+	  | Eq_Connect (((x, _), (y, _)), _, _) => (foldl scan_e acc0 [x, y])
 	  | Eq_If (cc, _, _) => (
 	    (foldl
 		 (fn ((x, qq), acc) => (foldl scan_q (scan_e (x, acc)) qq))

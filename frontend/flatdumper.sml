@@ -682,13 +682,16 @@ fun dump_equation s q = (
 	    in
 		()
 	    end)
-	  | Eq_Connect ((e0, e1), aa, ww) => (
+	  | Eq_Connect (((e0, side0), (e1, side1)), aa, ww) => (
 	    let
 		val _ = (TextIO.output
-			     (s, ("connect ("^
+			     (s, ("/*connect ("^
 				  (expression_to_string e0)
+				  (*^(if side0 then "(+)" else "(-)")*)
 				  ^", "^
-				  (expression_to_string e1) ^")\n")))
+				  (expression_to_string e1)
+				  (*^(if side1 then "(+)" else "(-)")*)
+				  ^")*/\n")))
 	    in
 		()
 	    end)

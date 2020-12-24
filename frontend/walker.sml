@@ -528,12 +528,13 @@ fun walk_in_equation qvamp (ewalk : 'a x_vamper_t) (q0, acc0) = (
 	    in
 		(qvamp (q1, acc3))
 	    end)
-	  | Eq_Connect ((x0, y0), Annotation aa0, ww) => (
+	  | Eq_Connect (((x0, sidex), (y0, sidey)), Annotation aa0, ww) => (
 	    let
 		val (x1, acc1) = (walk_x (x0, acc0))
 		val (y1, acc2) = (walk_x (y0, acc1))
 		val (aa1, acc3) = (map_along walk_m (aa0, acc2))
-		val q1 = Eq_Connect ((x1, y1), Annotation aa1, ww)
+		val q1 = Eq_Connect (((x1, sidex), (y1, sidey)),
+				     Annotation aa1, ww)
 	    in
 		(qvamp (q1, acc3))
 	    end)

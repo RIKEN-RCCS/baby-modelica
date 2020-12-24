@@ -240,12 +240,14 @@ datatype primitive_type_t
     | P_String
     | P_Enum of class_tag_t
 
-(* Equations.  Eq_List is introduced temporarily. *)
+(* Equations.  Eq_Connect has boolean slots indicating an outside one.
+   They are set during syntaxing.  E_List is introduced
+   temporarily. *)
 
 datatype equation_t
     = Eq_Eq of ((expression_t * expression_t)
 		* annotation_t * comment_t)
-    | Eq_Connect of ((expression_t * expression_t)
+    | Eq_Connect of (((expression_t * bool) * (expression_t * bool))
 		     * annotation_t * comment_t)
     | Eq_If of ((expression_t * equation_t list) list
 		* annotation_t * comment_t)

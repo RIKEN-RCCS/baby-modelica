@@ -418,7 +418,7 @@ fun drop_duplicate_declarations step (bindings : naming_t list) = (
 	fun unify_by_pairs ([]) = raise Match
 	  | unify_by_pairs (b :: bb) = (foldl unify b bb)
 
-	val bb0 = (list_duplicates eq bindings)
+	val bb0 = (list_groups eq bindings)
 	val bb1 = (map unify_by_pairs bb0)
     in
 	bb1

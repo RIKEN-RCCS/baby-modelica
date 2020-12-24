@@ -46,8 +46,8 @@ use "folder.sml" ;
 
 use "binder.sml" ;
 use "builder.sml" ;
-use "postbinder.sml" ;
 
+use "postbinder.sml" ;
 use "syntaxer.sml" ;
 use "connector.sml" ;
 

@@ -9,6 +9,11 @@ structure connector :
 sig
     type expression_t
     type subject_t
+
+    val discern_connects : unit -> unit
+
+    val xbind : unit -> unit
+
     val xconnect :
 	unit -> ((ast.expression_t * bool) * (ast.expression_t * bool)
 		 * subject_t) list
@@ -22,6 +27,7 @@ fun tr_conn_vvv (s : string) = if false then (print (s ^"\n")) else ()
 
 val instance_tree = classtree.instance_tree
 val traverse_tree = classtree.traverse_tree
+val store_to_instance_tree = classtree.store_to_instance_tree
 
 val expression_is_literal = expression.expression_is_literal
 val find_iterator_range = expression.find_iterator_range
@@ -50,62 +56,138 @@ datatype root_marker_t = Root of bool
 
 (* ================================================================ *)
 
-fun simplify_subscript kp w0 = (
+(* Drops a prefix of a reference which refers to a class pointed by a
+   subject.  It returns NONE if a reference is not a component of the
+   class.  A returned path is non-empty (a reference should be a
+   component).  It assumes the indices (of a class) are equal. *)
+
+fun strip_component_reference subj w = (
     let
-	val buildphase = false
-	val w1 = (bind_in_scoped_expression buildphase kp w0)
+	val Subj (ns0, cc0) = subj
+	(*val rr0 = (drop_subscripts cc0)*)
+	val Subj (ns1, cc1) = w
+	(*val rr1 = (drop_subscripts cc1)*)
     in
-	(fold_constants kp buildphase [] w1)
+	if ((ns0 = VAR andalso ns1 = VAR)
+	    andalso (list_prefix (op =) cc0 cc1)
+	    andalso ((length cc0) < (length cc1))) then
+	    SOME (List.drop (cc1, (length cc0)))
+	else
+	    NONE
     end)
+
+(* Tests if a referenced connector is an outside one.  It takes a
+   reference and a class by a subject.  It checks some prefix of the
+   reference is declared in the class and it is a connector.  It
+   requires a reference is before resolving the inner-outer
+   relation. *)
+
+fun reference_is_connector_component subj w = (
+    case (strip_component_reference subj w) of
+	NONE => false
+      | SOME [] => raise Match
+      | SOME ((id, ss) :: _) => (
+	let
+	    val component = (compose_subject subj id [])
+	    val k = surely (fetch_from_instance_tree component)
+	in
+	    (class_is_connector false k)
+	end))
+
+(* Converts a reference to a subject by simplifying subscripts to
+   literal integers.  It errs if subscripts are not simplified to
+   literals. *)
+
+fun literalize_subscripts kp w0 = (
+    let
+	fun mapr f (x0, x1) = (x0, f x1)
+	val simplify = (fold_constants kp false [])
+    in
+	case w0 of
+	    Vref (_, []) => raise Match
+	  | Vref (NONE, _) => raise Match
+	  | Vref (SOME ns, rr0) => (
+	    let
+		val w1 = Vref (SOME ns, (map (mapr (map simplify)) rr0))
+	    in
+		(reference_as_subject w1)
+	    end)
+    end)
+
+(* Returns a type/record of a connector instance. *)
+
+fun record_of_connect k = (
+    case k of
+	Def_Body (mk, j, cs, nm, ee, aa, ww) => (
+	Def_Body (mk, j, cs, nm, ee, aa, ww))
+      | Def_Der _ => k
+      | Def_Primitive _ => raise Match
+      | Def_Name _ => raise Match
+      | Def_Scoped _ => raise Match
+      | Def_Refine _ => raise Match
+      | Def_Extending _ => raise Match
+      | Def_Replaced _ => raise Match
+      | Def_Displaced _ => raise Match
+      | Def_In_File => raise Match
+      | Def_Mock_Array _ => raise Match
+      | Def_Outer_Alias _ => raise Match)
 
 (* ================================================================ *)
 
-(* Tests if a reference is a component of a class specified by a
-   subject (true when a reference is a class itself).  It ignores
-   subscripts but it is precise. *)
+fun discern_connects_in_equation kp (q0, acc0) = (
+    let
+	val subj = (subject_of_class kp)
+    in
+	case q0 of
+	    Eq_Eq _ => (q0, acc0)
+	  | Eq_Connect (((x0, false), (y0, false)), aa, ww) => (
+	    let
+		val x1 = (literalize_subscripts kp x0)
+		val y1 = (literalize_subscripts kp y0)
+		val sidex = (reference_is_connector_component subj x1)
+		val sidey = (reference_is_connector_component subj y1)
+		val q1 = Eq_Connect (((x0, sidex), (y0, sidey)), aa, ww)
+	    in
+		(q1, acc0)
+	    end)
+	  | Eq_Connect (((x0, _), (y0, _)), aa, ww) => raise Match
+	  | Eq_If _ => (q0, acc0)
+	  | Eq_When _ => (q0, acc0)
+	  | Eq_App _ => (q0, acc0)
+	  | Eq_For _ => (q0, acc0)
+    end)
 
-fun reference_is_component__ subj w = (
-    case w of
-	Vref (_, []) => raise Match
-      | Vref (NONE, _) => raise Match
-      | Vref (SOME ns0, rr0) => (
+fun discern_connects_in_instance (k0, acc0) = (
+    if (class_is_outer_alias k0) then
+	acc0
+    else if (class_is_enumerator_definition k0) then
+	acc0
+    else if (class_is_package k0) then
+	acc0
+    else
 	let
-	    val rr1 = (drop_subscripts rr0)
-	    val Subj (ns1, cc0) = subj
-	    val cc1 = (drop_subscripts cc0)
+	    val _ = if (not (class_is_primitive k0)) then () else raise Match
 	in
-	    (ns0 = ns1) andalso (list_prefix (op =) cc1 rr1)
+	    let
+		val subj = (subject_of_class k0)
+		val efix = (fn (e, a) => (e, a))
+		val qfix = (discern_connects_in_equation k0)
+		val qwalk = (walk_in_equation qfix efix)
+		val swalk = (fn (s, a) => (s, a))
+		val walker = {vamp_q = qwalk, vamp_s = swalk}
+		val (k1, _) = (walk_in_class walker (k0, ()))
+		val _ = (store_to_instance_tree subj k1)
+	    in
+		acc0
+	    end
 	end)
-      | _ => raise Match)
 
-(* Tests if a referenced component is a connector declared in the
-   class (it checks the first part of the name declared in the class
-   is a connector). *)
+(* Discriminates connections by inside/outside. *)
 
-fun reference_is_connector_component subj w = (
-    case w of
-	Vref (_, []) => raise Match
-      | Vref (NONE, _) => raise Match
-      | Vref (SOME ns0, rr0) => (
-	let
-	    val Subj (ns1, cc0) = subj
-	    val cc1 = (drop_subscripts cc0)
-	    val rr1 = (drop_subscripts rr0)
-	in
-	    if (not ((ns0 = ns1) andalso (list_prefix (op =) cc1 rr1))) then
-		false
-	    else
-		case (List.drop (rr0, (length cc0))) of
-		    [] => false
-		  | (id, ss) :: _ => (
-		    let
-			val component = (compose_subject subj id [])
-			val k = surely (fetch_from_instance_tree component)
-		    in
-			(class_is_connector false k)
-		    end)
-	end)
-      | _ => raise Match)
+fun discern_connects () = (
+    ignore (traverse_tree discern_connects_in_instance (instance_tree, [])))
+
+(* ================================================================ *)
 
 fun collect_connects_in_equation kp (q0, acc0) = (
     let
@@ -113,13 +195,8 @@ fun collect_connects_in_equation kp (q0, acc0) = (
     in
 	case q0 of
 	    Eq_Eq _ => (q0, acc0)
-	  | Eq_Connect ((x, y), aa, ww) => (
-	    let
-		val outsidex = (reference_is_connector_component subj x)
-		val outsidey = (reference_is_connector_component subj y)
-	    in
-		(q0, (((x, outsidex), (y, outsidey), subj) :: acc0))
-	    end)
+	  | Eq_Connect (((x, outsidex), (y, outsidey)), aa, ww) => (
+	    (q0, (((x, outsidex), (y, outsidey), subj) :: acc0)))
 	  | Eq_If _ => (q0, acc0)
 	  | Eq_When _ => (q0, acc0)
 	  | Eq_App _ => (q0, acc0)
@@ -154,54 +231,121 @@ fun collect_connects () = (
 
 (* ================================================================ *)
 
-(* Finds an expandable connector in the reference path.  An undefined
-   name is not an error. *)
-
-fun find_expandable_loop kp rr0 = (
-    case rr0 of
+fun find_expansion_loop subj cc0 = (
+    case cc0 of
 	[] => NONE
-      | (id, ss0) :: rr1 => (
+      | (id, index) :: cc1 => (
 	let
-	    val ss1 = (map (simplify_subscript kp) ss0)
-	    val index = (map literal_to_int ss1)
-	    val subj = (subject_of_class kp)
 	    val subsubj = (compose_subject subj id index)
 	in
 	    case (fetch_from_instance_tree subsubj) of
 		NONE => NONE
 	      | SOME kx => (
 		if (class_is_connector true kx) then
-		    SOME subsubj
+		    if ((length cc1) = 1) then
+			SOME (subsubj, (hd cc1))
+		    else
+			NONE
 		else
-		    case kx of
-		        Def_Mock_Array _ => NONE
-		      | _ => (find_expandable_loop kx rr1))
+		    (find_expansion_loop subsubj cc1))
 	end))
 
-(*
-fun find_expandable kp w = (
-    case w of
-	Vref (_, []) => raise Match
-      | Vref (NONE, rr as (id, ss_) :: _) => (
+(* Finds a reference "m...m.c.d", with "m" a possibly empty component
+   that is not an expandable connector, "c" an expandable connector,
+   and "d" a component.  It signifies an addition of a component to an
+   expandable connector.  During a search, fetching an instance never
+   fails, because the model builder has instantiated all instances
+   except expandable connectors. *)
+
+fun find_expansion subj w = (
+    case (strip_component_reference subj w) of
+	NONE => NONE
+      | SOME cc => (find_expansion_loop subj cc))
+
+fun test_expansion pair = (
+    let
+	val ((x, sidex), (y, sidey), subj) = pair
+    in
+	case ((find_expansion subj x), (find_expansion subj y)) of
+	    (NONE, NONE) => NONE
+	  | (SOME ((cx, (id, ss))), NONE) => (
+	    SOME (cx, (id, ss), sidex, y, sidey))
+	  | (NONE, SOME ((cy, (id, ss)))) => (
+	    SOME (cy, (id, ss), sidey, x, sidex))
+	  | (SOME _, SOME _) => raise error_mutual_expandable_connectors
+    end)
+
+fun make_expansion_set connects0 = (
+    case connects0 of
+	[] => raise Match
+      | (x, (id, _), sidex, y, sidey) :: _ => (
 	let
-	    val _ = if (not (reference_is_global w)) then ()
-		    else raise error_connector_in_package
-	    val subj = (subject_of_class kp)
-	    val subsubj = (compose_subject subj id [])
+	    val peer = surely (fetch_from_instance_tree y)
+
+	    fun strip ((x0, (id0, ss0), xs0, y0, ys0), acc) = (
+		let
+		    val _ = if (x0 = x) then () else raise Match
+		    val _ = if (id0 = id) then () else raise Match
+		    val _ = if (xs0 = sidex) then () else raise Match
+		in
+		    (ss0, y0, ys0) :: acc
+	    end)
+
+	    val connectset = (foldl strip [] connects0)
 	in
-	    case (fetch_from_instance_tree subsubj) of
-		NONE => raise (error_name_not_found id kp)
-	      | SOME kx => (
-		if (class_is_connector true kx) then
-		else
-		    find_expandable_loop
+	    (x, id, sidex, connectset)
+	end))
+
+(*GOMI
+
+fun expand_expandable_connector (x, id, side, connectset) = (
+    let
+	val node = surely (fetch_instance_tree_node x)
+	val peer = surely (fetch_from_instance_tree y)
 
 
-		end)
-	end)
-      | Vref (SOME _, _) => raise Match
-      | _ => raise Match)
-*)
+    in
+	if ((length groups) > 1) then
+
+		val _ = if (x0 = x1) then () else raise Match
+	    in
+
+	    end)
+
+	val node = surely (fetch_instance_tree_node x)
+	val peer = surely (fetch_from_instance_tree y)
+    in
+	x ((id, dim), sidex, y, sidey) = (
+
+    end)
+
+
+    in
+    end)
+
+
+fun expand_expandable_connector connects =(
+    let
+	fun eq ((_, (id0, _), _, _, _), (_, (id1, _), _, _, _)) = (id0 = id1)
+_), _, _, _)
+
+	val groups = (list_groups eq connects)
+    in
+	(map expand_expandable_slot groups)
+end)
+
+fun expand_expandable connects = (
+    let
+	fun eq ((x0, _, _, _, _), (x1, _, _, _, _)) = (x0 = x1)
+
+	val pairs = (gather_some test_expansion connects)
+	val groups = (list_groups eq pairs)
+	val connectset = (map make_expansion_set groups)
+    in
+
+    end)
+
+GOMI*)
 
 (* ================================================================ *)
 
@@ -216,6 +360,18 @@ fun connect_connects () = (
 
 (* ================================================================ *)
 
+val bind_model = postbinder.bind_model
+val replace_outer = postbinder.replace_outer
+
 fun xconnect () = (connect_connects ())
+
+fun xbind () = (
+    let
+	val _ = (bind_model true)
+	val _ = (discern_connects ())
+	val _ = (replace_outer ())
+    in
+	()
+    end)
 
 end

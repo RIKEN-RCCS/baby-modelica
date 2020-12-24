@@ -343,4 +343,6 @@ val error_when_contains_connects = Match
 
 val error_connector_in_package = Match
 
+val error_mutual_expandable_connectors = Match
+
 end

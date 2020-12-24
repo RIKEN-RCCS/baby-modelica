@@ -553,8 +553,10 @@ Section~\ref{sec:implicit-iterator-ranges}.
 
 \subsection{Expandable_connectors}
 
-Instantiation of expandable_connectors is delayed, while usual classes
-are instantiated as the model hierarchy.
+Instantiation of expandable_connectors is delayed, while other (usual)
+classes are instantiated by descending the model hierarchy.  Expanding
+expandable_connectors is performed first for the connector at the
+shallowest position.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -5150,8 +5152,8 @@ model in "x.mo".
 use "bbm.sml" ;
 builder.xreset () ;
 builder.xbuild "Modelica.Fluid.Examples.HeatingSystem" ;
-postbinder.xbind () ;
-postbinder.xreplace () ;
+connector.xbind () ;
+connector.xconnect () ;
 flatdumper.xdump () ;
 valOf (classtree.xfetch1 "tank") ;
 valOf (classtree.xfetch1 "wall.G") ;

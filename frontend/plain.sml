@@ -91,15 +91,15 @@ fun remove_duplicates eq [] = []
   | remove_duplicates eq (a :: t) = (
     (a :: (remove_duplicates eq (List.filter (fn x => not (eq (a, x))) t))))
 
-(* Partitions sets of duplicates with regard to a given equality.
-   Non-duplicating sets are singletons *)
+(* Partitions a list by groups with regard to a given equality.
+   Non-groups are singletons. *)
 
-fun list_duplicates eq [] = []
-  | list_duplicates eq (a :: t) = (
+fun list_groups eq [] = []
+  | list_groups eq (a :: tt) = (
     let
-	val (d, r) = (List.partition (fn x => eq (a, x)) t)
+	val (gg, rr) = (List.partition (fn x => eq (a, x)) tt)
     in
-	([(a :: d)] @ (list_duplicates eq r))
+	([(a :: gg)] @ (list_groups eq rr))
     end)
 
 (* Uniquifies with respect to eq and keeps the last one.  Slow. *)

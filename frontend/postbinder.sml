@@ -6,8 +6,8 @@
 
 structure postbinder :
 sig
-    val xbind : unit -> unit
-    val xreplace : unit -> 'a list
+    val bind_model : bool -> unit
+    val replace_outer : unit -> unit
 end = struct
 
 open ast
@@ -166,11 +166,8 @@ fun replace_outer_in_instance (k0, acc0) = (
 	end)
 
 fun replace_outer () = (
-    (traverse_tree replace_outer_in_instance (instance_tree, [])))
+    ignore (traverse_tree replace_outer_in_instance (instance_tree, [])))
 
 (* ================================================================ *)
-
-fun xbind () = (bind_model true)
-fun xreplace () = (replace_outer ())
 
 end

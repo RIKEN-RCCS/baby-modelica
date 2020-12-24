@@ -1217,7 +1217,8 @@ elsewhen_statement_loop_
 
 connect_clause
 	: CONNECT "(" component_reference "," component_reference ")" {
-		Eq_Connect (($3, $5), Annotation [], Comment [])}
+		Eq_Connect ((($3, false), ($5, false)),
+			     Annotation [], Comment [])}
 	;
 
 /* B.2.7 Expressions */
