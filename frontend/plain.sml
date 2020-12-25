@@ -6,6 +6,7 @@
 structure plain = struct
 
 val error_dimension_index_mismatch = Match
+val error_array_index = Match
 
 fun assert (x : bool) : unit = if (x) then () else raise Match
 
@@ -200,6 +201,10 @@ fun list_shortest ll = (
 			    (x, xlen)))
 		   (h, (length h)) tl))))
 
+fun check_array_index dimension index = (
+    if (List.all (op >=) (ListPair.zip (dimension, index))) then ()
+    else raise error_array_index)
+
 (* Returns an offset for an index.  An array is row-major, and an
    index is 1-origin.  Call it with offset=0.  (An offset of
    [i+1,j+1,k+1] in a [4,3,2] array is (3*2*i+2*j+k).  It accepts an
@@ -220,8 +225,38 @@ fun array_size dimension = (
 
 (* Drops the first n dimensions. *)
 
-fun array_drop_columns dimension count = (
+fun array_drop_dimensions dimension count = (
     (List.drop (dimension, count)))
+
+(* Accesses an index-th row of an array.  It returns a pair of a
+   dimension and contents. *)
+
+fun array_access index (dim0, ee0) = (
+    let
+	val _ = (check_array_index dim0 index)
+	val dim1 = (List.drop (dim0, (length index)))
+	val size = (array_size dim1)
+	val offset = (array_index dim0 index 0)
+	val ee1 = (List.take ((List.drop (ee0, offset)), size))
+    in
+	(dim1, ee1)
+    end)
+
+(* Accesses a i-th row (1-origin) of an array.  It returns a pair of a
+   dimension and contents. *)
+
+fun array_access1__ i (dim0, ee0) = (
+    case dim0 of
+	[] => raise Match
+      | (d :: dim1) => (
+	let
+	    val size = (array_size dim1)
+	    val offset = ((i - 1) * size)
+	    val ee1 = (List.drop (ee0, offset))
+	    val ee2 = (List.take (ee1, size))
+	in
+	    (dim1, ee2)
+	end))
 
 fun list_prefix eq x y = (
     ((length x) <= (length y)) andalso (List.all eq (ListPair.zip (x, y))))
@@ -258,5 +293,13 @@ fun make_unions eq bag = (
 fun list_select bitmap xx = (
     (foldl (fn ((b, x), acc) => if b then x :: acc else acc)
 	   [] (ListPair.zip (bitmap, xx))))
+
+(* Repeats v in a list n times. *)
+
+fun list_repeat v n acc = (
+    if (n <= 0) then
+	acc
+    else
+	(list_repeat v (n - 1) (v :: acc)))
 
 end

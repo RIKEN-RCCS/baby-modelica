@@ -166,6 +166,10 @@ fun drop_last_subscript_of_subject subj = (
 	    (compose_subject prefix v [])
 	end)
 
+fun subject_equal_sans_subscript subj0 subj1 = (
+    ((drop_last_subscript_of_subject subj0)
+     = (drop_last_subscript_of_subject subj1)))
+
 (* Checks the subjects ignoring the subscripts of an instance k. *)
 
 fun assert_match_subject_sans_subscript subj0 k = (

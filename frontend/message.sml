@@ -306,9 +306,7 @@ val error_subscripts_to_scalar = Match
 
 val error_split_array_dimension = Match
 
-val error_array_index_to_scalar = Match
-
-val error_array_index = Match
+val error_indexing_to_scalar = Match
 
 val error_no_instantiated_instance = Match
 
@@ -344,5 +342,7 @@ val error_when_contains_connects = Match
 val error_connector_in_package = Match
 
 val error_mutual_expandable_connectors = Match
+
+val error_bad_dimension = Match
 
 end

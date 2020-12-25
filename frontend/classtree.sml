@@ -267,7 +267,8 @@ fun access_component subj (Slot (v, dim, ee, dummy)) (index : int list) = (
 	    val node = (hd ee)
 	    val (subjx, kx, _) = node
 	    val kp = (! kx)
-	    val _ = if (subjx = subj) then () else raise Match
+	    val _ = if (subject_equal_sans_subscript subj subjx) then ()
+		    else raise Match
 	    val _ = if (step_is_less E1 kp) then ()
 		    else (assert_match_subject_sans_subscript subj kp)
 	in
@@ -280,7 +281,8 @@ fun access_component subj (Slot (v, dim, ee, dummy)) (index : int list) = (
 	in
 	    (subj, ref (Def_Mock_Array (dim, array, dummy)), ref [])
 	end)
-      | (_, []) => raise error_array_index_to_scalar
+      | (_, []) => raise error_indexing_to_scalar
+      (*
       | (_, _) => (
 	let
 	    val i = (array_index dim index 0)
@@ -288,6 +290,13 @@ fun access_component subj (Slot (v, dim, ee, dummy)) (index : int list) = (
 	    val node = (List.nth (ee, i))
 	in
 	    node
+	end)
+      *)
+      | (_, _) => (
+	let
+	    val (dim1, ee1) = (array_access index (dim, ee))
+	in
+	    (access_component subj (Slot (v, dim1, ee1, dummy)) [])
 	end))
 
 fun find_component id components = (
@@ -380,8 +389,8 @@ fun subject_to_instance_tree_path subj = (
 
 fun fetch_instance_tree_node subj : instance_node_t option = (
     let
-	val (tree, path) = (subject_to_instance_tree_path subj)
-	val root = if (tree = PKG) then class_tree else instance_tree
+	val (ns, path) = (subject_to_instance_tree_path subj)
+	val root = if (ns = PKG) then class_tree else instance_tree
     in
 	(descend_instance_tree path root)
     end)

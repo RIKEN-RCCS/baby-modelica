@@ -521,10 +521,13 @@ fun subarray_of_instances (index : int list) (dim0, kk0, dummy) = (
 		else raise error_bad_index
 	val _ = if (ListPair.all (fn (i, d) => (i <= d)) (index, dim0)) then ()
 		else raise error_bad_index
-	val dim1 = (array_drop_columns dim0 (length index))
+	(*
+	val dim1 = (array_drop_dimensions dim0 (length index))
 	val size = (array_size dim1)
 	val offset = (array_index dim0 index 0)
 	val kk1 = (List.take ((List.drop (kk0, offset)), size))
+	*)
+	val (dim1, kk1) = (array_access index (dim0, kk0))
 	val subjs = (map subject_of_class kk1)
     in
 	(*Instance (dim1, kk1, dummy)*)

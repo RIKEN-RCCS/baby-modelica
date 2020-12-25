@@ -174,6 +174,11 @@ fun expand_equations_in_instance (k0, acc0) = (
 	    end
 	end)
 
+(* Expands if-equations and for-equations containing connect
+   equations.  Those equations consist of translation-time constants
+   (it is always affirmative for "for" and when those contain connect
+   equations for "if"). *)
+
 fun expand_equations_for_connects () = (
     (traverse_tree expand_equations_in_instance (instance_tree, [])))
 
