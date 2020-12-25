@@ -176,14 +176,15 @@ and instantiate_with_dimension (subj, k0) = (
 		val arraylist = (map #2 dimarraylist)
 		val array = (List.concat arraylist)
 		val dimlist = (map #1 dimarraylist)
-		val xdim0 = (list_all_equal (op =) dimlist)
 		val size = (array_size dim1)
 		val dummy = if (size <> 0) then NONE else SOME x0
 	    in
-		case xdim0 of
-		    NONE => raise error_dimensions_mismatch
-		  | SOME NONE => (dim1, array, dummy)
-		  | SOME (SOME dim0) => (dim1 @ dim0, array, dummy)
+		if (null dimlist) then
+		    (dim1, array, dummy)
+		else
+		    case (list_unique_value (op =) dimlist) of
+			NONE => raise error_dimensions_mismatch
+		      | SOME dim0 => (dim1 @ dim0, array, dummy)
 	    end)
 	  | _ => raise Match
     end)

@@ -399,10 +399,12 @@ fun unique_range (vv0 : int option list) : int option = (
     let
 	val vv1 = (List.mapPartial (fn v => v) vv0)
     in
-	case (list_all_equal (op =) vv1) of
-	    NONE => raise error_varying_iterator_range
-	  | SOME NONE => NONE
-	  | SOME (SOME v) => SOME v
+	if (null vv1) then
+	    NONE
+	else
+	    case (list_unique_value (op =) vv1) of
+		NONE => raise error_varying_iterator_range
+	      | SOME v => SOME v
     end)
 
 fun find_range_in_reference_loop v (node0, rr0) : int option = (

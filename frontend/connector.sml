@@ -279,12 +279,28 @@ fun test_expansion pair = (
 	  | (SOME _, SOME _) => raise error_mutual_expandable_connectors
     end)
 
+(* Makes a dimension from a list of descriptions, each of which is
+   either (false, i) or (true, i) where false for an index and true
+   for a dimension. *)
+
 (*
-fun make_dimension indexs = (
+fun make_dimension dimensions = (
     let
+	fun fixdim ee = (
+	    let
+		val (d0, i0) = (List.partition #1 ee)
+		val d1 = (map #2 d0)
+		val i1 = (map #2 i0)
+		val d = (
+	    )
+
+	val _ = if (list_all_equal (op =) (map length dimensions)) then ()
+		else raise error_dimensions_mismatch
+	val dims = (list_transpose dimensions)
+
 	val mapmax = ((map Int.max) o ListPair.zip)
     in
-	case (list_all_equal (op =) (map length indexs)) of
+	case (list_unique_value (op =) (map length indexs)) of
 	    NONE => raise error_bad_dimension
 	  | SOME NONE => raise Match
 	  | SOME size => (
@@ -308,10 +324,16 @@ fun compact_expansion_set pairs = (
 		    val _ = if (id_ = id) then () else raise Match
 		    val _ = if (sidex_ = sidex) then () else raise Match
 
-		    val k = surely (fetch_from_instance_tree y)
-		    val (dim, array) = (unwrap_array_of_instances k)
+		    val k0 = surely (fetch_from_instance_tree y)
+		    val (dim, array) = (unwrap_array_of_instances k0)
+		    val _ = if (not (null array)) then ()
+			    else raise error_empty_array_connector
+		    val k1 = (record_of_connect (hd array))
+		    val dimension = ((map (fn i => (false, i)) ss0)
+				     @ (map (fn i => (true, i)) dim))
 		in
-		    (ss0, y, sidey) :: acc
+
+		    (dimension, k1, sidey) :: acc
 	    end)
 
 	    val connectset = (foldl strip [] pairs)
@@ -325,10 +347,9 @@ fun compact_expansion_set pairs = (
 (*
 fun expand_connector pairs = (
     let
-	val expansionset = (compact_expansion_set pairs)
-	val (x, id, sidex, connectset) = expansionset
-	val indexs = (map #1 connectset)
-	val dim = (make_dimension indexs)
+	val (x, id, sidex, connectset) = (compact_expansion_set pairs)
+	val dimensions = (map #1 connectset)
+	val dim = (make_dimension dimensions)
     in
 	(*val peer = surely (fetch_from_instance_tree y)*)
 	val node = surely (fetch_instance_tree_node x)

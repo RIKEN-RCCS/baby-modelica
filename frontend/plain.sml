@@ -114,13 +114,21 @@ fun list_diff sup sub = (
     (foldl (fn (e, residue) => (List.filter (fn x => (not (x = e))) residue))
 	   sup sub))
 
-(* Tests if all are equal with regard to a given equality.  It returns
-   SOME (SOME e) of a first item, SOME NONE if a list is empty, or
-   NONE if not. *)
+(* Tests if all are equal with regard to a given equality. *)
 
-fun list_all_equal eq [] = SOME NONE
-  | list_all_equal eq (e :: t) = (
-    if (List.all (fn x => (eq (x, e))) t) then SOME (SOME e) else NONE)
+fun list_all_equal eq ee = (
+    case ee of
+	[] => true
+      | (e :: tt) => (List.all (fn x => (eq (e, x))) tt))
+
+(* Returns a unique value if all are equal with regard to a given
+   equality.  It errs on an empty list.  It returns the first element
+   as (SOME e) or NONE. *)
+
+fun list_unique_value eq ee = (
+    case ee of
+	[] => raise Match
+      | e :: tt => (if (list_all_equal eq ee) then (SOME e) else NONE))
 
 (* Returns an escaped string enclosed by "...". *)
 
@@ -301,5 +309,19 @@ fun list_repeat v n acc = (
 	acc
     else
 	(list_repeat v (n - 1) (v :: acc)))
+
+(* Transposes a list of a list.  Element lists are truncated to the
+   shortest one. *)
+
+fun list_transpose ee = (
+    if (List.exists null ee) then
+	[]
+    else
+	let
+	    val hds = (map hd ee)
+	    val tls = (map tl ee)
+	in
+	    hds :: (list_transpose tls)
+	end)
 
 end

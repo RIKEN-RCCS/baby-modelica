@@ -345,4 +345,6 @@ val error_mutual_expandable_connectors = Match
 
 val error_bad_dimension = Match
 
+val error_empty_array_connector = Match
+
 end
