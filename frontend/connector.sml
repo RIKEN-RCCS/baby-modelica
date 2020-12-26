@@ -13,10 +13,8 @@ sig
     val discern_connects : unit -> unit
 
     val xbind : unit -> unit
-
     val xconnect :
-	unit -> ((ast.expression_t * bool) * (ast.expression_t * bool)
-		 * subject_t) list
+	unit -> ((subject_t * bool) * (subject_t * bool) * subject_t) list
 end = struct
 
 open ast plain
@@ -37,6 +35,9 @@ val fold_constants = folder.fold_constants
 val explicitize_range = folder.explicitize_range
 
 val bind_in_scoped_expression = binder.bind_in_scoped_expression
+
+val instantiate_class = builder.instantiate_class
+val traverse_with_instantiation = builder.traverse_with_instantiation
 
 val walk_in_class = walker.walk_in_class
 val walk_in_expression = walker.walk_in_expression
@@ -121,7 +122,24 @@ fun record_of_connect k = (
     case k of
 	Def_Body (mk, j, cs, nm, ee, aa, ww) => (
 	Def_Body (mk, j, cs, nm, ee, aa, ww))
-      | Def_Der _ => k
+      | Def_Der _ => raise Match
+      | Def_Primitive _ => raise Match
+      | Def_Name _ => raise Match
+      | Def_Scoped _ => raise Match
+      | Def_Refine _ => raise Match
+      | Def_Extending _ => raise Match
+      | Def_Replaced _ => raise Match
+      | Def_Displaced _ => raise Match
+      | Def_In_File => raise Match
+      | Def_Mock_Array _ => raise Match
+      | Def_Outer_Alias _ => raise Match)
+
+fun unmark_expandable_connector k = (
+    case k of
+	Def_Body (mk, j, (Connector true, p, q), nm, ee, aa, ww) => (
+	Def_Body (mk, j, (Connector false, p, q), nm, ee, aa, ww))
+      | Def_Body _ => raise Match
+      | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
       | Def_Name _ => raise Match
       | Def_Scoped _ => raise Match
@@ -183,8 +201,8 @@ fun discern_connects_in_instance (k0, acc0) = (
 	    end
 	end)
 
-(* Discriminates connections by inside/outside, and records that
-   information in connect-equations. *)
+(* Discriminates the side (inside/outside) of connections, and records
+   that information in connect equations. *)
 
 fun discern_connects () = (
     ignore (traverse_tree discern_connects_in_instance (instance_tree, [])))
@@ -197,8 +215,13 @@ fun collect_connects_in_equation kp (q0, acc0) = (
     in
 	case q0 of
 	    Eq_Eq _ => (q0, acc0)
-	  | Eq_Connect (((x, sidex), (y, sidey)), aa, ww) => (
-	    (q0, (((x, sidex), (y, sidey), subj) :: acc0)))
+	  | Eq_Connect (((x0, sidex), (y0, sidey)), aa, ww) => (
+	    let
+		val x1 = (literalize_subscripts kp x0)
+		val y1 = (literalize_subscripts kp y0)
+	    in
+		(q0, (((x1, sidex), (y1, sidey), subj) :: acc0))
+	    end)
 	  | Eq_If _ => (q0, acc0)
 	  | Eq_When _ => (q0, acc0)
 	  | Eq_App _ => (q0, acc0)
@@ -228,7 +251,7 @@ fun collect_connects_in_instance (k0, acc0) = (
 	    end
 	end)
 
-(* Collects connect-equations. *)
+(* Collects connect equations. *)
 
 fun collect_connects () = (
     (traverse_tree collect_connects_in_instance (instance_tree, [])))
@@ -279,39 +302,25 @@ fun test_expansion pair = (
 	  | (SOME _, SOME _) => raise error_mutual_expandable_connectors
     end)
 
-(* Makes a dimension from a list of descriptions, each of which is
-   either (false, i) or (true, i) where false for an index and true
-   for a dimension. *)
+(* Selects a dimension from a list of descriptions, each of which is
+   either an index value (false,i) or a dimension value (true,i).  It
+   returns a common value of a dimension set if any, or a maximum
+   value of an index set. *)
 
-(*
-fun make_dimension dimensions = (
+fun pick_dimension_value descriptions = (
     let
-	fun fixdim ee = (
-	    let
-		val (d0, i0) = (List.partition #1 ee)
-		val d1 = (map #2 d0)
-		val i1 = (map #2 i0)
-		val d = (
-	    )
-
-	val _ = if (list_all_equal (op =) (map length dimensions)) then ()
-		else raise error_dimensions_mismatch
-	val dims = (list_transpose dimensions)
-
-	val mapmax = ((map Int.max) o ListPair.zip)
+	val _ = if (not (null descriptions)) then () else raise Match
+	val (d0, i0) = (List.partition #1 descriptions)
+	val dset = (map #2 d0)
+	val iset = (map #2 i0)
     in
-	case (list_unique_value (op =) (map length indexs)) of
-	    NONE => raise error_bad_dimension
-	  | SOME NONE => raise Match
-	  | SOME size => (
-	    let
-		val base = (list_repeat 1 size [])
-		val dim = (foldl mapmax base indexs)
-	    in
-		dim
-	    end)
+	if (null dset) then
+	    (foldl Int.max 0 iset)
+	else
+	    case (list_unique_value (op =) dset) of
+		NONE => raise error_nonunique_dimension
+	      | SOME v => v
     end)
-*)
 
 fun compact_expansion_set pairs = (
     case pairs of
@@ -333,7 +342,7 @@ fun compact_expansion_set pairs = (
 				     @ (map (fn i => (true, i)) dim))
 		in
 
-		    (dimension, k1, sidey) :: acc
+		    (dimension, (k1, sidey)) :: acc
 	    end)
 
 	    val connectset = (foldl strip [] pairs)
@@ -341,43 +350,73 @@ fun compact_expansion_set pairs = (
 	    (x, id, sidex, connectset)
 	end))
 
+(* Chooses an appropriate record class.  It takes a list of pairs of a
+   type/record and its side.  It just returns a first type/record and
+   does not consider the input/output direction. *)
+
+fun select_record_class sidex classes = (
+    let
+	val _ = print "(AHO) EXPANDING CONNECTOR IGNORES I/O\n"
+    in
+	(#1 (hd classes))
+    end)
+
+fun make_record_instances subj dim0 k0 = (
+    let
+	val dim1 = (map z_literal dim0)
+	val q = (Effort, Continuous, Modeless)
+	val k1 = Def_Refine (k0, NONE, copy_type, q,
+			     (dim1, []), Annotation [], Comment [])
+	val (dim, array) = (instantiate_class (subj, k1))
+    in
+	(dim, array)
+    end)
+
 (* Fills a slot of an expandable connector.  It takes peer connectors
    for one slot of a connector. *)
 
-(*
 fun expand_connector pairs = (
     let
-	val (x, id, sidex, connectset) = (compact_expansion_set pairs)
+	val (subj, id, sidex, connectset) = (compact_expansion_set pairs)
 	val dimensions = (map #1 connectset)
-	val dim = (make_dimension dimensions)
+	val _ = if (list_all_equal (op =) (map length dimensions)) then ()
+		else raise error_dimensions_mismatch
+	val dim = (map pick_dimension_value (list_transpose dimensions))
+	val classes = (map #2 connectset)
+	val k0 = (select_record_class sidex classes)
+	val subsubj = (compose_subject subj id [])
+	val (dim, array) = (make_record_instances subsubj dim k0)
+	val _ = (app traverse_with_instantiation array)
     in
-	(*val peer = surely (fetch_from_instance_tree y)*)
-	val node = surely (fetch_instance_tree_node x)
-    in
-	if ((length groups) > 1) then
-
-		val _ = if (x0 = x1) then () else raise Match
-	    in
-
-	    end)
-
-	val node = surely (fetch_instance_tree_node x)
-	val peer = surely (fetch_from_instance_tree y)
-    in
-	x ((id, dim), sidex, y, sidey) = (
-
+	(dim, array)
     end)
 
+(* Selects an expandable connector at the shallowest in the instance
+   hierarchy. *)
 
-    in
-    end)
-
-fun expand_expandable connects = (
+fun select_prior_connector pairs = (
     let
-	fun eq ((_, (id0, _), _, _, _), (_, (id1, _), _, _, _)) = (id0 = id1)
 	fun depth (Subj (ns, cc)) = (length cc)
 	fun select_d d (x, _, _, _, _) = (d = (depth x))
-	fun select_x y (x, _, _, _, _) = (y = x)
+	fun select_x s (x, _, _, _, _) = (s = x)
+
+	val _ = if (not (null pairs)) then () else raise Match
+
+	val depths = (map (fn (x, _, _, _, _) => (depth x)) pairs)
+	val min = (foldl Int.min (hd depths) depths)
+	val (x, _, _, _, _) = valOf (List.find (select_d min) pairs)
+	val group = (List.filter (select_x x) pairs)
+    in
+	(x, group)
+    end)
+
+(* Expands expandable connectors.  It changes an expandable connector
+   to a normal connector, and repeats the process until all expandable
+   connectors are settled. *)
+
+fun expand_expandable_connectors connects = (
+    let
+	fun eq ((_, (id0, _), _, _, _), (_, (id1, _), _, _, _)) = (id0 = id1)
 
 	val pairs = (gather_some test_expansion connects)
     in
@@ -385,17 +424,16 @@ fun expand_expandable connects = (
 	    [] => ()
 	  | _ => (
 	    let
-		val depths = (map (fn (x, _, _, _, _) => (depth x)) pairs)
-		val min = (foldl Int.min (hd depths) depths)
-		val (x, _, _, _, _) = valOf (List.find (select_d min) pairs)
-		val group = (List.filter (select_x x) pairs)
+		val (subj, group) = (select_prior_connector pairs)
 		val groups = (list_groups eq group)
-		val _ = (app expand_connector groups)
+		val _ = (app (ignore o expand_connector) groups)
+		val k0 = surely (fetch_from_instance_tree subj)
+		val k1 = (unmark_expandable_connector k0)
+		val _ = (store_to_instance_tree subj k1)
 	    in
-		()
+		(expand_expandable_connectors connects)
 	    end)
     end)
-*)
 
 (* ================================================================ *)
 
@@ -403,6 +441,7 @@ fun connect_connects () = (
     let
 	val _ = (expand_equations_for_connects ())
 	val cc0 = (collect_connects ())
+	val _ = (expand_expandable_connectors cc0)
 	(*val cc1 = (make_unions (op =) cc0)*)
     in
 	cc0

@@ -144,7 +144,7 @@ datatype analogical_t = Flow | Stream | Effort
 
 datatype variability_t = Constant | Parameter | Discrete | Continuous
 
-(* (It may better Modeless be Acausal). *)
+(* (Modeless may better be Acausal). *)
 
 datatype input_or_output_t = Input | Output | Modeless
 

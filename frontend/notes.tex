@@ -540,6 +540,14 @@ redeclarations.  See Fact~\ref{record-class-identity}.
 The_implementation does not identify functions this way, because
 modifications of values change the function.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Syntaxing}
+
+{Syntaxing} performs simple transformations to make a flat model.  It
+rewrites connect_equations to equations.  In that rewriting, it
+expands if-equations and for-equations that include connect_equations.
+
 %%%%%%%%%%%%%%%%
 
 \subsection{Implicit Iterator Ranges}
@@ -558,13 +566,7 @@ classes are instantiated by descending the model hierarchy.  Expanding
 expandable_connectors is performed first for the connector at the
 shallowest position.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\section{Syntaxing}
-
-{Syntaxing} performs simple transformations to make a flat model.  It
-rewrites connect_equations to equations.  In that rewriting, it
-expands if-equations and for-equations that include connect_equations.
+%%%%%%%%%%%%%%%%
 
 \subsection{Stream connectors}
 
@@ -2530,13 +2532,20 @@ operator_records, but not models.
 
 \subsubsection*{Expandable_connectors}
 
-An expandable_connector is a set of connectors, and it only is
-connected to other ones.  All components in an expandable_connector
-are implicitly considered as connectors.  A component will be included
-for the outside use of an expandable_connector even if it is not
-declared in the definition.  Additionally, an expandable_connector is
-first considered empty until a declared component is included by using
-it explicitly.
+An expandable_connector is a set of connectors, and it is only
+connected to another ones.  A component will be included when it is
+used.  All components in an expandable_connector are implicitly
+considered as connectors.  An expandable_connector is first considered
+empty until (even) a declared component is included by using it
+explicitly.
+
+A direct reference of a component in a connect equation signifies an
+addition of a component to an expandable_connector.  A reference is
+$m...m.c.d$, with $m$ a possibly empty component, $c$ an
+expandable_connector, and $d$ a component.
+
+%% A component will be included for the outside use of an
+%% expandable_connector even if it is not declared in the definition.
 
 \begin{qquote} (\specref{9.1.3}\/) $\bullet$\,expandable connectors
 can only be connected to other expandable connectors.\end{qquote}
@@ -2798,11 +2807,13 @@ restricted to contain constants/parameters but no variables.
 (*CHECK*) It can contain protected sections.
 
 \item[connector] is either a {type} or a {record}, but it is allowed
-to connect on it.  It is similar to $\mathbf{record}$, when
-$\mathbf{connector}$ is used in a (long class) definition.  Connector
-declarations may be implicit in expandable_connectors.
+to connect on it.  It is actually a subkind of them.  The use of a
+keyword $\mathbf{connector}$ defines a record, when it is used in a
+long class definition.  It gives a connector-status to a type/record,
+when it is used in a short class definition.  Connector declarations
+are implicit in expandable_connectors.
 
-\item[expandable_connector] is $\mathbf{connector}$.
+\item[expandable_connector] is a connector.
 
 \item[operator_record] contains the same elements as
 $\mathbf{record}$, but with an operator-overloading.

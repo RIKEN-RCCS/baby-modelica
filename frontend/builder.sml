@@ -14,6 +14,9 @@ sig
 
     val secure_reference :
 	definition_body_t -> bool -> expression_t -> expression_t
+    val instantiate_class :
+	subject_t * definition_body_t -> int list * definition_body_t list
+    val traverse_with_instantiation : definition_body_t -> unit
 
     val xreset : unit -> unit
     val xload : string -> class_definition_t
@@ -476,13 +479,11 @@ fun call_if_component__ kp f (Naming (v, subsubj, _, _, (z, r, dd, h))) = (
 		()
 	end))
 
-(* Instantiates a class by one or by an array of it, then traverses
-   the instances.  It skips an instantiation when one has been created
-   during determination of array dimensions.  Note that the subject is
-   always a non-array (at the last part), and it collectively creates
-   an array of instances. *)
+(* Instantiates the components of a class, then repeats instantiating
+   in the components.  It skips ones already created, which are
+   possibly created during determination of array dimensions. *)
 
-fun traverse_with_instantiation (subj0, k0) = (
+fun traverse_with_instantiation k0 = (
     let
 	fun instantiate kp binding = (
 	    case binding of
@@ -513,7 +514,7 @@ fun traverse_with_instantiation (subj0, k0) = (
 		    ()
 		end)
 
-	val _ = (assert_subject_is_not_array subj0)
+	(*val _ = (assert_subject_is_not_array subj0)*)
     in
 	(traverse k0)
     end)
@@ -575,7 +576,8 @@ fun xbuild s = (
 	val v = Id ""
 	val q = no_component_prefixes
 	val var = Defvar (v, q, k3, NONE, Annotation [], Comment [])
-	val _ = (traverse_with_instantiation (subj, k3))
+	val _ = (assert_subject_is_not_array subj)
+	val _ = (traverse_with_instantiation k3)
     in
 	()
     end)

@@ -347,4 +347,6 @@ val error_bad_dimension = Match
 
 val error_empty_array_connector = Match
 
+val error_nonunique_dimension = Match
+
 end
