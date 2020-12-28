@@ -268,6 +268,7 @@ and bind_in_expression ctx buildphase binder w0 = (
 	  (*| Instance _ => w0*)
 	  | Instances _ => w0
 	  | Iref _ => w0
+	  | Cref _ => w0
 	  | Array_fill (e, s) => (
 	    Array_fill ((walk_x e), (walk_x s)))
 	  | Array_diagonal e => (
@@ -622,8 +623,8 @@ and bind_in_equation ctx binder q0 = (
 	    Eq_Eq ((x0, y0), Annotation aa0, ww) => (
 	    Eq_Eq (((walk_x x0), (walk_x y0)),
 		   Annotation (map walk_m aa0), ww))
-	  | Eq_Connect (((x0, sidex), (y0, sidey)), Annotation aa0, ww) => (
-	    Eq_Connect ((((walk_x x0), sidex), ((walk_x y0), sidey)),
+	  | Eq_Connect ((x0, y0), Annotation aa0, ww) => (
+	    Eq_Connect (((walk_x x0), (walk_x y0)),
 			Annotation (map walk_m aa0), ww))
 	  | Eq_If (c0, Annotation aa0, ww) => (
 	    Eq_If ((map walk_x_qq c0),

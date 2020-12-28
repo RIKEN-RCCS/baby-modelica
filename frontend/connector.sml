@@ -159,17 +159,19 @@ fun discern_connects_in_equation kp (q0, acc0) = (
     in
 	case q0 of
 	    Eq_Eq _ => (q0, acc0)
-	  | Eq_Connect (((x0, false), (y0, false)), aa, ww) => (
+	  | Eq_Connect ((x0 as Vref _, y0 as Vref _), aa, ww) => (
 	    let
 		val x1 = (literalize_subscripts kp x0)
 		val y1 = (literalize_subscripts kp y0)
 		val sidex = (reference_is_connector_component subj x1)
 		val sidey = (reference_is_connector_component subj y1)
-		val q1 = Eq_Connect (((x0, sidex), (y0, sidey)), aa, ww)
+		val x2 = Cref (x1, sidex)
+		val y2 = Cref (y1, sidey)
+		val q1 = Eq_Connect ((x2, y2), aa, ww)
 	    in
 		(q1, acc0)
 	    end)
-	  | Eq_Connect (((x0, _), (y0, _)), aa, ww) => raise Match
+	  | Eq_Connect ((_, _), aa, ww) => raise Match
 	  | Eq_If _ => (q0, acc0)
 	  | Eq_When _ => (q0, acc0)
 	  | Eq_App _ => (q0, acc0)
@@ -215,13 +217,9 @@ fun collect_connects_in_equation kp (q0, acc0) = (
     in
 	case q0 of
 	    Eq_Eq _ => (q0, acc0)
-	  | Eq_Connect (((x0, sidex), (y0, sidey)), aa, ww) => (
-	    let
-		val x1 = (literalize_subscripts kp x0)
-		val y1 = (literalize_subscripts kp y0)
-	    in
-		(q0, (((x1, sidex), (y1, sidey), subj) :: acc0))
-	    end)
+	  | Eq_Connect ((Cref (x, sidex), Cref (y, sidey)), aa, ww) => (
+	    (q0, (((x, sidex), (y, sidey), subj) :: acc0)))
+	  | Eq_Connect ((_, _), aa, ww) => raise Match
 	  | Eq_If _ => (q0, acc0)
 	  | Eq_When _ => (q0, acc0)
 	  | Eq_App _ => (q0, acc0)

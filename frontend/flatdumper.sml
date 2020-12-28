@@ -682,19 +682,20 @@ fun dump_equation s q = (
 	    in
 		()
 	    end)
-	  | Eq_Connect (((e0, side0), (e1, side1)), aa, ww) => (
+	  | Eq_Connect ((Cref (s0, side0), Cref (s1, side1)), aa, ww) => (
 	    let
 		val _ = (TextIO.output
 			     (s, ("/*connect ("^
-				  (expression_to_string e0)
+				  (subject_to_string s0)
 				  (*^(if side0 then "(+)" else "(-)")*)
 				  ^", "^
-				  (expression_to_string e1)
+				  (subject_to_string s1)
 				  (*^(if side1 then "(+)" else "(-)")*)
 				  ^")*/\n")))
 	    in
 		()
 	    end)
+	  | Eq_Connect ((_, _), aa, ww) => raise Match
 	  | Eq_If (cc, aa, ww) => (
 	    let
 		val _ = (foldl (dump_conditional "if" s) true cc)

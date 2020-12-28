@@ -2476,28 +2476,29 @@ See \specref{3.8.3}\/ for discrete values.
 A connector is a type or a record that is marked to be used in
 connect_equations.
 
+\subsubsection*{Sides of connectors}
+
+A side is an aspect of a connector whether it is connected in a
+declaring class.  An outside_connector is an internal connection
+connected in the declaring class, and the flow direction is considered
+reversed (a value is negated) for that connection.  An opposite is an
+inside_connector.  A connector is considered separate as the
+inside/outside ones, but they share the same variables.  The side is
+taken into account in {connect} equations and $\mathrm{cardinality}$.
+
+\begin{QFACT} Determination of a side of a connector must respect the
+place where the connector is declared, and inner/outer declarations
+should be ignored for that.  An outside_connector is distinguished by
+the use of a connector that is declared and used in the class (i.e.,
+the connector appears in the first part of a composite name).  Both
+$c$ and $c.d$ are outside_connectors when they appear in
+$\mathrm{connect}\,(c,...)$ and $\mathrm{connect}\,(c.d,...)$ in the
+class declaring $c$.\end{QFACT}
+
 \subsubsection*{Nesting connectors}
 
 A connect_equation connects variables including component connectors
 declared in the connector.
-
-\subsubsection*{Outside_connectors}
-
-An outside_connector is an aspect of a connector when it is connected
-in a declaring class.  It is an internal connection to the connector,
-and the flow direction is considered reversed (a value is negated) for
-that connection.  An opposite is an inside_connector.  Each connector
-is considered separate as the inside/outside ones, but they share the
-same variables.
-
-\begin{QFACT} Determination of an outside_connector must respect the
-place where the connector is declared, and inner/outer declarations
-should be ignored for that.  An outside_connector is distinguished by
-the use of a connector that is declared and connected in the class
-(the connector appears in the first part of a composite name).  Both
-$c$ and $c.d$ are outside_connectors when they are used in
-$\mathrm{connect}(c,...)$ or $\mathrm{connect}(c.d,...)$ in the class
-declaring $c$.\end{QFACT}
 
 \subsubsection*{Connection restrictions}
 
@@ -2784,9 +2785,6 @@ The following is the copy of the table in \specref{4.6}.
 \begin{quote}
 \begin{description}
 
-\item[type] is one of the simple_types, arrays of a type, or one
-extending a type.
-
 \item[model] is a general collection of elements.
 
 \item[class] is a restricted collection that contains extends-clauses,
@@ -2797,14 +2795,27 @@ accept other elements.  See Quote~\ref{quo:class-is-restricted}.
 \item[block] is a restricted {model}, whose connectors are directed by
 $\mathbf{input}$/$\mathbf{output}$.
 
+\item[package] contains similar elements as $\mathbf{record}$ that is
+restricted to contain constants/parameters but no variables.
+(*CHECK*) It can contain protected sections.
+
+\item[type] is one of the simple_types, arrays of a type, or one
+extending a type.
+
 \item[record] is a record in a usual sense.  A component of a record
 is a type, a record, or an array of them.  It contains no
 equation/algorithm sections nor protected sections (but it can contain
 functions).
 
-\item[package] contains similar elements as $\mathbf{record}$ that is
-restricted to contain constants/parameters but no variables.
-(*CHECK*) It can contain protected sections.
+\item[operator_record] is a record, but is restricted for
+operator-overloading.  It can contain the same elements as records,
+but also it can contain operators.
+
+\item[operator] contains similar elements as $\mathbf{package}$, that
+is restricted to contain only functions as definitions.  An operator
+is only defined in an operator_record.
+
+\item[(operator_function)] is $\mathbf{operator}$ with one function.
 
 \item[connector] is either a {type} or a {record}, but it is allowed
 to connect on it.  It is actually a subkind of them.  The use of a
@@ -2814,14 +2825,6 @@ when it is used in a short class definition.  Connector declarations
 are implicit in expandable_connectors.
 
 \item[expandable_connector] is a connector.
-
-\item[operator_record] contains the same elements as
-$\mathbf{record}$, but with an operator-overloading.
-
-\item[operator] contains similar elements as $\mathbf{package}$, that
-is restricted to contain only functions as definitions.
-
-\item[operator_function] is $\mathbf{operator}$ with one function.
 
 \item[function] is a function in a usual sense.  It is syntactically a
 package (not an instance).  It can contain either one algorithm

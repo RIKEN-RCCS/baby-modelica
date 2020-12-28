@@ -97,8 +97,9 @@ datatype predefined_operator_t
    rewriting a modifier of class copying.  It is with an array
    dimension which is null for a scalar component.  Instances refers
    to instances, and also it internally refers to a function.  Iref is
-   an iterator variable reference.  Others, Array_fill,
-   Array_diagonal, etc. are predefined functions. *)
+   an iterator variable reference.  Cref is a connector reference with
+   the side information.  Others, Array_fill, Array_diagonal, etc. are
+   predefined functions. *)
 
 datatype expression_t
     = NIL
@@ -127,6 +128,7 @@ datatype expression_t
     | Component_Ref of expression_t * id_t
     | Instances of int list * subject_t list
     | Iref of id_t
+    | Cref of subject_t * (*outside*) bool
     | Array_fill of expression_t * expression_t
     | Array_diagonal of expression_t
 
@@ -167,6 +169,9 @@ type element_prefixes_t
 
 type modifier_prefixes_t
      = {Final : bool, Replaceable : bool, Each : bool}
+
+datatype connector_type_t = ConnectorS of (*expandable*) bool
+type connector_status_t = connector_type_t option
 
 (* Implied is used by internally introduced modifiers.  See the
    copy_type definition. *)
@@ -240,15 +245,13 @@ datatype primitive_type_t
     | P_String
     | P_Enum of class_tag_t
 
-(* Equations.  Eq_Connect has boolean slots indicating an outside one.
-   They are set during syntaxing.  E_List is introduced
-   temporarily. *)
+(* Equations.  Eq_Connect will have Cref (connectors) for the
+   arguments after syntaxing.  E_List is introduced temporarily. *)
 
 datatype equation_t
     = Eq_Eq of ((expression_t * expression_t)
 		* annotation_t * comment_t)
-    | Eq_Connect of (((expression_t * bool) * (expression_t * bool))
-		     * annotation_t * comment_t)
+    | Eq_Connect of ((expression_t * expression_t) * annotation_t * comment_t)
     | Eq_If of ((expression_t * equation_t list) list
 		* annotation_t * comment_t)
     | Eq_When of ((expression_t * equation_t list) list

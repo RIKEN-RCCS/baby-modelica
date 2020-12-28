@@ -294,16 +294,16 @@ fun expression_is_literal w = (
    f on Vref and g on Iref (every expression, not taking the iterator
    into consideration), but skips other primary expressions. *)
 
-fun scan_for_iterator_e v (f, g) (w, acc0) = (
+fun scan_for_iterator_x v (f, g) (w, acc0) = (
     let
-	val scan_e = scan_for_iterator_e v (f, g)
+	val scan_x = scan_for_iterator_x v (f, g)
 
 	fun scan_may_be_hidden_e ((x, uu0), acc0) = (
 	    case uu0 of
-		[] => (scan_e (x, acc0))
+		[] => (scan_x (x, acc0))
 	      | (id, r) :: uu1 => (
 		let
-		    val acc1 = (scan_e (r, acc0))
+		    val acc1 = (scan_x (r, acc0))
 		in
 		    if (v = Iref id) then
 			acc1
@@ -320,39 +320,40 @@ fun scan_for_iterator_e v (f, g) (w, acc0) = (
 	  | Vref (NONE, _) => raise Match
 	  | Vref (SOME _, rr) => (f (w, acc0))
 	  | Opr _ => acc0
-	  | App (x, xx) => (foldl scan_e acc0 (x :: xx))
+	  | App (x, xx) => (foldl scan_x acc0 (x :: xx))
 	  | ITE cc => (
-	    (foldl (fn ((x, y), acc) => (foldl scan_e acc [x, y])) acc0 cc))
-	  | Der xx => (foldl scan_e acc0 xx)
-	  | Pure xx => (foldl scan_e acc0 xx)
-	  | Closure (n, xx) => (foldl scan_e acc0 xx)
+	    (foldl (fn ((x, y), acc) => (foldl scan_x acc [x, y])) acc0 cc))
+	  | Der xx => (foldl scan_x acc0 xx)
+	  | Pure xx => (foldl scan_x acc0 xx)
+	  | Closure (n, xx) => (foldl scan_x acc0 xx)
 	  | L_Number _ => acc0
 	  | L_Bool _ => acc0
 	  | L_Enum _ => acc0
 	  | L_String _ => acc0
-	  | Array_Triple (x, y, NONE) => (foldl scan_e acc0 [x, y])
-	  | Array_Triple (x, y, SOME z) => (foldl scan_e acc0 [x, y, z])
-	  | Array_Constructor xx => (foldl scan_e acc0 xx)
+	  | Array_Triple (x, y, NONE) => (foldl scan_x acc0 [x, y])
+	  | Array_Triple (x, y, SOME z) => (foldl scan_x acc0 [x, y, z])
+	  | Array_Constructor xx => (foldl scan_x acc0 xx)
 	  | Array_Comprehension (x, uu) => (
 	    (scan_may_be_hidden_e ((x, uu), acc0)))
 	  | Array_Concatenation xx => (
-	    (foldl (fn (yy, acc) => (foldl scan_e acc yy)) acc0 xx))
+	    (foldl (fn (yy, acc) => (foldl scan_x acc yy)) acc0 xx))
 	  | Tuple xx => raise error_tuple_in_rhs
 	  | Reduction_Argument (x, uu) => (
 	    (scan_may_be_hidden_e ((x, uu), acc0)))
-	  | Named_Argument (n, x) => (scan_e (x, acc0))
-	  | Pseudo_Split (x, s) => (scan_e (x, acc0))
-	  | Component_Ref (x, c) => (scan_e (x, acc0))
+	  | Named_Argument (n, x) => (scan_x (x, acc0))
+	  | Pseudo_Split (x, s) => (scan_x (x, acc0))
+	  | Component_Ref (x, c) => (scan_x (x, acc0))
 	  (*| Instance _ => acc0*)
 	  | Instances _ => acc0
 	  | Iref _ => (g (w, acc0))
-	  | Array_fill (x, y) => (foldl scan_e acc0 [x, y])
-	  | Array_diagonal x => (scan_e (x, acc0))
+	  | Cref _ => acc0
+	  | Array_fill (x, y) => (foldl scan_x acc0 [x, y])
+	  | Array_diagonal x => (scan_x (x, acc0))
     end)
 
 fun scan_for_iterator_q v (f, g) (q, acc0) = (
     let
-	val scan_e = scan_for_iterator_e v (f, g)
+	val scan_x = scan_for_iterator_x v (f, g)
 	val scan_q = scan_for_iterator_q v (f, g)
 
 	fun scan_may_be_hidden_q ((qq, uu0), acc0) = (
@@ -360,7 +361,7 @@ fun scan_for_iterator_q v (f, g) (q, acc0) = (
 		[] => (foldl scan_q acc0 qq)
 	      | (id, r) :: uu1 => (
 		let
-		    val acc1 = (scan_e (r, acc0))
+		    val acc1 = (scan_x (r, acc0))
 		in
 		    if (v = Iref id) then
 			acc1
@@ -369,20 +370,20 @@ fun scan_for_iterator_q v (f, g) (q, acc0) = (
 		end))
     in
 	case q of
-	    Eq_Eq ((x, y), _, _) => (foldl scan_e acc0 [x, y])
-	  | Eq_Connect (((x, _), (y, _)), _, _) => (foldl scan_e acc0 [x, y])
+	    Eq_Eq ((x, y), _, _) => (foldl scan_x acc0 [x, y])
+	  | Eq_Connect ((x, y), _, _) => (foldl scan_x acc0 [x, y])
 	  | Eq_If (cc, _, _) => (
 	    (foldl
-		 (fn ((x, qq), acc) => (foldl scan_q (scan_e (x, acc)) qq))
+		 (fn ((x, qq), acc) => (foldl scan_q (scan_x (x, acc)) qq))
 		 acc0 cc))
 	  | Eq_When (cc, _, _) => (
 	    (foldl
-		 (fn ((x, qq), acc) => (foldl scan_q (scan_e (x, acc)) qq))
+		 (fn ((x, qq), acc) => (foldl scan_q (scan_x (x, acc)) qq))
 		 acc0 cc))
 	  | Eq_For ((uu, qq), _, _) => (
 	    (scan_may_be_hidden_q ((qq, uu), acc0)))
 	  | Eq_App ((e, ee), _, _) => (
-	    (foldl scan_e acc0 (e :: ee)))
+	    (foldl scan_x acc0 (e :: ee)))
     end)
 
 (* Tests an iterator v=Iref appears in an expression. *)
@@ -392,7 +393,7 @@ fun contains_iterator v w = (
 	fun f (x, acc) = acc
 	fun g (x, acc) = (v = x) orelse acc
     in
-	(scan_for_iterator_e v (f, g) (w, false))
+	(scan_for_iterator_x v (f, g) (w, false))
     end)
 
 fun unique_range (vv0 : int option list) : int option = (
