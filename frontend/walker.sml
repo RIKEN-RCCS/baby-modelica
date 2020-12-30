@@ -107,8 +107,8 @@ fun walk_in_n_xx walk ((n, xx0), acc0) = (
 	((n, xx1), acc1)
     end)
 
-(* Applies a function to each element expression in the post-order.
-   It does not call the function if an expression is simple -- Colon,
+(* Applies a function to each element expression in post-order.  It
+   does not call the function if an expression is simple -- Colon,
    Otherwise, Opr, and literals.  It need be called after resolving
    variable references. *)
 
@@ -502,7 +502,7 @@ and walk_in_constraint ewalk ((h0 : constraint_t), acc0) = (
 	(h1, acc2)
     end)
 
-(* Applies a function to each equation in the post-order as well as it
+(* Applies a function to each equation in post-order as well as it
    applies a function to an expression when it encounters. *)
 
 fun walk_in_equation vamp_q (vamp_x : 'a x_vamper_t) (q0, acc0) = (
@@ -574,8 +574,8 @@ fun walk_in_equation vamp_q (vamp_x : 'a x_vamper_t) (q0, acc0) = (
 	    end)
     end)
 
-(* Applies a function to each statement in the post-order as well as
-   it applies a function to an expression when it encounters. *)
+(* Applies a function to each statement in post-order as well as it
+   applies a function to an expression when it encounters. *)
 
 fun walk_in_statement vamp_s (vamp_x : 'a x_vamper_t) (s0, acc0) = (
     let

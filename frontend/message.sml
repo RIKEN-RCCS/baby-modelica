@@ -351,4 +351,6 @@ val error_nonunique_dimension = Match
 
 val error_bad_call_of_cardinality = Match
 
+val error_cardinality_in_declaration = Match
+
 end

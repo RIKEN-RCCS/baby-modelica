@@ -49,6 +49,23 @@ fun secure_references_in_class kp = (
 	()
     end)
 
+(* Makes a record accessible as a package if it is instantiated.  It
+   is because a record itself may be accessed (not as an instance) in
+   such as instantiation. *)
+
+fun secure_record_class kp = (
+    if ((kind_is_record kp) andalso (class_is_instance kp)) then
+	let
+	    val record = (class_name_of_instance kp)
+	    val var = (subject_as_reference record)
+	    val ctx = kp
+	    val _ = (secure_reference ctx false var)
+	in
+	    ()
+	end
+    else
+	())
+
 (* Resolves variable references in a package/instance.  It returns
    true if some instances are processed, so that it can repeat the
    process until it stabilizes.  It, with scanning=true, processes all
@@ -77,7 +94,9 @@ fun bind_in_instance (scanning : bool) k0 = (
 	    val _ = if ((cook_step k1) = E5) then () else raise Match
 	    val _ = (store_to_instance_tree subj k1)
 	    val _ = (secure_references_in_class k1)
+	    val _ = (secure_record_class k1)
 	in
+	    (*
 	    if ((kind_is_record k1) andalso (class_is_instance k1)) then
 		let
 		    val record = (class_name_of_instance k1)
@@ -89,11 +108,15 @@ fun bind_in_instance (scanning : bool) k0 = (
 		end
 	    else
 		true
+	    *)
+	    true
 	end)
 
-(* Resolves variables in packages/instances.  It skips classes which
-   are named but are not used as packages (which have the step=E0).
-   It accesses the component slot after processing the class. *)
+(* Calls the variable resolving procedure on packages/instances in the
+   trees.  It returns true if some instances are processed.  It skips
+   classes that are named but are not used as packages (which have the
+   step=E0).  It accesses the component slot after processing the
+   class. *)
 
 fun bind_instances_loop (scanning : bool) node0 = (
     let
@@ -124,7 +147,7 @@ fun bind_instances_loop (scanning : bool) node0 = (
     end)
 
 (* Binds variables in the model.  Call it with true.  It repeatedly
-   calls the bind procedure until settled, because values and
+   calls the binding procedure until settled, because values and
    equations in accessed instances introduce new references. *)
 
 fun bind_model scanning = (

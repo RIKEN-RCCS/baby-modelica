@@ -129,7 +129,7 @@ datatype expression_t
     | Component_Ref of expression_t * id_t
     | Instances of int list * subject_t list
     | Iref of id_t
-    | Cref of subject_t * (*outside*) bool
+    | Cref of expression_t * (*outside*) bool
     | Array_fill of expression_t * expression_t
     | Array_diagonal of expression_t
 

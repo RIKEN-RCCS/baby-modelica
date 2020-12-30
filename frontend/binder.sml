@@ -53,6 +53,48 @@ fun tr_build (s : string) = if true then (print (s ^"\n")) else ()
 
 (* ================================================================ *)
 
+(* Takes a declared component of a reference in a class pointed by a
+   subject.  It returns an ID or NONE if a reference is not a
+   component.  It assumes the subscripts are the same. *)
+
+fun take_declared_component subj w = (
+    case w of
+	Vref (_, []) => raise Match
+      | Vref (NONE, _) => raise Match
+      | Vref (SOME ns1, rr) => (
+	let
+	    val path1 = (drop_subscripts rr)
+	    val Subj (ns0, cc) = subj
+	    val path0 = (drop_subscripts cc)
+	in
+	    if ((ns0 = VAR andalso ns1 = VAR)
+		andalso (list_prefix (op =) path0 path1)
+		andalso ((length path0) < (length path1))) then
+		SOME (List.nth (path1, (length path0)))
+	    else
+		NONE
+	end)
+      | _ => raise Match)
+
+(* Discriminates the side (inside/outside) of a connector.  It takes a
+   class by a subject and a reference.  It checks a reference is
+   declared in the class and it is a connector.  It requires a
+   reference is before resolving the inner-outer relation. *)
+
+fun discern_connector_component subj w = (
+    case (take_declared_component subj w) of
+	NONE => false
+      | SOME id => (
+	let
+	    val component = (compose_subject subj id [])
+	    val k = surely (fetch_from_instance_tree component)
+	in
+	    (class_is_connector false k)
+	end)
+      | _ => raise Match)
+
+(* ================================================================ *)
+
 (* Tests a global reference, which starts with "" and is considered
    bound. *)
 
@@ -190,6 +232,7 @@ and make_reference_on_iterator binder id w0 = (
 
 and bind_in_expression ctx buildphase binder w0 = (
     let
+	val {k = kp} = ctx
 	val walk_x = (bind_in_expression ctx buildphase binder)
 	val walk_n_x = (fn (n, x) => (n, (walk_x x)))
 	val walk_x_x = (fn (x, y) => ((walk_x x), (walk_x y)))
@@ -206,7 +249,8 @@ and bind_in_expression ctx buildphase binder w0 = (
 		val _ = (assert_match_subject subj1 k1)
 		val _ = if (step_is_at_least E3 k1) then () else raise Match
 		val binder1 = (make_reference k1 buildphase)
-		val walk_x1 = (bind_in_expression ctx buildphase binder1)
+		val newctx = {k = k1}
+		val walk_x1 = (bind_in_expression newctx buildphase binder1)
 	    in
 		(walk_x1 e)
 	    end)
@@ -226,8 +270,28 @@ and bind_in_expression ctx buildphase binder w0 = (
 	    else
 		w0)
 	  | Opr _ => w0
-	  | App (x0, a0) => (
-	    App ((walk_x x0), (map walk_x a0)))
+	  | App (f0, ee0) => (
+	    let
+		val f1 = (walk_x f0)
+		val ee1 = (map walk_x ee0)
+		val w1 = App (f1, ee1)
+	    in
+		if (f1 = Vref (SOME PKG, [(Id "cardinality", [])])) then
+		    let
+			val _ = if (not buildphase) then ()
+				else raise error_cardinality_in_declaration
+			val _ = if ((length ee1) = 1) then ()
+				else raise error_bad_call_of_cardinality
+			val subj = (subject_of_class kp)
+			val x0 = (hd ee1)
+			val sidex = (discern_connector_component subj x0)
+			val x1 = Cref (x0, sidex)
+		    in
+			App (f1, [x1])
+		    end
+		else
+		    w1
+	    end)
 	  | ITE c0 => (
 	    ITE (map walk_x_x c0))
 	  | Der a0 => (
@@ -406,9 +470,8 @@ and bind_in_value_declaration ctx buildphase k0 = (
       | Def_Der _ => k0
       | _ => raise Match)
 
-(* Binds variables, only in expressions of their own scopes.  It is
-   used for modifiers and subscripts which have their environments of
-   scopes. *)
+(* Binds variables in an expression of its own scope.  It is used for
+   modifiers and subscripts which have their scope environments. *)
 
 fun bind_in_scoped_expression buildphase k0 w0 = (
     let
@@ -467,11 +530,11 @@ fun bind_in_class ctx binder k0 = (
 
 and bind_in_class_element ctx binder e0 = (
     let
-	val walk_q = (bind_in_equation ctx binder)
-	val walk_s = (bind_in_statement ctx binder)
+	val {k = kp} = ctx
+	val walk_q = (bind_in_equation kp binder)
+	val walk_s = (bind_in_statement kp binder)
 	fun walk_pair (c, kx) = (c, (bind_in_class ctx binder kx))
 
-	val {k = kp} = ctx
 	val package = (class_is_package kp)
     in
 	case e0 of
@@ -519,12 +582,12 @@ and bind_in_class_element ctx binder e0 = (
 	    end)
     end)
 
-and bind_in_modifier ctx binder (m : modifier_t) = (
+and bind_in_modifier kp binder (m : modifier_t) = (
     let
-	val {k = kp} = ctx
+	val ctx = {k = kp}
 	val walk_x = (bind_in_expression ctx false binder)
-	val walk_m = (bind_in_modifier ctx binder)
-	val walk_h = (bind_in_constraint ctx binder)
+	val walk_m = (bind_in_modifier kp binder)
+	val walk_h = (bind_in_constraint kp binder)
 	val walk_k = (bind_in_class ctx binder)
     in
 	case m of
@@ -578,12 +641,12 @@ and bind_in_modifier ctx binder (m : modifier_t) = (
 	    end)
     end)
 
-and bind_in_constraint ctx binder (r : constraint_t) = (
+and bind_in_constraint kp binder (r : constraint_t) = (
     let
-	val {k = kp} = ctx
+	val ctx = {k = kp}
 	val cooker = assemble_package
 	(*val walk_x = (bind_in_expression {k = kp} false binder)*)
-	val walk_m = (bind_in_modifier ctx binder)
+	val walk_m = (bind_in_modifier kp binder)
 
 	val subj = (subject_of_class kp)
 	val (k0, mm0, aa, ww) = r
@@ -610,12 +673,12 @@ and bind_in_constraint ctx binder (r : constraint_t) = (
 	  | Def_Mock_Array _ => raise Match
     end)
 
-and bind_in_equation ctx binder q0 = (
+and bind_in_equation kp binder q0 = (
     let
-	val {k = kp} = ctx
+	val ctx = {k = kp}
 	val walk_x = (bind_in_expression ctx false binder)
-	val walk_m = (bind_in_modifier ctx binder)
-	val walk_q = (bind_in_equation ctx binder)
+	val walk_m = (bind_in_modifier kp binder)
+	val walk_q = (bind_in_equation kp binder)
 	val walk_n_e = (fn (n, e) => (n, (walk_x e)))
 	val walk_x_qq = (fn (e, qq) => ((walk_x e), (map walk_q qq)))
     in
@@ -624,8 +687,19 @@ and bind_in_equation ctx binder q0 = (
 	    Eq_Eq (((walk_x x0), (walk_x y0)),
 		   Annotation (map walk_m aa0), ww))
 	  | Eq_Connect ((x0, y0), Annotation aa0, ww) => (
-	    Eq_Connect (((walk_x x0), (walk_x y0)),
-			Annotation (map walk_m aa0), ww))
+	    let
+		val subj = (subject_of_class kp)
+		val x1 = (walk_x x0)
+		val y1 = (walk_x y0)
+		val aa1 = (map walk_m aa0)
+		val sidex = (discern_connector_component subj x1)
+		val sidey = (discern_connector_component subj y1)
+		val x2 = Cref (x1, sidex)
+		val y2 = Cref (y1, sidey)
+		val q1 = Eq_Connect ((x2, y2), Annotation aa1, ww)
+	    in
+		q1
+	    end)
 	  | Eq_If (c0, Annotation aa0, ww) => (
 	    Eq_If ((map walk_x_qq c0),
 		   Annotation (map walk_m aa0), ww))
@@ -636,8 +710,8 @@ and bind_in_equation ctx binder q0 = (
 	    let
 		val (binder1, ii1) = (make_iterator_binder
 					  {k = kp} false binder ii0)
-		val walk_q = (bind_in_equation ctx binder1)
-		val walk_m = (bind_in_modifier ctx binder1)
+		val walk_q = (bind_in_equation kp binder1)
+		val walk_m = (bind_in_modifier kp binder1)
 		val qq1 = (map walk_q qq0)
 		val aa1 = (map walk_m aa0)
 	    in
@@ -648,46 +722,46 @@ and bind_in_equation ctx binder q0 = (
 		    Annotation (map walk_m aa0), ww))
     end)
 
-and bind_in_statement ctx binder s0 = (
+and bind_in_statement kp binder s0 = (
     let
-	val {k = kp} = ctx
+	val ctx = {k = kp}
 	val walk_x = (bind_in_expression ctx false binder)
-	val walk_m = (bind_in_modifier ctx binder)
-	val walk_s = (bind_in_statement ctx binder)
+	val walk_m = (bind_in_modifier kp binder)
+	val walk_s = (bind_in_statement kp binder)
 	val walk_n_e = (fn (n, e) => (n, (walk_x e)))
 	val walk_x_ss = (fn (e, ss) => ((walk_x e), (map walk_s ss)))
     in
 	case s0 of
-	    St_Break (Annotation a0, w) => (
-	    St_Break (Annotation (map walk_m a0), w))
-	  | St_Return (Annotation a0, w) => (
-	    St_Return (Annotation (map walk_m a0), w))
-	  | St_Assign (x0, y0, Annotation a0, w) => (
+	    St_Break (Annotation aa0, ww) => (
+	    St_Break (Annotation (map walk_m aa0), ww))
+	  | St_Return (Annotation aa0, ww) => (
+	    St_Return (Annotation (map walk_m aa0), ww))
+	  | St_Assign (x0, y0, Annotation aa0, ww) => (
 	    St_Assign ((walk_x x0), (walk_x y0),
-		       Annotation (map walk_m a0), w))
-	  | St_Call (x0, y0, z0, Annotation a0, w) => (
+		       Annotation (map walk_m aa0), ww))
+	  | St_Call (x0, y0, z0, Annotation aa0, ww) => (
 	    St_Call ((map walk_x x0), (walk_x y0), (map walk_x z0),
-		     Annotation (map walk_m a0), w))
-	  | St_If (c0, Annotation a0, w) => (
+		     Annotation (map walk_m aa0), ww))
+	  | St_If (c0, Annotation aa0, ww) => (
 	    St_If ((map walk_x_ss c0),
-		   Annotation (map walk_m a0), w))
-	  | St_For (ii0, ss0, Annotation a0, w) => (
+		   Annotation (map walk_m aa0), ww))
+	  | St_For (ii0, ss0, Annotation aa0, ww) => (
 	    let
 		val (binder1, ii1) = (make_iterator_binder
 					  ctx false binder ii0)
-		val walk_s = (bind_in_statement ctx binder1)
-		val walk_m = (bind_in_modifier ctx binder1)
+		val walk_s = (bind_in_statement kp binder1)
+		val walk_m = (bind_in_modifier kp binder1)
 		val ss1 = (map walk_s ss0)
-		val a1 = (map walk_m a0)
+		val aa1 = (map walk_m aa0)
 	    in
-		St_For (ii1, ss1, Annotation a1, w)
+		St_For (ii1, ss1, Annotation aa1, ww)
 	    end)
-	  | St_While (e0, s0, Annotation a0, w) => (
-	    St_While ((walk_x e0), (map walk_s s0),
-		      Annotation (map walk_m a0), w))
-	  | St_When (c0, Annotation a0, w) => (
-	    St_When ((map walk_x_ss c0),
-		     Annotation (map walk_m a0), w))
+	  | St_While (e0, ss0, Annotation aa0, ww) => (
+	    St_While ((walk_x e0), (map walk_s ss0),
+		      Annotation (map walk_m aa0), ww))
+	  | St_When (cc0, Annotation aa0, ww) => (
+	    St_When ((map walk_x_ss cc0),
+		     Annotation (map walk_m aa0), ww))
     end)
 
 end

@@ -314,6 +314,13 @@ fun fold_expression ctx oneshot env w0 = (
 		    NONE => raise Match
 		  | SOME (_, NIL) => w0
 		  | SOME (_, x) => x)
+	  | Cref (x0, b) => (
+	    let
+		val x1 = (walk_x x0)
+		val w1 = Cref (x1, b)
+	    in
+		w1
+	    end)
 	  | Array_fill (x, n) => w0
 	  | Array_diagonal x => w0
     end)

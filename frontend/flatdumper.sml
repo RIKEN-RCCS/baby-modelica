@@ -242,6 +242,7 @@ fun expression_to_string w = (
 		    ("(Instance ["^ ds ^"] "^ (subject_to_string subj) ^")"))
 	    end)
 	  | Iref v => (id_to_string v)
+	  | Cref (e, b) => (expression_to_string e)
 	  | Array_fill (e, n) => (
 	    let
 		val se = (expression_to_string e)
@@ -689,14 +690,14 @@ fun dump_equation s q = (
 	    in
 		()
 	    end)
-	  | Eq_Connect ((Cref (s0, side0), Cref (s1, side1)), aa, ww) => (
+	  | Eq_Connect ((Cref (e0, side0), Cref (e1, side1)), aa, ww) => (
 	    let
 		val _ = (TextIO.output
 			     (s, ("/*connect ("^
-				  (subject_to_string s0)
+				  (expression_to_string e0)
 				  (*^(if side0 then "(+)" else "(-)")*)
 				  ^", "^
-				  (subject_to_string s1)
+				  (expression_to_string e1)
 				  (*^(if side1 then "(+)" else "(-)")*)
 				  ^")*/\n")))
 	    in

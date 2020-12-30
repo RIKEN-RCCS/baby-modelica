@@ -217,7 +217,7 @@ fun expression_to_string w = (
 	    in
 		("(#iterator ("^ sv ^")")
 	    end)
-	  | Cref (j, b) => (subject_to_string j)
+	  | Cref (x, b) => (expression_to_string x)
 	  | Array_fill (e, n) => (
 	    let
 		val se = (expression_to_string e)

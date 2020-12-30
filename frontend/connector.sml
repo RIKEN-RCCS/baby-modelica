@@ -10,8 +10,7 @@ sig
     type expression_t
     type subject_t
 
-    val discern_connector : unit -> unit
-
+    (*val discern_connector : unit -> unit*)
     (*val xbind : unit -> unit*)
 
     val xbind :
@@ -68,9 +67,7 @@ datatype root_marker_t = Root of bool
 fun strip_component_reference subj w = (
     let
 	val Subj (ns0, cc0) = subj
-	(*val rr0 = (drop_subscripts cc0)*)
 	val Subj (ns1, cc1) = w
-	(*val rr1 = (drop_subscripts cc1)*)
     in
 	if ((ns0 = VAR andalso ns1 = VAR)
 	    andalso (list_prefix (op =) cc0 cc1)
@@ -79,24 +76,6 @@ fun strip_component_reference subj w = (
 	else
 	    NONE
     end)
-
-(* Tests if a referenced connector is an outside one.  It takes a
-   reference and a class by a subject.  It checks some prefix of the
-   reference is declared in the class and it is a connector.  It
-   requires a reference is before resolving the inner-outer
-   relation. *)
-
-fun reference_is_connector_component subj w = (
-    case (strip_component_reference subj w) of
-	NONE => false
-      | SOME [] => raise Match
-      | SOME ((id, ss) :: _) => (
-	let
-	    val component = (compose_subject subj id [])
-	    val k = surely (fetch_from_instance_tree component)
-	in
-	    (class_is_connector false k)
-	end))
 
 (* Converts a reference to a subject by simplifying subscripts to
    literal integers.  It errs if subscripts are not simplified to
@@ -155,125 +134,19 @@ fun unmark_expandable_connector k = (
 
 (* ================================================================ *)
 
-fun discern_connector_in_expression kp (w0, acc_) = (
-    let
-	val subj = (subject_of_class kp)
-    in
-	case w0 of
-	    NIL => (w0, ())
-	  | Colon => (w0, ())
-	  | Otherwise => (w0, ())
-	  | Scoped _ => raise Match
-	  | Vref _ => (w0, ())
-	  | Opr _ => (w0, ())
-	  | App (f, xx) => (
-	    if (f = Vref (SOME PKG, [(Id "cardinality", [])])) then
-		let
-		    val _ = if ((length xx) = 1) then ()
-			    else raise error_bad_call_of_cardinality
-		    val x0 = (hd xx)
-		    val x1 = (literalize_subscripts kp x0)
-		    val sidex = (reference_is_connector_component subj x1)
-		    val x2 = Cref (x1, sidex)
-		    val w1 = App (f, [x2])
-		in
-		    (w1, ())
-		end
-	    else
-		(w0, ()))
-	  | ITE cc => (w0, ())
-	  | Der _ => (w0, ())
-	  | Pure _ => (w0, ())
-	  | Closure _ => (w0, ())
-	  | L_Number _ => (w0, ())
-	  | L_Bool _ => (w0, ())
-	  | L_Enum _ => (w0, ())
-	  | L_String _ => (w0, ())
-	  | Array_Triple _ => (w0, ())
-	  | Array_Constructor _ => (w0, ())
-	  | Array_Comprehension _ => (w0, ())
-	  | Array_Concatenation _ => (w0, ())
-	  | Tuple _ => (w0, ())
-	  | Reduction_Argument _ => (w0, ())
-	  | Named_Argument _ => (w0, ())
-	  | Pseudo_Split _ => (w0, ())
-	  | Component_Ref _ => (w0, ())
-	  | Instances _ => (w0, ())
-	  | Iref _ => (w0, ())
-	  | Cref _ => (w0, ())
-	  | Array_fill (x, y) => (w0, ())
-	  | Array_diagonal x => (w0, ())
-    end)
-
-fun discern_connector_in_equation kp (q0, acc0) = (
-    let
-	val subj = (subject_of_class kp)
-    in
-	case q0 of
-	    Eq_Eq _ => (q0, acc0)
-	  | Eq_Connect ((x0 as Vref _, y0 as Vref _), aa, ww) => (
-	    let
-		val x1 = (literalize_subscripts kp x0)
-		val y1 = (literalize_subscripts kp y0)
-		val sidex = (reference_is_connector_component subj x1)
-		val sidey = (reference_is_connector_component subj y1)
-		val x2 = Cref (x1, sidex)
-		val y2 = Cref (y1, sidey)
-		val q1 = Eq_Connect ((x2, y2), aa, ww)
-	    in
-		(q1, acc0)
-	    end)
-	  | Eq_Connect ((_, _), aa, ww) => raise Match
-	  | Eq_If _ => (q0, acc0)
-	  | Eq_When _ => (q0, acc0)
-	  | Eq_App _ => (q0, acc0)
-	  | Eq_For _ => (q0, acc0)
-    end)
-
-fun discern_connector_in_instance (k0, acc0) = (
-    if (class_is_outer_alias k0) then
-	acc0
-    else if (class_is_enumerator_definition k0) then
-	acc0
-    else if (class_is_package k0) then
-	acc0
-    else
-	let
-	    val _ = if (not (class_is_primitive k0)) then () else raise Match
-	in
-	    let
-		val subj = (subject_of_class k0)
-		(*val efix = (fn (e, a) => (e, a))*)
-		val efix = (discern_connector_in_expression k0)
-		val xwalk = (walk_in_expression efix)
-		val qfix = (discern_connector_in_equation k0)
-		val qwalk = (walk_in_equation qfix xwalk)
-		val swalk = (fn (s, a) => (s, a))
-		val walker = {vamp_q = qwalk, vamp_s = swalk}
-		val (k1, _) = (walk_in_class walker (k0, ()))
-		val _ = (store_to_instance_tree subj k1)
-	    in
-		acc0
-	    end
-	end)
-
-(* Discriminates the side (inside/outside) of connectors, and records
-   that information in connect equations or the cardinality
-   function. *)
-
-fun discern_connector () = (
-    ignore (traverse_tree discern_connector_in_instance (instance_tree, [])))
-
-(* ================================================================ *)
-
 fun collect_connects_in_equation kp (q0, acc0) = (
     let
 	val subj = (subject_of_class kp)
     in
 	case q0 of
 	    Eq_Eq _ => (q0, acc0)
-	  | Eq_Connect ((Cref (x, sidex), Cref (y, sidey)), aa, ww) => (
-	    (q0, (((x, sidex), (y, sidey), subj) :: acc0)))
+	  | Eq_Connect ((Cref (x0, sidex), Cref (y0, sidey)), aa, ww) => (
+	    let
+		val x1 = (literalize_subscripts kp x0)
+		val y1 = (literalize_subscripts kp y0)
+	    in
+		(q0, (((x1, sidex), (y1, sidey), subj) :: acc0))
+	    end)
 	  | Eq_Connect ((_, _), aa, ww) => raise Match
 	  | Eq_If _ => (q0, acc0)
 	  | Eq_When _ => (q0, acc0)
@@ -493,11 +366,11 @@ fun expand_expandable_connectors connects = (
 fun connect_connectors () = (
     let
 	val _ = (expand_equations_for_connects ())
-	(*val cc0 = (collect_connects ())*)
+	val cc0 = (collect_connects ())
 	(*val _ = (expand_expandable_connectors cc0)*)
 	(*val cc1 = (make_unions (op =) cc0)*)
     in
-	[]
+	cc0
     end)
 
 (* ================================================================ *)
@@ -508,7 +381,6 @@ val replace_outer = postbinder.replace_outer
 fun xbind () = (
     let
 	val _ = (bind_model true)
-	(*val _ = (discern_connector ())*)
 	val _ = (replace_outer ())
 	val v = (connect_connectors ())
     in
