@@ -10,11 +10,13 @@ sig
     type expression_t
     type subject_t
 
-    val discern_connects : unit -> unit
+    val discern_connector : unit -> unit
 
-    val xbind : unit -> unit
-    val xconnect :
+    (*val xbind : unit -> unit*)
+
+    val xbind :
 	unit -> ((subject_t * bool) * (subject_t * bool) * subject_t) list
+
 end = struct
 
 open ast plain
@@ -153,7 +155,57 @@ fun unmark_expandable_connector k = (
 
 (* ================================================================ *)
 
-fun discern_connects_in_equation kp (q0, acc0) = (
+fun discern_connector_in_expression kp (w0, acc_) = (
+    let
+	val subj = (subject_of_class kp)
+    in
+	case w0 of
+	    NIL => (w0, ())
+	  | Colon => (w0, ())
+	  | Otherwise => (w0, ())
+	  | Scoped _ => raise Match
+	  | Vref _ => (w0, ())
+	  | Opr _ => (w0, ())
+	  | App (f, xx) => (
+	    if (f = Vref (SOME PKG, [(Id "cardinality", [])])) then
+		let
+		    val _ = if ((length xx) = 1) then ()
+			    else raise error_bad_call_of_cardinality
+		    val x0 = (hd xx)
+		    val x1 = (literalize_subscripts kp x0)
+		    val sidex = (reference_is_connector_component subj x1)
+		    val x2 = Cref (x1, sidex)
+		    val w1 = App (f, [x2])
+		in
+		    (w1, ())
+		end
+	    else
+		(w0, ()))
+	  | ITE cc => (w0, ())
+	  | Der _ => (w0, ())
+	  | Pure _ => (w0, ())
+	  | Closure _ => (w0, ())
+	  | L_Number _ => (w0, ())
+	  | L_Bool _ => (w0, ())
+	  | L_Enum _ => (w0, ())
+	  | L_String _ => (w0, ())
+	  | Array_Triple _ => (w0, ())
+	  | Array_Constructor _ => (w0, ())
+	  | Array_Comprehension _ => (w0, ())
+	  | Array_Concatenation _ => (w0, ())
+	  | Tuple _ => (w0, ())
+	  | Reduction_Argument _ => (w0, ())
+	  | Named_Argument _ => (w0, ())
+	  | Pseudo_Split _ => (w0, ())
+	  | Component_Ref _ => (w0, ())
+	  | Instances _ => (w0, ())
+	  | Iref _ => (w0, ())
+	  | Cref _ => (w0, ())
+	  | Array_fill (x, y) => (w0, ())
+	  | Array_diagonal x => (w0, ())
+    end)
+
+fun discern_connector_in_equation kp (q0, acc0) = (
     let
 	val subj = (subject_of_class kp)
     in
@@ -178,7 +230,7 @@ fun discern_connects_in_equation kp (q0, acc0) = (
 	  | Eq_For _ => (q0, acc0)
     end)
 
-fun discern_connects_in_instance (k0, acc0) = (
+fun discern_connector_in_instance (k0, acc0) = (
     if (class_is_outer_alias k0) then
 	acc0
     else if (class_is_enumerator_definition k0) then
@@ -191,9 +243,11 @@ fun discern_connects_in_instance (k0, acc0) = (
 	in
 	    let
 		val subj = (subject_of_class k0)
-		val efix = (fn (e, a) => (e, a))
-		val qfix = (discern_connects_in_equation k0)
-		val qwalk = (walk_in_equation qfix efix)
+		(*val efix = (fn (e, a) => (e, a))*)
+		val efix = (discern_connector_in_expression k0)
+		val xwalk = (walk_in_expression efix)
+		val qfix = (discern_connector_in_equation k0)
+		val qwalk = (walk_in_equation qfix xwalk)
 		val swalk = (fn (s, a) => (s, a))
 		val walker = {vamp_q = qwalk, vamp_s = swalk}
 		val (k1, _) = (walk_in_class walker (k0, ()))
@@ -203,11 +257,12 @@ fun discern_connects_in_instance (k0, acc0) = (
 	    end
 	end)
 
-(* Discriminates the side (inside/outside) of connections, and records
-   that information in connect equations. *)
+(* Discriminates the side (inside/outside) of connectors, and records
+   that information in connect equations or the cardinality
+   function. *)
 
-fun discern_connects () = (
-    ignore (traverse_tree discern_connects_in_instance (instance_tree, [])))
+fun discern_connector () = (
+    ignore (traverse_tree discern_connector_in_instance (instance_tree, [])))
 
 (* ================================================================ *)
 
@@ -435,14 +490,14 @@ fun expand_expandable_connectors connects = (
 
 (* ================================================================ *)
 
-fun connect_connects () = (
+fun connect_connectors () = (
     let
 	val _ = (expand_equations_for_connects ())
-	val cc0 = (collect_connects ())
-	val _ = (expand_expandable_connectors cc0)
+	(*val cc0 = (collect_connects ())*)
+	(*val _ = (expand_expandable_connectors cc0)*)
 	(*val cc1 = (make_unions (op =) cc0)*)
     in
-	cc0
+	[]
     end)
 
 (* ================================================================ *)
@@ -453,12 +508,11 @@ val replace_outer = postbinder.replace_outer
 fun xbind () = (
     let
 	val _ = (bind_model true)
-	val _ = (discern_connects ())
+	(*val _ = (discern_connector ())*)
 	val _ = (replace_outer ())
+	val v = (connect_connectors ())
     in
-	()
+	v
     end)
-
-fun xconnect () = (connect_connects ())
 
 end

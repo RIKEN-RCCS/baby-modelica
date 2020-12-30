@@ -505,11 +505,11 @@ and walk_in_constraint ewalk ((h0 : constraint_t), acc0) = (
 (* Applies a function to each equation in the post-order as well as it
    applies a function to an expression when it encounters. *)
 
-fun walk_in_equation qvamp (ewalk : 'a x_vamper_t) (q0, acc0) = (
+fun walk_in_equation vamp_q (vamp_x : 'a x_vamper_t) (q0, acc0) = (
     let
-	val walk_x = ewalk
+	val walk_x = vamp_x
 	val walk_m = (walk_in_modifier walk_x)
-	val walk_q = (walk_in_equation qvamp ewalk)
+	val walk_q = (walk_in_equation vamp_q vamp_x)
 	val walk_n_x = (walk_in_n_x walk_x)
 	fun walk_x_qq ((x0, qq0), acc0) = (
 	    let
@@ -527,7 +527,7 @@ fun walk_in_equation qvamp (ewalk : 'a x_vamper_t) (q0, acc0) = (
 		val (aa1, acc3) = (map_along walk_m (aa0, acc2))
 		val q1 = Eq_Eq ((x1, y1), Annotation aa1, ww)
 	    in
-		(qvamp (q1, acc3))
+		(vamp_q (q1, acc3))
 	    end)
 	  | Eq_Connect ((x0, y0), Annotation aa0, ww) => (
 	    let
@@ -536,7 +536,7 @@ fun walk_in_equation qvamp (ewalk : 'a x_vamper_t) (q0, acc0) = (
 		val (aa1, acc3) = (map_along walk_m (aa0, acc2))
 		val q1 = Eq_Connect ((x1, y1), Annotation aa1, ww)
 	    in
-		(qvamp (q1, acc3))
+		(vamp_q (q1, acc3))
 	    end)
 	  | Eq_If (cc0, Annotation aa0, ww) => (
 	    let
@@ -544,7 +544,7 @@ fun walk_in_equation qvamp (ewalk : 'a x_vamper_t) (q0, acc0) = (
 		val (aa1, acc2) = (map_along walk_m (aa0, acc1))
 		val q1 = Eq_If (cc1, Annotation aa1, ww)
 	    in
-		(qvamp (q1, acc2))
+		(vamp_q (q1, acc2))
 	    end)
 	  | Eq_When (cc0, Annotation aa0, ww) => (
 	    let
@@ -552,7 +552,7 @@ fun walk_in_equation qvamp (ewalk : 'a x_vamper_t) (q0, acc0) = (
 		val (aa1, acc2) = (map_along walk_m (aa0, acc1))
 		val q1 = Eq_When (cc1, Annotation aa1, ww)
 	    in
-		(qvamp (q1, acc2))
+		(vamp_q (q1, acc2))
 	    end)
 	  | Eq_App ((x0, yy0), Annotation aa0, ww) => (
 	    let
@@ -561,7 +561,7 @@ fun walk_in_equation qvamp (ewalk : 'a x_vamper_t) (q0, acc0) = (
 		val (aa1, acc3) = (map_along walk_m (aa0, acc2))
 		val q1 = Eq_App ((x1, yy1), Annotation aa1, ww)
 	    in
-		(qvamp (q1, acc3))
+		(vamp_q (q1, acc3))
 	    end)
 	  | Eq_For ((ii0, qq0), Annotation aa0, ww) => (
 	    let
@@ -570,18 +570,18 @@ fun walk_in_equation qvamp (ewalk : 'a x_vamper_t) (q0, acc0) = (
 		val (aa1, acc3) = (map_along walk_m (aa0, acc2))
 		val q1 = Eq_For ((ii1, qq1), Annotation aa1, ww)
 	    in
-		(qvamp (q1, acc3))
+		(vamp_q (q1, acc3))
 	    end)
     end)
 
 (* Applies a function to each statement in the post-order as well as
    it applies a function to an expression when it encounters. *)
 
-fun walk_in_statement svamp (ewalk : 'a x_vamper_t) (s0, acc0) = (
+fun walk_in_statement vamp_s (vamp_x : 'a x_vamper_t) (s0, acc0) = (
     let
-	val walk_x = ewalk
+	val walk_x = vamp_x
 	val walk_m = (walk_in_modifier walk_x)
-	val walk_s = (walk_in_statement svamp ewalk)
+	val walk_s = (walk_in_statement vamp_s vamp_x)
 	val walk_n_x = (walk_in_n_x walk_x)
 	fun walk_x_ss ((x0, ss0), acc0) = (
 	    let
@@ -597,14 +597,14 @@ fun walk_in_statement svamp (ewalk : 'a x_vamper_t) (s0, acc0) = (
 		val (mm1, acc1) = (map_along walk_m (mm0, acc0))
 		val s1 = St_Break (Annotation mm1, ww)
 	    in
-		(svamp (s1, acc1))
+		(vamp_s (s1, acc1))
 	    end)
 	  | St_Return (Annotation mm0, ww) => (
 	    let
 		val (mm1, acc1) = (map_along walk_m (mm0, acc0))
 		val s1 = St_Return (Annotation mm1, ww)
 	    in
-		(svamp (s1, acc1))
+		(vamp_s (s1, acc1))
 	    end)
 	  | St_Assign (x0, y0, Annotation mm0, ww) => (
 	    let
@@ -613,7 +613,7 @@ fun walk_in_statement svamp (ewalk : 'a x_vamper_t) (s0, acc0) = (
 		val (mm1, acc3) = (map_along walk_m (mm0, acc2))
 		val s1 = St_Assign (x1, y1, Annotation mm1, ww)
 	    in
-		(svamp (s1, acc3))
+		(vamp_s (s1, acc3))
 	    end)
 	  | St_Call (xx0, y0, zz0, Annotation mm0, ww) => (
 	    let
@@ -623,7 +623,7 @@ fun walk_in_statement svamp (ewalk : 'a x_vamper_t) (s0, acc0) = (
 		val (mm1, acc4) = (map_along walk_m (mm0, acc3))
 		val s1 = St_Call (xx1, y1, zz1, Annotation mm1, ww)
 	    in
-		(svamp (s1, acc4))
+		(vamp_s (s1, acc4))
 	    end)
 	  | St_If (cc0, Annotation mm0, ww) => (
 	    let
@@ -631,7 +631,7 @@ fun walk_in_statement svamp (ewalk : 'a x_vamper_t) (s0, acc0) = (
 		val (mm1, acc2) = (map_along walk_m (mm0, acc1))
 		val s1 = St_If (cc1, Annotation mm1, ww)
 	    in
-		(svamp (s1, acc2))
+		(vamp_s (s1, acc2))
 	    end)
 	  | St_While (x0, ss0, Annotation mm0, ww) => (
 	    let
@@ -640,7 +640,7 @@ fun walk_in_statement svamp (ewalk : 'a x_vamper_t) (s0, acc0) = (
 		val (mm1, acc3) = (map_along walk_m (mm0, acc2))
 		val s1 = St_While (x1, ss1, Annotation mm1, ww)
 	    in
-		(svamp (s1, acc3))
+		(vamp_s (s1, acc3))
 	    end)
 	  | St_When (cc0, Annotation mm0, ww) => (
 	    let
@@ -648,7 +648,7 @@ fun walk_in_statement svamp (ewalk : 'a x_vamper_t) (s0, acc0) = (
 		val (mm1, acc2) = (map_along walk_m (mm0, acc1))
 		val s1 = St_When (cc1, Annotation mm1, ww)
 	    in
-		(svamp (s1, acc2))
+		(vamp_s (s1, acc2))
 	    end)
 	  | St_For (ii0, ss0, Annotation mm0, ww) => (
 	    let
@@ -657,7 +657,7 @@ fun walk_in_statement svamp (ewalk : 'a x_vamper_t) (s0, acc0) = (
 		val (mm1, acc3) = (map_along walk_m (mm0, acc2))
 		val s1 = St_For (ii1, ss1, Annotation mm1, ww)
 	    in
-		(svamp (s1, acc3))
+		(vamp_s (s1, acc3))
 	    end)
     end)
 

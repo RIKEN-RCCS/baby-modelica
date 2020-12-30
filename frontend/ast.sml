@@ -81,24 +81,25 @@ datatype predefined_operator_t
 
 (* Expressions.  NIL is an empty element in an output-expression-list.
    Colon is a [:] in a subscript.  Otherwise is a truth for an
-   else-part condition.  NIL, Colon, and Otherwise appear alone, and
-   not in an expression.  Scoped is an expression in a scope.  Vref
-   represents a component reference which includes array indexing.  A
-   first optional slot indicates whether it is resolved.  Opr
-   represents predefined operators.  Closure is a partially applied
-   function.  L_Number, L_String, L_Bool, and L_Enum are literals.
-   L_Number has a slot indicating Real or Integer.  Real literals are
-   represented by strings to make syntax trees eqtype in SML.  L_Enum
-   is introduced when enumerations are processed.  Reduction_Argument
-   is an argument list for reductions.  Note that arguments to
-   Array_Constructor is non-empty.  Pseudo_Split is an array indexing,
-   that is introduced at rewriting a non-each modifier on an array.
-   Component_Ref is a component reference, that is introduced at
-   rewriting a modifier of class copying.  It is with an array
-   dimension which is null for a scalar component.  Instances refers
-   to instances, and also it internally refers to a function.  Iref is
-   an iterator variable reference.  Cref is a connector reference with
-   the side information.  Others, Array_fill, Array_diagonal, etc. are
+   else-part condition (or a truth after simplification).  NIL, Colon,
+   and Otherwise always appear alone, but not in an expression.
+   Scoped is an expression in a scope.  Vref represents a component
+   reference which includes array indexing.  A first optional slot
+   indicates whether it is resolved.  Opr represents predefined
+   operators.  Closure is a partially applied function.  L_Number,
+   L_String, L_Bool, and L_Enum are literals.  L_Number has a slot
+   indicating Real or Integer.  Real literals are represented by
+   strings to make syntax trees eqtype in SML.  L_Enum is introduced
+   when enumerations are processed.  Reduction_Argument is an argument
+   list for reductions.  Note that arguments to Array_Constructor is
+   non-empty.  Pseudo_Split is an array indexing, that is introduced
+   at rewriting a non-each modifier on an array.  Component_Ref is a
+   component reference, that is introduced at rewriting a modifier of
+   class copying.  It is with an array dimension which is null for a
+   scalar component.  Instances refers to instances, and also it
+   internally refers to a function.  Iref is an iterator variable
+   reference.  Cref is a connector reference with the side
+   information.  Others, Array_fill, Array_diagonal, etc. are
    predefined functions. *)
 
 datatype expression_t

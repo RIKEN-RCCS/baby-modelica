@@ -2570,6 +2570,12 @@ in some expandable_connectors.
 aggregate in generated equations with defined eqaulity, summation, or
 negation.
 
+\subsubsection*{cardinality function}
+
+$\mathrm{cardinality}$ appears only in equation sections (in
+assertions).  Equations including $\mathrm{cardinality}$
+(if-equations) are fixed at translation-time.
+
 %%%%%%%%%%%%%%%%
 
 \subsection{Conditional components}
@@ -5167,7 +5173,6 @@ use "bbm.sml" ;
 builder.xreset () ;
 builder.xbuild "Modelica.Fluid.Examples.HeatingSystem" ;
 connector.xbind () ;
-connector.xconnect () ;
 flatdumper.xdump () ;
 valOf (classtree.xfetch1 "tank") ;
 valOf (classtree.xfetch1 "wall.G") ;

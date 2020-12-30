@@ -15,12 +15,14 @@ open small1
 
 val instance_tree = classtree.instance_tree
 val traverse_tree = classtree.traverse_tree
+val store_to_instance_tree = classtree.store_to_instance_tree
 
 val expression_is_literal = expression.expression_is_literal
 val find_iterator_range = expression.find_iterator_range
 
 val fold_constants = folder.fold_constants
 val explicitize_range = folder.explicitize_range
+val expression_to_string = dumper.expression_to_string
 
 val bind_in_scoped_expression = binder.bind_in_scoped_expression
 
@@ -36,25 +38,87 @@ fun tr_conv_vvv (s : string) = if false then (print (s ^"\n")) else ()
 
 (* ================================================================ *)
 
-(* Tests a connector equation appears in an equation. *)
+(* Tests if the cardinality function appears in an expression. *)
 
-fun contains_connects (q0, contains0) = (
+fun contains_cardinality (w, contains0) = (
+    case w of
+	NIL => contains0
+      | Colon => contains0
+      | Otherwise => contains0
+      | Scoped _ => raise Match
+      | Vref _ => contains0
+      | Opr _ => contains0
+      | App (f, xx) => (
+	(f = Vref (SOME PKG, [(Id "cardinality", [])]))
+	orelse (foldl contains_cardinality contains0 (f :: xx)))
+      | ITE cc => (
+	(foldl contains_cardinality contains0
+	       (List.concat (map (fn (x, y) => [x, y]) cc))))
+      | Der _ => contains0
+      | Pure _ => contains0
+      | Closure (n, xx) => (foldl contains_cardinality contains0 xx)
+      | L_Number _ => contains0
+      | L_Bool _ => contains0
+      | L_Enum _ => contains0
+      | L_String _ => contains0
+      | Array_Triple (x, y, NONE) => (
+	(foldl contains_cardinality contains0 [x, y]))
+      | Array_Triple (x, y, SOME z) => (
+	(foldl contains_cardinality contains0 [x, y, z]))
+      | Array_Constructor xx => (
+	(foldl contains_cardinality contains0 xx))
+      | Array_Comprehension (x, ii) => (
+	(contains_cardinality (x, false))
+	orelse (foldl contains_cardinality contains0 (map #2 ii)))
+      | Array_Concatenation ee => (
+	(foldl (fn (xx, acc) => (foldl contains_cardinality acc xx))
+	       contains0 ee))
+      | Tuple xx => (
+	(foldl contains_cardinality contains0 xx))
+      | Reduction_Argument (x, ii) => (
+	(contains_cardinality (x, false))
+	orelse (foldl contains_cardinality contains0 (map #2 ii)))
+      | Named_Argument (n, x) => (
+	(contains_cardinality (x, contains0)))
+      | Pseudo_Split (x, v) => (
+	(contains_cardinality (x, contains0)))
+      | Component_Ref (x, v) => (
+	(contains_cardinality (x, contains0)))
+      | Instances _ => contains0
+      | Iref _ => contains0
+      | Cref _ => contains0
+      | Array_fill (x, y) => (
+	(foldl contains_cardinality contains0 [x, y]))
+      | Array_diagonal x => (
+	(contains_cardinality (x, contains0))))
+
+(* Tests if a connector reference (connect equations or the
+   cardinality function) appears in an equation. *)
+
+fun contains_connectors (q0, contains0) = (
     let
-	fun contains_connects_x_qq ((x, qq), contains) = (
-	    (foldl contains_connects contains qq))
+	fun contains_connectors_x_qq ((x, qq), contains) = (
+	    (contains_cardinality (x, false)
+	     orelse (foldl contains_connectors contains qq)))
+
+	fun contains_connectors_n_qq ((_, qq), contains) = (
+	    (foldl contains_connectors contains qq))
     in
 	case q0 of
-	    Eq_Eq _ => contains0
+	    Eq_Eq ((x, y), _ ,_) => (
+	    (foldl contains_cardinality contains0 [x, y]))
 	  | Eq_Connect _ => true
-	  | Eq_If (cc, _, _) => (foldl contains_connects_x_qq contains0 cc)
+	  | Eq_If (cc, _, _) => (
+	    (foldl contains_connectors_x_qq contains0 cc))
 	  | Eq_When (cc, _, _) => (
-	    if (foldl contains_connects_x_qq false cc) then
-		raise error_when_contains_connects
+	    if (foldl contains_connectors_n_qq false cc) then
+		raise error_when_contains_connectors
 	    else
-		contains0)
-	  | Eq_App _ => contains0
+		(foldl contains_connectors_x_qq contains0 cc))
+	  | Eq_App ((f, xx), _, _) => (
+	    (foldl contains_cardinality contains0 (f :: xx)))
 	  | Eq_For ((_, qq), _, _) => (
-	    (foldl contains_connects contains0 qq))
+	    (foldl contains_connectors contains0 qq))
     end)
 
 (* Replaces iterator references.  Folding constants with an
@@ -131,7 +195,7 @@ fun expand_equations kp env q0 = (
 			 vv)
 		end))
     in
-	if (not (contains_connects (q0, false))) then
+	if (not (contains_connectors (q0, false))) then
 	    q0
 	else
 	    case q0 of
@@ -165,19 +229,21 @@ fun expand_equations_in_instance (k0, acc0) = (
 	    val _ = if (not (class_is_primitive k0)) then () else raise Match
 	in
 	    let
+		val subj = (subject_of_class k0)
 		val qfix = (fn (q, _) => ((expand_equations k0 [] q), []))
 		val sfix = (fn (s, a) => (s, a))
 		val walker = {vamp_q = qfix, vamp_s = sfix}
 		val (k1, acc1) = (walk_in_class walker (k0, acc0))
+		val _ = (store_to_instance_tree subj k1)
 	    in
 		acc1
 	    end
 	end)
 
-(* Expands if-equations and for-equations containing connect
-   equations.  Those equations consist of translation-time constants
-   (it is always affirmative for "for" and when those contain connect
-   equations for "if"). *)
+(* Expands if-equations and for-equations containing connect equations
+   or the cardinality function.  Those equations consist of
+   translation-time constants (it is always affirmative for "for" and
+   when those contain connect equations for "if"). *)
 
 fun expand_equations_for_connects () = (
     (traverse_tree expand_equations_in_instance (instance_tree, [])))

@@ -337,7 +337,7 @@ val error_varying_iterator_range = Match
 
 val error_unknown_iterator_range = Match
 
-val error_when_contains_connects = Match
+val error_when_contains_connectors = Match
 
 val error_connector_in_package = Match
 
@@ -348,5 +348,7 @@ val error_bad_dimension = Match
 val error_empty_array_connector = Match
 
 val error_nonunique_dimension = Match
+
+val error_bad_call_of_cardinality = Match
 
 end

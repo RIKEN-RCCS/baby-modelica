@@ -650,13 +650,20 @@ fun dump_equation s q = (
 	fun dump_conditional key s ((e, qq), start) = (
 	    case e of
 		Otherwise => (
-		let
-		    val _ = if (not start) then () else raise Match
-		    val _ = (TextIO.output (s, "else\n"))
-		    val _ = (app (dump_equation s) qq)
-		in
-		    false
-		end)
+		if (not start) then
+		    let
+			(*val _ = if (not start) then () else raise Match*)
+			val _ = (TextIO.output (s, "else\n"))
+			val _ = (app (dump_equation s) qq)
+		    in
+			false
+		    end
+		else
+		    let
+			val _ = (app (dump_equation s) qq)
+		    in
+			false
+		    end)
 	      | _ => (
 		let
 		    val _ = if (start) then
@@ -695,7 +702,19 @@ fun dump_equation s q = (
 	    in
 		()
 	    end)
-	  | Eq_Connect ((_, _), aa, ww) => raise Match
+	  | Eq_Connect ((e0, e1), aa, ww) =>
+	    (*raise Match*)
+	      (
+		let
+		    val _ = (TextIO.output
+				 (s, ("/*connect ("^
+				      (expression_to_string e0)
+				      ^", "^
+				      (expression_to_string e1)
+				      ^")*/\n")))
+		in
+		    ()
+		end)
 	  | Eq_If (cc, aa, ww) => (
 	    let
 		val _ = (foldl (dump_conditional "if" s) true cc)
@@ -724,7 +743,6 @@ fun dump_equation s q = (
 	    end)
 	  | Eq_App ((f, ee), aa, ww) => (
 	    let
-
 		val _ = (TextIO.output (s, (expression_to_string f)))
 		val _ = (TextIO.output (s, "("))
 		val _ = (TextIO.output
