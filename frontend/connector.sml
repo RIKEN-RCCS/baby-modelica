@@ -367,7 +367,7 @@ fun connect_connectors () = (
     let
 	val _ = (expand_equations_for_connects ())
 	val cc0 = (collect_connects ())
-	(*val _ = (expand_expandable_connectors cc0)*)
+	val _ = (expand_expandable_connectors cc0)
 	(*val cc1 = (make_unions (op =) cc0)*)
     in
 	cc0
@@ -376,12 +376,12 @@ fun connect_connectors () = (
 (* ================================================================ *)
 
 val bind_model = postbinder.bind_model
-val replace_outer = postbinder.replace_outer
+val substitute_outer = postbinder.substitute_outer
 
 fun xbind () = (
     let
 	val _ = (bind_model true)
-	val _ = (replace_outer ())
+	val _ = (substitute_outer ())
 	val v = (connect_connectors ())
     in
 	v

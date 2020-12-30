@@ -43,7 +43,7 @@ sig
 
     val instantiate_outer_alias :
 	instantiation_t -> subject_t -> subject_t -> definition_body_t
-    val replace_outer_reference : expression_t -> expression_t
+    val substitute_outer_reference : expression_t -> expression_t
 
     val subject_to_instance_tree_path :
 	subject_t -> (instantiation_t * (id_t * int list) list)
@@ -603,6 +603,9 @@ datatype inner_outer_slot_t
 
 val inner_outer_table = ref (Alist [])
 
+fun clear_inner_outer_table () = (
+    inner_outer_table := (Alist []))
+
 fun make_singleton_slot e path = (
     (foldr (fn (k, s) => Alist [(k, s)]) e path))
 
@@ -684,38 +687,38 @@ fun instantiate_outer_alias var outer inner = (
 	k
     end)
 
-fun replace_outer_loop slot0 (prefix0, suffix0) = (
+fun substitute_outer_loop slot0 (prefix0, suffix0) = (
     case (slot0, suffix0) of
 	(Entry (Name outer, Name inner), _) => (
 	let
 	    val (prefix1, (id, ss)) = (split_last prefix0)
 	    val prefix2 = (List.take (prefix1, ((length inner) - 1)))
 	    val path = (prefix2 @ [(id, ss)] @ suffix0)
-	    val _ = tr_tree (";; replace_outer ("^
+	    val _ = tr_tree (";; substitute_outer ("^
 			     (name_to_string (Name outer)) ^", "^
 			     (name_to_string (Name inner)) ^")")
 	in
-	    (replace_outer_loop (! inner_outer_table) ([], path))
+	    (substitute_outer_loop (! inner_outer_table) ([], path))
 	end)
       | (Alist alist, []) => (prefix0 @ suffix0)
       | (Alist alist, (Id v, ss) :: suffix1) => (
-	let
-	    val prefix1 = prefix0 @ [(Id v, ss)]
-	    val (entry, _) = (List.partition (fn (s, _) => (s = v)) alist)
-	in
-	    case entry of
-		[] => (prefix0 @ suffix0)
-	      | [(_, slot1)] => (replace_outer_loop slot1 (prefix1, suffix1))
-	      | _ => raise Match
-	end))
+	case (List.partition (fn (s, _) => (s = v)) alist) of
+	    ([], _) => (prefix0 @ suffix0)
+	  | ([(_, slot1)], _) => (
+	    let
+		val prefix1 = prefix0 @ [(Id v, ss)]
+	    in
+		(substitute_outer_loop slot1 (prefix1, suffix1))
+	    end)
+	  | _ => raise Match))
 
-fun replace_outer_reference w0 = (
+fun substitute_outer_reference w0 = (
     case w0 of
 	Vref (_, []) => raise Match
       | Vref (NONE, _) => raise Match
       | Vref (SOME ns, rr0) => (
 	let
-	    val rrx = (replace_outer_loop (! inner_outer_table) ([], rr0))
+	    val rrx = (substitute_outer_loop (! inner_outer_table) ([], rr0))
 	in
 	    Vref (SOME ns, rrx)
 	end)
@@ -952,6 +955,7 @@ fun clear_syntaxer_tables () = (
 	val _ = (clear_table dummy_inners)
 	val _ = (clear_table class_bindings)
 	val _ = (clear_instance_tree ())
+	val _ = (clear_inner_outer_table ())
     in () end)
 
 (* ================================================================ *)

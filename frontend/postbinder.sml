@@ -7,7 +7,7 @@
 structure postbinder :
 sig
     val bind_model : bool -> unit
-    val replace_outer : unit -> unit
+    val substitute_outer : unit -> unit
 end = struct
 
 open ast
@@ -21,7 +21,7 @@ val store_to_instance_tree = classtree.store_to_instance_tree
 val fetch_from_instance_tree = classtree.fetch_from_instance_tree
 val component_is_outer_alias = classtree.component_is_outer_alias
 val traverse_tree = classtree.traverse_tree
-val replace_outer_reference = classtree.replace_outer_reference
+val substitute_outer_reference = classtree.substitute_outer_reference
 
 val make_reference = binder.make_reference
 val bind_in_class = binder.bind_in_class
@@ -163,7 +163,7 @@ fun bind_model scanning = (
 
 (* ================================================================ *)
 
-fun replace_outer_in_instance (k0, acc0) = (
+fun substitute_outer_in_instance (k0, acc0) = (
     if (class_is_outer_alias k0) then
 	acc0
     else if (class_is_enumerator_definition k0) then
@@ -176,7 +176,7 @@ fun replace_outer_in_instance (k0, acc0) = (
 	in
 	    let
 		val subj = (subject_of_class k0)
-		val efix = (fn (w, _) => ((replace_outer_reference w), ()))
+		val efix = (fn (w, _) => ((substitute_outer_reference w), ()))
 		val ewalk = (walk_in_expression efix)
 		val qwalk = (walk_in_equation (fn (q, a) => (q, a)) ewalk)
 		val swalk = (walk_in_statement (fn (s, a) => (s, a)) ewalk)
@@ -188,8 +188,8 @@ fun replace_outer_in_instance (k0, acc0) = (
 	    end
 	end)
 
-fun replace_outer () = (
-    ignore (traverse_tree replace_outer_in_instance (instance_tree, [])))
+fun substitute_outer () = (
+    ignore (traverse_tree substitute_outer_in_instance (instance_tree, [])))
 
 (* ================================================================ *)
 
