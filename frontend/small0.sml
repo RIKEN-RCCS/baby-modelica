@@ -509,14 +509,4 @@ fun extract_bases_in_main_class (k0 : definition_body_t) = (
 	    (SOME bases, k1)
     end)
 
-fun class_is_main_class k = (
-    let
-	val _ = if (class_is_body k) then () else raise Match
-	val _ = if (step_is_at_least E3 k) then () else raise Match
-    in
-	case (extract_bases_in_main_class k) of
-	    (NONE, k_) => false
-	  | (SOME bases, k_) => true
-    end)
-
 end

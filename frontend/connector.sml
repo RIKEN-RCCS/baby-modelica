@@ -1,7 +1,7 @@
 (* connector.sml -*-Coding: us-ascii-unix;-*- *)
 (* Copyright (C) 2018-2020 RIKEN R-CCS *)
 
-(* CONNECTOR HANDLING.  It removes the uses of "connect",
+(* CONNECTOR HANDLING.  It removes the uses of "connect" equations,
    "Connections", "inStream()", "actualStream()", and
    "cardinality()". *)
 
@@ -10,8 +10,11 @@ sig
     type expression_t
     type subject_t
 
-    (*val discern_connector : unit -> unit*)
     (*val xbind : unit -> unit*)
+    (*val discern_connector : unit -> unit*)
+
+    val connect_connectors :
+	unit -> ((subject_t * bool) * (subject_t * bool) * subject_t) list
 
     val xbind :
 	unit -> ((subject_t * bool) * (subject_t * bool) * subject_t) list
@@ -24,10 +27,14 @@ open small1
 fun tr_conn (s : string) = if true then (print (s ^"\n")) else ()
 fun tr_conn_vvv (s : string) = if false then (print (s ^"\n")) else ()
 
+val list_elements = finder.list_elements
+
 val instance_tree = classtree.instance_tree
 val traverse_tree = classtree.traverse_tree
 val store_to_instance_tree = classtree.store_to_instance_tree
 val unwrap_array_of_instances = classtree.unwrap_array_of_instances
+val fetch_from_instance_tree = classtree.fetch_from_instance_tree
+val fetch_instance_tree_node = classtree.fetch_instance_tree_node
 
 val expression_is_literal = expression.expression_is_literal
 val find_iterator_range = expression.find_iterator_range
@@ -131,6 +138,60 @@ fun unmark_expandable_connector k = (
       | Def_In_File => raise Match
       | Def_Mock_Array _ => raise Match
       | Def_Outer_Alias _ => raise Match)
+
+fun marked_as_stream k = (
+    case k of
+	Def_Body (_, _, (t, p, (Stream, _, _)), _, _, _, _) => true
+      | Def_Body (_, _, (t, p, (_, _, _)), _, _, _, _) => false
+      | _ => raise error_connector_is_not_record)
+
+fun marked_as_flow k = (
+    case k of
+	Def_Body (_, _, (t, p, (Flow, _, _)), _, _, _, _) => true
+      | Def_Body (_, _, (t, p, (_, _, _)), _, _, _, _) => false
+      | _ => raise error_connector_is_not_record)
+
+fun connector_is_stream (subj, b) = (
+    let
+	fun test_stream (Slot (id, dim, nodes, dummy)) = (
+	    (List.exists (fn (j, kx, cx) => (marked_as_stream (! kx))) nodes))
+
+	val (_, kx, cx) = surely (fetch_instance_tree_node subj)
+	val components = (! cx)
+    in
+	(List.exists test_stream components)
+    end)
+
+(* Tests if a type/record appearing a connector is an overdetermined
+   one (i.e., it defines an equalityConstraint function). *)
+
+fun connector_is_overdetermined subj = (
+    let
+	val kp = surely (fetch_from_instance_tree subj)
+	fun cooker u_ (subj_, k_) = raise Match
+	val bindings = (list_elements cooker true kp)
+	val id = Id "equalityConstraint"
+    in
+	case (find_in_bindings id bindings) of
+	    NONE => false
+	  | SOME (Naming (_, _, _, _, (z, r, EL_Class dx, h))) => true
+	  | SOME (Naming (_, _, _, _, (z, r, EL_State dx, h))) => false
+    end)
+
+(* Lists component names of a record.  It errs for an array of
+   records. *)
+
+fun names_in_record subj = (
+    let
+	val (_, kx, cx) = surely (fetch_instance_tree_node subj)
+	val kp = (! kx)
+	val components = (! cx)
+    in
+	case (unwrap_array_of_instances kp) of
+	    ([], _) => (
+	    (map (fn (Slot (id, dim, nodes, dummy)) => id) components))
+	  | (_, []) => raise Match
+    end)
 
 (* ================================================================ *)
 
@@ -363,12 +424,75 @@ fun expand_expandable_connectors connects = (
 
 (* ================================================================ *)
 
+fun unique_array_size subjs = (
+    let
+	val pairs = (map (unwrap_array_of_instances
+			  o surely o fetch_from_instance_tree) subjs)
+	val dims = (map #1 pairs)
+    in
+	case (list_unique_value (op =) dims) of
+	    NONE => raise error_mismatch_connector_arrays
+	  | SOME dim => dim
+    end)
+
+fun equate_connections_stream connectors = (
+    let
+	fun slot_is_flow subj id = (
+	    let
+		val subsubj = (compose_subject subj id [])
+		val kx = surely (fetch_from_instance_tree subsubj)
+	    in
+		(marked_as_flow kx)
+	    end)
+
+	val subjs = (map #1 connectors)
+	val namelist = (map names_in_record subjs)
+	val names = (remove_duplicates (op =) (List.concat namelist))
+	val _ = if (List.all (fn x => (length x = (length names))) namelist)
+		then () else raise error_mismatch_connection_list
+	val subj = (hd subjs)
+	val flow = (List.find (slot_is_flow subj) names)
+    in
+	[]
+    end)
+
+fun equate_connections_nonstream connectors = []
+
+fun equate_connections_array stream connectors = (
+    let
+	val equatorfn = if (stream) then equate_connections_stream
+			else equate_connections_nonstream
+
+	fun indexing index (subj, side) = (
+	    ((compose_subject_with_index subj index), side))
+
+	fun equate index = (
+	    (equatorfn (map (indexing index) connectors)))
+
+	val subjs = (map #1 connectors)
+    in
+	case (unique_array_size subjs) of
+	    [] => (equatorfn connectors)
+	  | dim => (List.concat (iterate_dimension equate dim))
+    end)
+
+fun equate_connections connectors = (
+    let
+	val stream = (List.exists connector_is_stream connectors)
+    in
+	(equate_connections_array stream connectors)
+    end)
+
+(* ================================================================ *)
+
 fun connect_connectors () = (
     let
 	val _ = (expand_equations_for_connects ())
 	val cc0 = (collect_connects ())
 	val _ = (expand_expandable_connectors cc0)
-	(*val cc1 = (make_unions (op =) cc0)*)
+	val cc1 = (map (fn (x, y, subj) => [x, y]) cc0)
+	val cc2 = (make_unions (op =) cc1)
+	val _ = (map equate_connections cc2)
     in
 	cc0
     end)

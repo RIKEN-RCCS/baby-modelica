@@ -2484,16 +2484,22 @@ connected in the declaring class, and the flow direction is considered
 reversed (a value is negated) for that connection.  An opposite is an
 inside_connector.  A connector is considered separate as the
 inside/outside ones, but they share the same variables.  The side is
-taken into account in {connect} equations and $\mathrm{cardinality}$.
+taken into account in {connect} equations and the
+$\mathrm{cardinality}$ function.
 
 \begin{QFACT} Determination of a side of a connector must respect the
 place where the connector is declared, and inner/outer declarations
-should be ignored for that.  An outside_connector is distinguished by
-the use of a connector that is declared and used in the class (i.e.,
-the connector appears in the first part of a composite name).  Both
-$c$ and $c.d$ are outside_connectors when they appear in
-$\mathrm{connect}\,(c,...)$ and $\mathrm{connect}\,(c.d,...)$ in the
-class declaring $c$.\end{QFACT}
+are ignored for that.  An outside_connector is distinguished by the
+use of a connector that is declared and used in the class (i.e., the
+first part of a composite name is a connector).\end{QFACT}
+%%%%
+For example, both $c$ and $c.m.d$ are outside_connectors when they
+appear in $\mathrm{connect}\,(c,...)$ and
+$\mathrm{connect}\,(c.m.d,...)$ in the class declaring $c$, where $m$
+is a possibly empty list of components (connectors or non-connectors).
+
+(*CHECK*) It is an outside_connector when a non-connector intervenes
+like $c.m.d$.
 
 \subsubsection*{Nesting connectors}
 
@@ -2514,18 +2520,6 @@ have parameter expressions for the array expression.]\end{qquote}
 shall be a vector expression. ... The expression of a for-equation
 shall be a parameter expression.\end{qquote}
 
-\subsubsection*{Stream connectors}
-
-See \specref{15}.
-
-A stream connector contains a single scalar real
-{\it{}flow_variable\/} and some real {\it{}stream_variables\/} (which
-can be arrays).  The $\mathbf{stream}$ can prefix a record then the
-components are considered as stream_variables.
-
-inStream(v) and actualStream(v) take a $\mathbf{stream}$ variable
-(which may be an array).
-
 \subsubsection*{Connector components}
 
 A connector may contain simple_types, connectors, records, and
@@ -2537,7 +2531,7 @@ An expandable_connector is a set of connectors, and it is only
 connected to another ones.  A component will be included when it is
 used.  All components in an expandable_connector are implicitly
 considered as connectors.  An expandable_connector is first considered
-empty until (even) a declared component is included by using it
+empty until a component (even a declared one) is included by using it
 explicitly.
 
 A direct reference of a component in a connect equation signifies an
@@ -2564,7 +2558,26 @@ potentially present.\end{qquote}
 used in connect_equations unless they are connected to connectors not
 in some expandable_connectors.
 
-\subsubsection*{Operator_record components}
+\subsubsection*{Stream_connectors}
+
+See \specref{15}.
+
+A {\it{}stream_connector\/} is a connector cotaining stream_variables.
+A stream_connector contains a single scalar real
+{\it{}flow_variable\/} and some (arrays of) reals of
+{\it{}stream_variables\/}.  The components are considered as
+stream_variables for a record.
+
+$\mathrm{inStream}\,(v)$ and $\mathrm{actualStream}\,(v)$ take a
+stream_variable (which may be an array).
+
+\subsubsection*{Overdetermined_types/records}
+
+A type/record defining $\mathrm{equalityConstraint}\,(x,y)$ is called
+overdetermined_type/record.  The {Connections} class defines some
+predefined functions to reduce overdetermined constraints.
+
+\subsubsection*{(?) Operator_record components}
 
 (?) A connection component of an operator_record is used as an
 aggregate in generated equations with defined eqaulity, summation, or
@@ -2572,9 +2585,11 @@ negation.
 
 \subsubsection*{cardinality function}
 
-$\mathrm{cardinality}$ appears only in equation sections (in
-assertions).  Equations including $\mathrm{cardinality}$
-(if-equations) are fixed at translation-time.
+The $\mathrm{cardinality}$ function returns the count of connections
+on the inside_connector of an argument.  $\mathrm{cardinality}$ only
+appears in equation sections (in assertions).  $\mathrm{cardinality}$
+is a translation-time constant (if the connector reference is
+determined).
 
 %%%%%%%%%%%%%%%%
 

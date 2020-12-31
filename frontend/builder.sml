@@ -41,7 +41,6 @@ val subject_to_instance_tree_path = classtree.subject_to_instance_tree_path
 val component_is_outer_alias = classtree.component_is_outer_alias
 val component_is_expandable = classtree.component_is_expandable
 val dereference_outer_alias = classtree.dereference_outer_alias
-val fetch_instance_tree_node = classtree.fetch_instance_tree_node
 val instantiate_outer_alias = classtree.instantiate_outer_alias
 
 val find_name_initial_part = finder.find_name_initial_part

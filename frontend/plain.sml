@@ -166,6 +166,8 @@ fun fill_dimension f index0 dim0 = (
 		  (fn i => (fill_dimension f (index0 @ [i + 1]) dim1))
 		  (int_seq 0 d)))))
 
+fun iterate_dimension f dim = (fill_dimension f [] dim)
+
 (* Partitions a list by n elements each.  It is required that the
    length of a list is multiple of n. *)
 

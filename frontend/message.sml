@@ -353,4 +353,10 @@ val error_bad_call_of_cardinality = Match
 
 val error_cardinality_in_declaration = Match
 
+val error_connector_is_not_record = Match
+
+val error_mismatch_connection_list = Match
+
+val error_mismatch_connector_arrays = Match
+
 end
