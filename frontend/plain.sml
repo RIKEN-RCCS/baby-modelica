@@ -312,7 +312,7 @@ fun list_repeat v n acc = (
     else
 	(list_repeat v (n - 1) (v :: acc)))
 
-(* Transposes a list of a list.  Element lists are truncated to the
+(* Transposes a list of lists.  Element lists are truncated to the
    shortest one. *)
 
 fun list_transpose ee = (
@@ -325,5 +325,29 @@ fun list_transpose ee = (
 	in
 	    hds :: (list_transpose tls)
 	end)
+
+(* Sorts a list to make each cmp (ai,aj) true for (i<j). *)
+
+fun list_sort cmp (ee : 'a list) = (
+    case ee of
+	[] => []
+      | p :: tl => (
+	let
+	    val (ll, hh) = (List.partition (fn e => cmp (e, p)) tl)
+	in
+	    ((list_sort cmp ll) @ [p] @ (list_sort cmp hh))
+	end))
+
+fun foldl_one_and_others_loop f acc dd ee = (
+    case ee of
+	[] => acc
+      | e :: tl => (
+	foldl_one_and_others_loop f (f (e, (dd @ tl), acc)) (dd @ [e]) tl))
+
+(* Calls f with (e,ee\e,acc) one (e) and the others (ee\e) with a
+   folding result (acc). *)
+
+fun foldl_one_and_others f acc ee = (
+    (foldl_one_and_others_loop f acc [] ee))
 
 end

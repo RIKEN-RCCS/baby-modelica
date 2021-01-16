@@ -1022,4 +1022,36 @@ fun class_is_connector expandable k = (
 	(List.all (class_is_connector expandable) array))
       | Def_Outer_Alias _ => raise Match)
 
+(* Tests a variable is a non-array. *)
+
+fun variable_is_monomer k = (
+    case k of
+	Def_Body _ => true
+      | Def_Der _ => true
+      | Def_Primitive _ => true
+      | Def_Name _ => raise Match
+      | Def_Scoped _ => raise Match
+      | Def_Refine _ => raise Match
+      | Def_Extending _ => raise Match
+      | Def_Replaced _ => raise Match
+      | Def_Displaced _ => raise Match
+      | Def_In_File => raise Match
+      | Def_Mock_Array _ => false
+      | Def_Outer_Alias _ => raise Match)
+
+fun variable_is_simple_type k = (
+    case k of
+	Def_Body _ => (class_is_enum k) orelse (class_is_simple_type k)
+      | Def_Der _ => false
+      | Def_Primitive _ => raise Match
+      | Def_Name _ => raise Match
+      | Def_Scoped _ => raise Match
+      | Def_Refine _ => raise Match
+      | Def_Extending _ => raise Match
+      | Def_Replaced _ => raise Match
+      | Def_Displaced _ => raise Match
+      | Def_In_File => raise Match
+      | Def_Mock_Array _ => false
+      | Def_Outer_Alias _ => raise Match)
+
 end

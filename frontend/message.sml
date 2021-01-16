@@ -359,4 +359,14 @@ val error_mismatch_connection_list = Match
 
 val error_mismatch_connector_arrays = Match
 
+val error_connect_rule_conflict = Match
+
+val error_connect_rule_disagree = Match
+
+val error_connect_record_disagree = Match
+
+val error_multiple_flow_variables = Match
+
+val error_missing_flow_variables = Match
+
 end

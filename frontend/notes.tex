@@ -333,7 +333,7 @@ import n2 = pkg.n2;
 The_syntaxer associates an application of modifiers to a declaration
 which is converted to a modification.  Association to a class
 definition $C$ is by temporarily creating a syntax element
-$\mathit{refine}(C, ...)$ with modifiers.
+$\mathit{refine}\,(C, ...)$ with modifiers.
 
 \subsubsection*{Redeclarations}
 
@@ -2482,29 +2482,39 @@ A side is an aspect of a connector whether it is connected in a
 declaring class.  An outside_connector is an internal connection
 connected in the declaring class, and the flow direction is considered
 reversed (a value is negated) for that connection.  An opposite is an
-inside_connector.  A connector is considered separate as the
+inside_connector.  A connector is considered split to the
 inside/outside ones, but they share the same variables.  The side is
-taken into account in {connect} equations and the
+taken into account in connect_equations but (*?*) not in the
 $\mathrm{cardinality}$ function.
 
 \begin{QFACT} Determination of a side of a connector must respect the
 place where the connector is declared, and inner/outer declarations
 are ignored for that.  An outside_connector is distinguished by the
 use of a connector that is declared and used in the class (i.e., the
-first part of a composite name is a connector).\end{QFACT}
+first part of a composite name is a declared connector).\end{QFACT}
 %%%%
-For example, both $c$ and $c.m.d$ are outside_connectors when they
-appear in $\mathrm{connect}\,(c,...)$ and
-$\mathrm{connect}\,(c.m.d,...)$ in the class declaring $c$, where $m$
-is a possibly empty list of components (connectors or non-connectors).
+For example, $c$ in $\mathrm{connect}\,(c,...)$ is an
+outside_connector when it appears in the class declaring $c$.  And
+also, $c.m.d$ in $\mathrm{connect}\,(c.m.d,...)$ is an
+outside_connector when it appears in the class declaring $c$, where
+$m$ is a possibly empty list of components (connectors or
+non-connectors).  (*CHECK*) It is an outside_connector in the case
+when a non-connector intervenes like $c.m.d$.
 
-(*CHECK*) It is an outside_connector when a non-connector intervenes
-like $c.m.d$.
+\subsubsection*{A connection_set}
 
-\subsubsection*{Nesting connectors}
-
-A connect_equation connects variables including component connectors
+A connector is a record that may contain simple_types, records,
+operator_records, and connectors (but not models especially).  A
+connect_equation connects variables including component connectors
 declared in the connector.
+
+A connection_set consists of tuples of a variable and its side.  The
+set is defined as a symmetric and transitive closure of a relation
+that contains the pairs in connect_equations.  The variables are
+simple_types or operator_records (overdetermined_records), and a
+record in a connector is broken down to its components, but an
+overdetermined_record (or every operator_record (?)) is treated as a
+single element.
 
 \subsubsection*{Connection restrictions}
 
@@ -2519,11 +2529,6 @@ have parameter expressions for the array expression.]\end{qquote}
 \begin{qquote} (\specref{8.3.2}\/) The expression of a for-equation
 shall be a vector expression. ... The expression of a for-equation
 shall be a parameter expression.\end{qquote}
-
-\subsubsection*{Connector components}
-
-A connector may contain simple_types, connectors, records, and
-operator_records, but not models.
 
 \subsubsection*{Expandable_connectors}
 
@@ -2562,11 +2567,10 @@ in some expandable_connectors.
 
 See \specref{15}.
 
-A {\it{}stream_connector\/} is a connector cotaining stream_variables.
-A stream_connector contains a single scalar real
-{\it{}flow_variable\/} and some (arrays of) reals of
-{\it{}stream_variables\/}.  The components are considered as
-stream_variables for a record.
+A stream_connector is a connector cotaining stream_variables.  A
+stream_connector contains a single scalar real flow_variable and some
+reals of (or arrays of) stream_variables.  The record components of a
+stream_variable are considered as stream_variables.
 
 $\mathrm{inStream}\,(v)$ and $\mathrm{actualStream}\,(v)$ take a
 stream_variable (which may be an array).
@@ -3051,7 +3055,7 @@ annotations.
 
 Connections is a package is used to remove overdetermined equations.
 It is described in \specref{9.4}.  A type/record defining
-$\mathit{equalityConstraint}(x,y)$ is called
+$\mathit{equalityConstraint}\,(x,y)$ is called
 overdetermined_type/record.  Connections works with
 overdetermined_types/records.  It contains equation_operators
 $\mathit{branch}$, $\mathit{root}$, and $\mathit{potentialRoot}$
@@ -3065,13 +3069,13 @@ overdetermined.  A graph is reduced to trees by removing some of the
 edges by replacing them with weaker contraints.  Operators in
 Connections are used to specify trees in the graph.
 
-$\mathit{branch}(m.c.r,m.c.r)$ makes an edge between
-overdetermined_types/records.  $\mathit{root}(m.c.r)$ specifies a root
+$\mathit{branch}\,(m.c.r,m.c.r)$ makes an edge between
+overdetermined_types/records.  $\mathit{root}\,(m.c.r)$ specifies a root
 of a tree of overdetermined_types/records.
-$\mathbf{connect}(m.c,m.c)$ creates weak edges for the
+$\mathbf{connect}\,(m.c,m.c)$ creates weak edges for the
 overdetermined_types/records in the connectors.  Some weak edges may
 be marked (as removed), and the equality of marked edges are replaced
-by $\mathit{equalityConstraint}(x,y)$ equations.
+by $\mathit{equalityConstraint}\,(x,y)$ equations.
 
 %%%%%%%%%%%%%%%%
 
@@ -3236,7 +3240,7 @@ Media/package.mo).
 \end{quote}
 
 A {fill} with a zero dimension can be used to create an empty array,
-such as $\mathrm{fill}("",0)$.
+such as $\mathrm{fill}\,("",0)$.
 
 \subsubsection*{Homogeneity of array elements}
 
@@ -3675,7 +3679,7 @@ On numbers, the arguments may be promoted from {Integer} to {Real}, if
 the types of the arguments differ.  Boolean is ordered as
 $\mathit{false}<\mathit{true}$.  A set of enumerators is ordered by
 the definition order.  The ordering in String is defined by the libc
-function $\mathit{strcmp}(x,y) \bowtie 0$ (replacing $\bowtie$ with a
+function $\mathit{strcmp}\,(x,y) \bowtie 0$ (replacing $\bowtie$ with a
 relational operator).
 
 \paragraph{Remark}
@@ -4699,8 +4703,8 @@ values.
 (\specref{3.7}\/)
 
 Predefined functions are defined in the unnamed root, and it can be
-accessed with a preceding dot $.\mathit{abs}(v)$ for
-$\mathit{abs}(v)$.  Array constructor admits an iterator syntax
+accessed with a preceding dot $.\mathit{abs}\,(v)$ for
+$\mathit{abs}\,(v)$.  Array constructor admits an iterator syntax
 ($\mathrm{array}$).  Reductions admit a reduction syntax in addition
 to a function call syntax ($\mathrm{min}$, $\mathrm{max}$,
 $\mathrm{sum}$, and $\mathrm{product}$).  $\mathrm{der}$ and
@@ -5188,6 +5192,7 @@ use "bbm.sml" ;
 builder.xreset () ;
 builder.xbuild "Modelica.Fluid.Examples.HeatingSystem" ;
 connector.xbind () ;
+connector.xconnect () ;
 flatdumper.xdump () ;
 valOf (classtree.xfetch1 "tank") ;
 valOf (classtree.xfetch1 "wall.G") ;

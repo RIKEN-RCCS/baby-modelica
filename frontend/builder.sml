@@ -58,7 +58,6 @@ val obtain_array_dimension = operator.obtain_array_dimension
 
 val bind_in_expression = binder.bind_in_expression
 val bind_in_scoped_expression = binder.bind_in_scoped_expression
-(*val bind_in_instance = binder.bind_in_instance*)
 val bind_in_value = binder.bind_in_value
 
 fun tr_build (s : string) = if true then (print (s ^"\n")) else ()

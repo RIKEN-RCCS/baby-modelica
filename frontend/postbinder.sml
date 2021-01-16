@@ -6,8 +6,11 @@
 
 structure postbinder :
 sig
+    type definition_body_t
+
     val bind_model : bool -> unit
     val substitute_outer : unit -> unit
+    val bind_in_instance : bool -> definition_body_t -> bool
 end = struct
 
 open ast

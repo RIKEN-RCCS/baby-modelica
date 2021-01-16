@@ -10,15 +10,8 @@ sig
     type expression_t
     type subject_t
 
-    (*val xbind : unit -> unit*)
-    (*val discern_connector : unit -> unit*)
-
-    val connect_connectors :
-	unit -> ((subject_t * bool) * (subject_t * bool) * subject_t) list
-
-    val xbind :
-	unit -> ((subject_t * bool) * (subject_t * bool) * subject_t) list
-
+    val xbind : unit -> unit
+    val xconnect : unit -> unit
 end = struct
 
 open ast plain
@@ -39,6 +32,13 @@ val fetch_instance_tree_node = classtree.fetch_instance_tree_node
 val expression_is_literal = expression.expression_is_literal
 val find_iterator_range = expression.find_iterator_range
 
+val walk_in_class = walker.walk_in_class
+val walk_in_expression = walker.walk_in_expression
+val walk_in_equation = walker.walk_in_equation
+val walk_in_statement = walker.walk_in_statement
+
+val fetch_displaced_class = loader.fetch_displaced_class
+
 val fold_constants = folder.fold_constants
 val explicitize_range = folder.explicitize_range
 
@@ -47,10 +47,7 @@ val bind_in_scoped_expression = binder.bind_in_scoped_expression
 val instantiate_class = builder.instantiate_class
 val traverse_with_instantiation = builder.traverse_with_instantiation
 
-val walk_in_class = walker.walk_in_class
-val walk_in_expression = walker.walk_in_expression
-val walk_in_equation = walker.walk_in_equation
-val walk_in_statement = walker.walk_in_statement
+val bind_in_instance = postbinder.bind_in_instance
 
 val expand_equations_for_connects = syntaxer.expand_equations_for_connects
 
@@ -65,6 +62,23 @@ datatype edge_marker_t = Edge of bool
 datatype root_marker_t = Root of bool
 
 (* ================================================================ *)
+
+(* Makes a mix-in name of an inStream variable. *)
+
+fun mixin_variable v = (
+    let
+	val (supsubj, (Id n0, ss)) = (subject_prefix v)
+	val n1 = n0 ^ "__mix_in_"
+    in
+	(compose_subject supsubj (Id n1) ss)
+    end)
+
+fun is_mixin v = (
+    let
+	val (_, (Id n, _)) = (subject_prefix v)
+    in
+	(String.isSuffix "__mix_in_" n)
+    end)
 
 (* Drops a prefix of a reference which refers to a class pointed by a
    subject.  It returns NONE if a reference is not a component of the
@@ -102,6 +116,7 @@ fun literalize_subscripts kp w0 = (
 	    in
 		(reference_as_subject w1)
 	    end)
+	  | _ => raise Match
     end)
 
 (* Returns a type/record of a connector instance. *)
@@ -139,27 +154,74 @@ fun unmark_expandable_connector k = (
       | Def_Mock_Array _ => raise Match
       | Def_Outer_Alias _ => raise Match)
 
-fun marked_as_stream k = (
+fun connect_rule_marker k = (
     case k of
-	Def_Body (_, _, (t, p, (Stream, _, _)), _, _, _, _) => true
-      | Def_Body (_, _, (t, p, (_, _, _)), _, _, _, _) => false
+	Def_Body (_, _, (t, p, (efs, _, _)), _, _, _, _) => efs
       | _ => raise error_connector_is_not_record)
 
-fun marked_as_flow k = (
-    case k of
-	Def_Body (_, _, (t, p, (Flow, _, _)), _, _, _, _) => true
-      | Def_Body (_, _, (t, p, (_, _, _)), _, _, _, _) => false
-      | _ => raise error_connector_is_not_record)
+fun marked_as_effort k = ((connect_rule_marker k) = Effort)
 
-fun connector_is_stream (subj, b) = (
+fun marked_as_flow k = ((connect_rule_marker k) = Flow)
+
+fun marked_as_stream k = ((connect_rule_marker k) = Stream)
+
+fun rule_of_variable k = (connect_rule_marker k)
+
+(* Lists component names of a record.  It errs if a record is an array
+   of records. *)
+
+fun names_in_record subj = (
     let
-	fun test_stream (Slot (id, dim, nodes, dummy)) = (
-	    (List.exists (fn (j, kx, cx) => (marked_as_stream (! kx))) nodes))
-
-	val (_, kx, cx) = surely (fetch_instance_tree_node subj)
+	val (j, kx, cx) = surely (fetch_instance_tree_node subj)
+	val kp = (! kx)
 	val components = (! cx)
     in
-	(List.exists test_stream components)
+	case (unwrap_array_of_instances kp) of
+	    ([], _) => (
+	    (map (fn (Slot (id, dim, nodes, _)) => id) components))
+	  | (_, _) => raise Match
+    end)
+
+(* Tests if there exists a record slot declared as a stream.  It
+   traverses the instance nodes. *)
+
+fun connector_is_stream (subj, side) = (
+    let
+	fun test_node (subj, kx, cx) = (marked_as_stream (! kx))
+
+	fun test_slot (Slot (id, dim, nodes, _)) = (
+	    ((List.exists test_node nodes)
+	     orelse (List.exists test_components nodes)))
+
+	and test_components (subj, kx, cx) = (List.exists test_slot (! cx))
+
+	val node = surely (fetch_instance_tree_node subj)
+    in
+	(test_components node)
+    end)
+
+(* Finds a record slot declared as a flow.  It does search in nested
+   records. *)
+
+fun find_flow_variable (subj, side) = (
+    let
+	fun getclass (subj, kx, cx) = (! kx)
+
+	fun test_node (subj, kx, cx) = (marked_as_flow (! kx))
+
+	fun find_in_slot (Slot (id, dim, nodes, _)) = (
+	    ((map getclass (List.filter test_node nodes))
+	     @ (List.concat (map find_in_components nodes))))
+
+	and find_in_components (subj, kx, cx) = (
+	    (List.concat (map find_in_slot (! cx))))
+
+	val node = surely (fetch_instance_tree_node subj)
+    in
+	case (find_in_components node) of
+	    [] => NONE
+	  | [k] => SOME (subject_of_class k)
+	  | _ => raise error_multiple_flow_variables
     end)
 
 (* Tests if a type/record appearing a connector is an overdetermined
@@ -178,20 +240,19 @@ fun connector_is_overdetermined subj = (
 	  | SOME (Naming (_, _, _, _, (z, r, EL_State dx, h))) => false
     end)
 
-(* Lists component names of a record.  It errs for an array of
-   records. *)
+fun global_function name = Instances ([], [Subj (PKG, [(Id name, [])])])
 
-fun names_in_record subj = (
-    let
-	val (_, kx, cx) = surely (fetch_instance_tree_node subj)
-	val kp = (! kx)
-	val components = (! cx)
-    in
-	case (unwrap_array_of_instances kp) of
-	    ([], _) => (
-	    (map (fn (Slot (id, dim, nodes, dummy)) => id) components))
-	  | (_, []) => raise Match
-    end)
+fun choose_connect_rule r0 rules = (
+    case (list_unique_value (op =) rules) of
+	NONE => raise error_connect_rule_disagree
+      | SOME r1 => (
+	case (r0, r1) of
+	    (Effort, _) => r1
+	  | (_, Effort) => r0
+	  | (Flow, Flow) => Flow
+	  | (Stream, Stream) => Stream
+	  | (Flow, Stream) => raise error_connect_rule_conflict
+	  | (Stream, Flow) => raise error_connect_rule_conflict))
 
 (* ================================================================ *)
 
@@ -424,6 +485,10 @@ fun expand_expandable_connectors connects = (
 
 (* ================================================================ *)
 
+fun is_inside side = (side = false)
+
+fun is_outside side = (side = true)
+
 fun unique_array_size subjs = (
     let
 	val pairs = (map (unwrap_array_of_instances
@@ -435,55 +500,249 @@ fun unique_array_size subjs = (
 	  | SOME dim => dim
     end)
 
-fun equate_connections_stream connectors = (
+fun make_loop_rule connectors = (
     let
-	fun slot_is_flow subj id = (
+	fun term (subj, side) = Instances ([], [subj])
+
+	fun equalize x y = (
+	    Eq_Eq ((x, y), Annotation [], Comment []))
+
+	val terms = (map term connectors)
+    in
+	case terms of
+	    [] => raise Match
+	  | x0 :: tl => (map (equalize x0) tl)
+    end)
+
+fun make_point_rule connectors = (
+    let
+	fun negate e = (
+	    App (Opr Opr_mul, [L_Number (R, "-1"), e]))
+
+	fun term (subj, side) = (
 	    let
-		val subsubj = (compose_subject subj id [])
-		val kx = surely (fetch_from_instance_tree subsubj)
+		val e = Instances ([], [subj])
+		val v = if (not side) then e else (negate e)
 	    in
-		(marked_as_flow kx)
+		v
+	    end)
+
+	val terms = (map term connectors)
+    in
+	[Eq_Eq ((L_Number (R, "0"),
+		 App ((global_function "sum"),
+		      [Array_Constructor terms])),
+		Annotation [], Comment [])]
+    end)
+
+(* It uses "semiLinear" for "positiveMax". *)
+
+fun stream_equation iqconnector otherconnectors = (
+    let
+	val one = L_Number (R, "1")
+
+	val zero = L_Number (R, "0")
+
+	fun term v = Instances ([], [v])
+
+	fun mixin v = Instances ([], [(mixin_variable v)])
+
+	fun negate e = (
+	    App (Opr Opr_mul, [L_Number (R, "-1"), e]))
+
+	fun denominator_term (flow, stream, side) = (
+	    if (is_inside side) then
+		(* j-term *)
+		App ((global_function "semiLinear"),
+		     [(negate (term flow)), one, zero])
+	    else
+		(* k-term *)
+		App ((global_function "semiLinear"),
+		     [(term flow), one, zero]))
+
+	fun denominator iqconnector otherconnectors = (
+	    App ((global_function "sum"),
+		 (map denominator_term otherconnectors)))
+
+	fun numerator_term (flow, stream, side) = (
+	    if (is_inside side) then
+		(* j-term *)
+		App ((global_function "semiLinear"),
+		     [(negate (term flow)), (term stream), zero])
+	    else
+		(* k-term *)
+		App ((global_function "semiLinear"),
+		     [(term flow), (mixin stream), zero]))
+
+	fun numerator iqconnector otherconnectors = (
+	    App ((global_function "sum"),
+		 (map numerator_term otherconnectors)))
+
+	val (_, stream, side) = iqconnector
+	val lhs = if (is_inside side) then (mixin stream) else (term stream)
+    in
+	[Eq_Eq ((lhs,
+		 App (Opr Opr_div,
+		      [(numerator iqconnector otherconnectors),
+		       (denominator iqconnector otherconnectors)])),
+		Annotation [], Comment [])]
+    end)
+
+fun list_mixin_variables connectors = (
+    (List.concat
+	 (map (fn (stream, side) => (
+		   if (is_inside side) then [(mixin_variable stream)] else []))
+	      connectors)))
+
+fun make_stream_rule flows connectors = (
+    let
+	fun tuple (flow, (stream, side)) = (flow, stream, side)
+
+	val mixins = (list_mixin_variables connectors)
+	val flowconnectors = (map tuple (ListPair.zipEq (flows, connectors)))
+	val eqns = (foldl_one_and_others
+			(fn (one, others, acc) =>
+			    (stream_equation one others) @ acc)
+			[] flowconnectors)
+    in
+	(mixins, eqns)
+    end)
+
+(* Makes equations, by switching either on simple-types, records, or
+   arrays.  It returns a pair of mix-in variables and equations.  It
+   makes an empty list for empty arrays. *)
+
+fun equate_connections rule0 flows connectors = (
+    let
+	fun connect_in_record rule flows sides subjs id = (
+	    let
+		val subsubjs = (map (fn j => (compose_subject j id [])) subjs)
+		val connectors = (ListPair.zipEq (subsubjs, sides))
+	    in
+		(equate_connections rule flows connectors)
+	    end)
+
+	fun connect_with_sides rule flows sides subjs = (
+	    let
+		val connectors = (ListPair.zipEq (subjs, sides))
+	    in
+		(equate_connections rule flows connectors)
+	    end)
+
+	fun check_identical_lists namelist = (
+	    let
+		val slots = (remove_duplicates (op =) (List.concat namelist))
+		val n = (length slots)
+		val _ = if (List.all (fn x => (length x) = n) namelist)
+			then () else raise error_connect_record_disagree
+	    in
+		slots
 	    end)
 
 	val subjs = (map #1 connectors)
-	val namelist = (map names_in_record subjs)
-	val names = (remove_duplicates (op =) (List.concat namelist))
-	val _ = if (List.all (fn x => (length x = (length names))) namelist)
-		then () else raise error_mismatch_connection_list
-	val subj = (hd subjs)
-	val flow = (List.find (slot_is_flow subj) names)
+	val sides = (map #2 connectors)
+	val variables = (map (surely o fetch_from_instance_tree) subjs)
+	val simpletypes = (map variable_is_simple_type variables)
+	val monomers = (map variable_is_monomer variables)
     in
-	[]
+	if (List.exists (fn x => x) simpletypes) then
+	    let
+		val _ = if (List.all (fn x => x) simpletypes) then ()
+			else raise error_connect_record_disagree
+		val rules = (map rule_of_variable variables)
+		val rule1 = (choose_connect_rule rule0 rules)
+	    in
+		case rule1 of
+		    Effort => ([], (make_loop_rule connectors))
+		  | Flow => ([], (make_point_rule connectors))
+		  | Stream => (make_stream_rule flows connectors)
+	    end
+	else if (List.exists (fn x => x) monomers) then
+	    let
+		val _ = if (List.all (fn x => x) monomers) then ()
+			else raise error_connect_record_disagree
+		val rules = (map rule_of_variable variables)
+		val rule1 = (choose_connect_rule rule0 rules)
+		val subjs = (map subject_of_class variables)
+		val namelist = (map names_in_record subjs)
+		val slots = (check_identical_lists namelist)
+		val x = (map (connect_in_record rule1 flows sides subjs) slots)
+		val mixins = (List.concat (map #1 x))
+		val eqns = (List.concat (map #2 x))
+	    in
+		(mixins, eqns)
+	    end
+	else
+	    let
+		val descs = (map unwrap_array_of_instances variables)
+		val dims = (map #1 descs)
+		val arrays = (map #2 descs)
+		val subjarrays = (map (map subject_of_class) arrays)
+		val sets = (list_transpose subjarrays)
+		val dim = case (list_unique_value (op =) dims) of
+			      NONE => raise error_connect_record_disagree
+			    | SOME d => d
+		val _ = if ((not ((array_size dim) = 0)) orelse (null sets))
+			then () else raise Match
+		val x = (map (connect_with_sides rule0 flows sides) sets)
+		val mixins = (List.concat (map #1 x))
+		val eqns = (List.concat (map #2 x))
+	    in
+		(mixins, eqns)
+	    end
     end)
 
-fun equate_connections_nonstream connectors = []
-
-fun equate_connections_array stream connectors = (
-    let
-	val equatorfn = if (stream) then equate_connections_stream
-			else equate_connections_nonstream
-
-	fun indexing index (subj, side) = (
-	    ((compose_subject_with_index subj index), side))
-
-	fun equate index = (
-	    (equatorfn (map (indexing index) connectors)))
-
-	val subjs = (map #1 connectors)
-    in
-	case (unique_array_size subjs) of
-	    [] => (equatorfn connectors)
-	  | dim => (List.concat (iterate_dimension equate dim))
-    end)
-
-fun equate_connections connectors = (
+fun make_connect_equations connectors = (
     let
 	val stream = (List.exists connector_is_stream connectors)
     in
-	(equate_connections_array stream connectors)
+	if (not (stream)) then
+	    (equate_connections Effort [] connectors)
+	else
+	    let
+		val flowset = (map find_flow_variable connectors)
+		val _ = if (List.all isSome flowset) then ()
+			else raise error_missing_flow_variables
+		val flows = (map valOf flowset)
+	    in
+		(equate_connections Effort flows connectors)
+	    end
     end)
 
 (* ================================================================ *)
+
+fun insert_connect_equations eqns = (
+    let
+	val section = Element_Equations (false, eqns)
+	val (subj, kx, cx) = instance_tree
+	val model0 = (! kx)
+    in
+	case model0 of
+	    Def_Body (mk, j, cs, nm, ee0, aa, ww) => (
+	    let
+		val ee1 = (ee0 @ [section])
+		val model1 = Def_Body (mk, j, cs, nm, ee1, aa, ww)
+		val _ = (kx := model1)
+	    in
+		()
+	    end)
+	  | _ => raise Match
+    end)
+
+fun insert_mixin_variable mixin = (
+    let
+	val _ = if (is_mixin mixin) then () else raise Match
+	val lookup_class_in_root = loader.lookup_class_in_root
+	(*val (_, k0) = surely (lookup_class_in_root (Id "Real"))*)
+	val x0 = Def_Displaced (Ctag ["Real"], the_root_subject)
+	val k0 = (fetch_displaced_class E0 x0)
+	val (dim, array) = (instantiate_class (mixin, k0))
+	val _ = if (null dim) then () else raise Match
+	val k1 = (hd array)
+	val _ = (bind_in_instance false k1)
+    in
+	()
+    end)
 
 fun connect_connectors () = (
     let
@@ -492,9 +751,13 @@ fun connect_connectors () = (
 	val _ = (expand_expandable_connectors cc0)
 	val cc1 = (map (fn (x, y, subj) => [x, y]) cc0)
 	val cc2 = (make_unions (op =) cc1)
-	val _ = (map equate_connections cc2)
+	val x = (map make_connect_equations cc2)
+	val mixins = (List.concat (map #1 x))
+	val eqns = (List.concat (map #2 x))
+	val _ = (insert_connect_equations eqns)
+	val _ = (app insert_mixin_variable mixins)
     in
-	cc0
+	()
     end)
 
 (* ================================================================ *)
@@ -506,9 +769,15 @@ fun xbind () = (
     let
 	val _ = (bind_model true)
 	val _ = (substitute_outer ())
-	val v = (connect_connectors ())
     in
-	v
+	()
+    end)
+
+fun xconnect () = (
+    let
+	val _ = (connect_connectors ())
+    in
+	()
     end)
 
 end

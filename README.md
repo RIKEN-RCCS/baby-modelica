@@ -4,14 +4,14 @@ Copyright (C) 2018-2020 RIKEN R-CCS
 
 __Baby-Modelica comes with ABSOLUTELY NO WARRANTY.__
 
-Baby-Modelica is a simple parser of the Modelica language
+Baby-Modelica is a simple parser+flattener of the Modelica language
 specification 3.4.  Its intended use is to create data extraction
-tools for Modelica models.  The parser can dump a flat model, and a
-generated flat model is hopefully to be re-readble by Modelica
-compliers.  Current status is a pre-zero version, and we are working
-towards version zero.  The version number of Baby-Modelica is the last
-digits, appended to the version number of the Modelica language
-specification.
+tools for Modelica models.  It parses and does some syntactic
+transformations, and can dump a flat model.  A generated flat model is
+hopefully to be re-readble by Modelica compliers.  Current status is a
+pre-zero version, and we are working towards version zero.  The
+version number of Baby-Modelica is the last digits, appended to the
+version number of the Modelica language specification.
 
 Baby-Modelica is written in SML'97 (Standard ML) and developed mainly
 with Poly/ML (on SUNOS 5.11/amd64), but it may work with SML/NJ or
@@ -57,8 +57,8 @@ model in "x.mo".
 use "bbm.sml" ;
 builder.xreset () ;
 builder.xbuild "Modelica.Fluid.Examples.HeatingSystem" ;
-postbinder.xbind () ;
-postbinder.xreplace () ;
+connector.xbind () ;
+connector.xconnect () ;
 flatdumper.xdump () ;
 valOf (classtree.xfetch1 "tank") ;
 valOf (classtree.xfetch1 "wall.G") ;
