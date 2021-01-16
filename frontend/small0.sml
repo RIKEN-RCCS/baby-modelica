@@ -1,5 +1,5 @@
 (* small0.sml -*-Coding: us-ascii-unix;-*- *)
-(* Copyright (C) 2018-2020 RIKEN R-CCS *)
+(* Copyright (C) 2018-2021 RIKEN R-CCS *)
 
 (* SMALL FUNCTIONS FOR ELABORATION (first half). *)
 

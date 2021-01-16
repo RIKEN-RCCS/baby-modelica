@@ -6,7 +6,7 @@
 \usepackage[b5paper,margin=1.5cm]{geometry}
 
 \title{\bf{}Baby-Modelica Implementation Notes}
-\author{Copyright (C) 2018-2020 RIKEN R-CCS}
+\author{Copyright (C) 2018-2021 RIKEN R-CCS}
 \date{Baby-Modelica 3.4.0, 2020-01-29}
 
 \usepackage[hidelinks]{hyperref}
@@ -2592,8 +2592,8 @@ negation.
 The $\mathrm{cardinality}$ function returns the count of connections
 on the inside_connector of an argument.  $\mathrm{cardinality}$ only
 appears in equation sections (in assertions).  $\mathrm{cardinality}$
-is a translation-time constant (if the connector reference is
-determined).
+is a translation-time constant, but the connector reference is not
+(array indices can be non-constants).
 
 %%%%%%%%%%%%%%%%
 
@@ -3055,7 +3055,7 @@ annotations.
 
 Connections is a package is used to remove overdetermined equations.
 It is described in \specref{9.4}.  A type/record defining
-$\mathit{equalityConstraint}\,(x,y)$ is called
+$\mathit{equalityConstraint}\,(x,y)$ is called an
 overdetermined_type/record.  Connections works with
 overdetermined_types/records.  It contains equation_operators
 $\mathit{branch}$, $\mathit{root}$, and $\mathit{potentialRoot}$
@@ -5134,7 +5134,7 @@ uses
 
 # Baby-Modelica 3.4.0 (2020-01-29)
 
-Copyright (C) 2018-2020 RIKEN R-CCS
+Copyright (C) 2018-2021 RIKEN R-CCS
 
 __Baby-Modelica comes with ABSOLUTELY NO WARRANTY.__
 

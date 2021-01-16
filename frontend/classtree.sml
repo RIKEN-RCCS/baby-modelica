@@ -1,5 +1,5 @@
 (* classtree.sml -*-Coding: us-ascii-unix;-*- *)
-(* Copyright (C) 2018-2020 RIKEN R-CCS *)
+(* Copyright (C) 2018-2021 RIKEN R-CCS *)
 
 (* CLASS/INSTANCE TREES. *)
 
@@ -81,8 +81,7 @@ sig
 	id_t -> instance_node_t -> component_slot_t option
 
     val traverse_tree :
-	(definition_body_t * 'a list -> 'a list)
-	-> instance_node_t * 'a list -> 'a list
+	(definition_body_t * 'a -> 'a) -> instance_node_t * 'a -> 'a
 
     val dereference_outer_alias : component_slot_t -> instance_node_t
     val component_is_outer_alias : component_slot_t -> bool
@@ -960,7 +959,8 @@ fun clear_syntaxer_tables () = (
 
 (* ================================================================ *)
 
-(* Calls f like foldl on each node in the class_tree/instance_tree. *)
+(* Calls f on each node (with a folding argument) in the
+   class_tree/instance_tree. *)
 
 fun traverse_tree f (node0, acc0) = (
     let

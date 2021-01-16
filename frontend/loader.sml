@@ -1,5 +1,5 @@
 (* loader.sml -*-Coding: us-ascii-unix;-*- *)
-(* Copyright (C) 2018-2020 RIKEN R-CCS *)
+(* Copyright (C) 2018-2021 RIKEN R-CCS *)
 
 (* PARSER CALLER. *)
 
@@ -509,7 +509,7 @@ fun fetch_or_load_class_in_root (tag : class_tag_t) : class_definition_t option 
 
 fun lookup_class_in_root (Id v) = (
     let
-	val _ = tr_load_vvv (";; - lookup_class_in_root("^ v ^")")
+	val _ = tr_load_vvv (";; - lookup_class_in_root ("^ v ^")")
 	val tag = (Ctag [v])
     in
 	case (fetch_or_load_class_in_root tag) of

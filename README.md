@@ -1,6 +1,6 @@
 # Baby-Modelica 3.4.0 (2020-01-29)
 
-Copyright (C) 2018-2020 RIKEN R-CCS
+Copyright (C) 2018-2021 RIKEN R-CCS
 
 __Baby-Modelica comes with ABSOLUTELY NO WARRANTY.__
 

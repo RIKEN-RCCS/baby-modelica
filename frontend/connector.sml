@@ -1,5 +1,5 @@
 (* connector.sml -*-Coding: us-ascii-unix;-*- *)
-(* Copyright (C) 2018-2020 RIKEN R-CCS *)
+(* Copyright (C) 2018-2021 RIKEN R-CCS *)
 
 (* CONNECTOR HANDLING.  It removes the uses of "connect" equations,
    "Connections", "inStream()", "actualStream()", and
@@ -711,6 +711,40 @@ fun make_connect_equations connectors = (
 
 (* ================================================================ *)
 
+(*
+fun substitute_operators_in_instance (k0, acc0) = (
+    if (class_is_outer_alias k0) then
+	acc0
+    else if (class_is_enumerator_definition k0) then
+	acc0
+    else if (class_is_package k0) then
+	acc0
+    else
+	let
+	    val _ if (not (class_is_primitive k0)) then () else raise Match
+
+	    val subj = (subject_of_class k0)
+	    val efix = (fn (w, _) => ((substitute_outer_reference w), ()))
+	    val ewalk = (walk_in_expression efix)
+	    val qwalk = (walk_in_equation (fn (q, a) => (q, a)) ewalk)
+	    val swalk = (walk_in_statement (fn (s, a) => (s, a)) ewalk)
+	    val walker = {vamp_q = qwalk, vamp_s = swalk}
+	    val (k1, _) = (walk_in_class walker (k0, ()))
+	    val _ = (store_to_instance_tree subj k1)
+	in
+	    acc0
+	end)
+
+(* Substitutes the uses of inStream(), actualStream(), and
+   cardinality(). *)
+
+fun substitute_operators () = (
+    ignore (traverse_tree substitute_operators_in_instance
+			  (instance_tree, [])))
+*)
+
+(* ================================================================ *)
+
 fun insert_connect_equations eqns = (
     let
 	val section = Element_Equations (false, eqns)
@@ -732,8 +766,6 @@ fun insert_connect_equations eqns = (
 fun insert_mixin_variable mixin = (
     let
 	val _ = if (is_mixin mixin) then () else raise Match
-	val lookup_class_in_root = loader.lookup_class_in_root
-	(*val (_, k0) = surely (lookup_class_in_root (Id "Real"))*)
 	val x0 = Def_Displaced (Ctag ["Real"], the_root_subject)
 	val k0 = (fetch_displaced_class E0 x0)
 	val (dim, array) = (instantiate_class (mixin, k0))

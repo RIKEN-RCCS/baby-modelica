@@ -1,5 +1,5 @@
 (* walker.sml -*-Coding: us-ascii-unix;-*- *)
-(* Copyright (C) 2018-2020 RIKEN R-CCS *)
+(* Copyright (C) 2018-2021 RIKEN R-CCS *)
 
 (* EXPRESSION SCANNING.  It walks in expressions.  Helper routines
    help traverse in equations/statements in a class.  These routines
@@ -30,6 +30,10 @@ sig
 	'a vamper_t -> definition_body_t * 'a -> definition_body_t * 'a
 
     val simplify_ite : expression_t -> expression_t
+
+    val substitute_expression :
+	(expression_t * 'a -> expression_t * 'a)
+	-> definition_body_t * 'a -> 'a
 end = struct
 
 open plain
@@ -41,6 +45,7 @@ type 'a q_vamper_t = equation_t * 'a -> equation_t * 'a
 type 'a s_vamper_t = statement_t * 'a -> statement_t * 'a
 type 'a vamper_t = {vamp_q : 'a q_vamper_t, vamp_s : 'a s_vamper_t}
 
+val store_to_instance_tree = classtree.store_to_instance_tree
 val expression_to_string = dumper.expression_to_string
 
 fun tr_expr (s : string) = if true then (print (s ^"\n")) else ()
@@ -660,5 +665,33 @@ fun walk_in_statement vamp_s (vamp_x : 'a x_vamper_t) (s0, acc0) = (
 		(vamp_s (s1, acc3))
 	    end)
     end)
+
+(* ================================================================ *)
+
+(* Updates an instance by replacing expressions in it.  It is used
+   with traverse_tree. *)
+
+fun substitute_expression f (k0, acc0) = (
+    if (class_is_outer_alias k0) then
+	acc0
+    else if (class_is_enumerator_definition k0) then
+	acc0
+    else if (class_is_package k0) then
+	acc0
+    else
+	let
+	    val _ = if (not (class_is_primitive k0)) then () else raise Match
+
+	    val subj = (subject_of_class k0)
+	    val efix = f
+	    val ewalk = (walk_in_expression efix)
+	    val qwalk = (walk_in_equation (fn (q, a) => (q, a)) ewalk)
+	    val swalk = (walk_in_statement (fn (s, a) => (s, a)) ewalk)
+	    val walker = {vamp_q = qwalk, vamp_s = swalk}
+	    val (k1, acc1) = (walk_in_class walker (k0, acc0))
+	    val _ = (store_to_instance_tree subj k1)
+	in
+	    acc1
+	end)
 
 end

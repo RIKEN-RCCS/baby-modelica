@@ -1,5 +1,5 @@
 /* modelica-grammar.y  -*-Mode: Fundamental;-*- */
-/* Copyright (C) 2018-2020 RIKEN R-CCS */
+/* Copyright (C) 2018-2021 RIKEN R-CCS */
 
 %{
 

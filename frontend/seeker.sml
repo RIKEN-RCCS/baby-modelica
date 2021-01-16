@@ -1,5 +1,5 @@
 (* seeker.sml -*-Coding: us-ascii-unix;-*- *)
-(* Copyright (C) 2018-2020 RIKEN R-CCS *)
+(* Copyright (C) 2018-2021 RIKEN R-CCS *)
 
 (* LOOKUP FOR IMPORT/EXTENDS-CLAUSES.  It searches in classes that are
    half-syntaxed (step=E0-E2), while other routines are used for

@@ -1,5 +1,5 @@
 (* postbinder.sml -*-Coding: us-ascii-unix;-*- *)
-(* Copyright (C) 2018-2020 RIKEN R-CCS *)
+(* Copyright (C) 2018-2021 RIKEN R-CCS *)
 
 (* NAME RESOLVER, SECOND PART.  Second resolving resolves a variable
    reference in equations/algorithms sections. *)
@@ -33,6 +33,7 @@ val walk_in_class = walker.walk_in_class
 val walk_in_expression = walker.walk_in_expression
 val walk_in_equation = walker.walk_in_equation
 val walk_in_statement = walker.walk_in_statement
+val substitute_expression = walker.substitute_expression
 
 val secure_reference = builder.secure_reference
 
@@ -166,30 +167,9 @@ fun bind_model scanning = (
 
 (* ================================================================ *)
 
-fun substitute_outer_in_instance (k0, acc0) = (
-    if (class_is_outer_alias k0) then
-	acc0
-    else if (class_is_enumerator_definition k0) then
-	acc0
-    else if (class_is_package k0) then
-	acc0
-    else
-	let
-	    val _ = if (not (class_is_primitive k0)) then () else raise Match
-	in
-	    let
-		val subj = (subject_of_class k0)
-		val efix = (fn (w, _) => ((substitute_outer_reference w), ()))
-		val ewalk = (walk_in_expression efix)
-		val qwalk = (walk_in_equation (fn (q, a) => (q, a)) ewalk)
-		val swalk = (walk_in_statement (fn (s, a) => (s, a)) ewalk)
-		val walker = {vamp_q = qwalk, vamp_s = swalk}
-		val (k1, _) = (walk_in_class walker (k0, ()))
-		val _ = (store_to_instance_tree subj k1)
-	    in
-		acc0
-	    end
-	end)
+val substitute_outer_in_instance
+    = (substitute_expression
+	   (fn (w, _) => ((substitute_outer_reference w), [])))
 
 fun substitute_outer () = (
     ignore (traverse_tree substitute_outer_in_instance (instance_tree, [])))
