@@ -32,7 +32,7 @@ sig
     val simplify_ite : expression_t -> expression_t
 
     val substitute_expression :
-	(expression_t * 'a -> expression_t * 'a)
+	(definition_body_t -> expression_t * 'a -> expression_t * 'a)
 	-> definition_body_t * 'a -> 'a
 end = struct
 
@@ -683,7 +683,7 @@ fun substitute_expression f (k0, acc0) = (
 	    val _ = if (not (class_is_primitive k0)) then () else raise Match
 
 	    val subj = (subject_of_class k0)
-	    val efix = f
+	    val efix = (f k0)
 	    val ewalk = (walk_in_expression efix)
 	    val qwalk = (walk_in_equation (fn (q, a) => (q, a)) ewalk)
 	    val swalk = (walk_in_statement (fn (s, a) => (s, a)) ewalk)

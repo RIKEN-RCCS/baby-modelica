@@ -369,4 +369,6 @@ val error_multiple_flow_variables = Match
 
 val error_missing_flow_variables = Match
 
+fun error_bad_intrinsic_call name = Match
+
 end

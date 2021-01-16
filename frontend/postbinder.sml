@@ -169,7 +169,7 @@ fun bind_model scanning = (
 
 val substitute_outer_in_instance
     = (substitute_expression
-	   (fn (w, _) => ((substitute_outer_reference w), [])))
+	   (fn _ => (fn (w, _) => ((substitute_outer_reference w), []))))
 
 fun substitute_outer () = (
     ignore (traverse_tree substitute_outer_in_instance (instance_tree, [])))

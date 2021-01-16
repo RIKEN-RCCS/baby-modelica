@@ -11,7 +11,7 @@ sig
     type subject_t
 
     val xbind : unit -> unit
-    val xconnect : unit -> unit
+    val xconnect : unit -> expression_t list * expression_t list * expression_t list
 end = struct
 
 open ast plain
@@ -29,6 +29,7 @@ val unwrap_array_of_instances = classtree.unwrap_array_of_instances
 val fetch_from_instance_tree = classtree.fetch_from_instance_tree
 val fetch_instance_tree_node = classtree.fetch_instance_tree_node
 
+val expression_to_string = dumper.expression_to_string
 val expression_is_literal = expression.expression_is_literal
 val find_iterator_range = expression.find_iterator_range
 
@@ -36,6 +37,7 @@ val walk_in_class = walker.walk_in_class
 val walk_in_expression = walker.walk_in_expression
 val walk_in_equation = walker.walk_in_equation
 val walk_in_statement = walker.walk_in_statement
+val substitute_expression = walker.substitute_expression
 
 val fetch_displaced_class = loader.fetch_displaced_class
 
@@ -63,14 +65,21 @@ datatype root_marker_t = Root of bool
 
 (* ================================================================ *)
 
+fun operator_suffix name = (
+    case name of
+	"inStream" => "_mix_in_"
+      | "actualStream" => "_actual_mix_in_"
+      | "cardinality" => "_cardinality_"
+      | _ => raise Match)
+
 (* Makes a mix-in name of an inStream variable. *)
 
 fun mixin_variable v = (
     let
+	val suffix = (operator_suffix "inStream")
 	val (supsubj, (Id n0, ss)) = (subject_prefix v)
-	val n1 = n0 ^ "__mix_in_"
     in
-	(compose_subject supsubj (Id n1) ss)
+	(compose_subject supsubj (Id (n0 ^"_"^ suffix)) ss)
     end)
 
 fun is_mixin v = (
@@ -711,37 +720,71 @@ fun make_connect_equations connectors = (
 
 (* ================================================================ *)
 
-(*
-fun substitute_operators_in_instance (k0, acc0) = (
-    if (class_is_outer_alias k0) then
-	acc0
-    else if (class_is_enumerator_definition k0) then
-	acc0
-    else if (class_is_package k0) then
-	acc0
-    else
-	let
-	    val _ if (not (class_is_primitive k0)) then () else raise Match
+fun substitute_operator_expression kp (w0, acc0) = (
+    let
+	val simplify = (fold_constants kp false [])
 
-	    val subj = (subject_of_class k0)
-	    val efix = (fn (w, _) => ((substitute_outer_reference w), ()))
-	    val ewalk = (walk_in_expression efix)
-	    val qwalk = (walk_in_equation (fn (q, a) => (q, a)) ewalk)
-	    val swalk = (walk_in_statement (fn (s, a) => (s, a)) ewalk)
-	    val walker = {vamp_q = qwalk, vamp_s = swalk}
-	    val (k1, _) = (walk_in_class walker (k0, ()))
-	    val _ = (store_to_instance_tree subj k1)
-	in
-	    acc0
-	end)
+	fun modify name ee0 (w0, acc0) = (
+	    case ee0 of
+		[Vref (_, [])] => raise Match
+	      | [Vref (NONE, _)] => raise Match
+	      | [x as Vref (SOME VAR, rr0)] => (
+		let
+		    val (prefix, (Id v0, ss)) = (split_last rr0)
+		    val v1 = Id (v0 ^"_"^ (operator_suffix name))
+		    val w1 = Vref (SOME VAR, prefix @ [(v1, ss)])
+		    val (ins0, acs0, crd0) = acc0
+		    val acc1
+			= case name of
+			      "inStream" => (x :: ins0, acs0, crd0)
+			    | "actualStream" => (ins0, x :: acs0, crd0)
+			    | "cardinality" => (ins0, acs0, x :: crd0)
+			    | _ => raise Match
+		in
+		    (w1, acc1)
+		end)
+	      | [Vref (SOME PKG, _)] => (
+		raise (error_bad_intrinsic_call name))
+	      | [Instances ([], [subj])] => (
+		(modify name [(subject_as_reference subj)] (w0, acc0)))
+	      | [Cref (x as Vref (SOME VAR, rr), _)] => (
+		(modify name [x] (w0, acc0)))
+	      | [Cref (Instances ([], [subj]), _)] => (
+		(modify name [(subject_as_reference subj)] (w0, acc0)))
+	      | [_] => raise (error_bad_intrinsic_call name)
+	      | _ => raise (error_bad_intrinsic_call name))
 
-(* Substitutes the uses of inStream(), actualStream(), and
+	fun check name ee0 (w0, acc0) = (
+	    case name of
+		"inStream" => (modify "inStream" ee0 (w0, acc0))
+	      | "actualStream" => (modify "actualStream" ee0 (w0, acc0))
+	      | "cardinality" => (modify "cardinality" ee0 (w0, acc0))
+	      | _ => (w0, acc0))
+    in
+	case w0 of
+	    App (f0, ee0) => (
+	    let
+		val f1 = (simplify f0)
+	    in
+		case f1 of
+		    Vref (SOME PKG, [(Id name, [])]) => (
+		    (check name ee0 (w0, acc0)))
+		  | Instances ([], [Subj (PKG, [(Id name, [])])]) => (
+		    (check name ee0 (w0, acc0)))
+		  | _ => (w0, acc0)
+	    end)
+	  | _ => (w0, acc0)
+    end)
+
+val substitute_operators_in_instance
+    = (substitute_expression substitute_operator_expression)
+
+(* Substitutes the uses of operators inStream(), actualStream(), and
    cardinality(). *)
 
 fun substitute_operators () = (
-    ignore (traverse_tree substitute_operators_in_instance
-			  (instance_tree, [])))
-*)
+    (traverse_tree substitute_operators_in_instance
+		   (instance_tree, ([], [], []))))
 
 (* ================================================================ *)
 
@@ -772,6 +815,8 @@ fun insert_mixin_variable mixin = (
 	val _ = if (null dim) then () else raise Match
 	val k1 = (hd array)
 	val _ = (bind_in_instance false k1)
+	val k2 = surely (fetch_from_instance_tree mixin)
+	val _ = if ((cook_step k2) = E5) then () else raise Match
     in
 	()
     end)
@@ -807,9 +852,10 @@ fun xbind () = (
 
 fun xconnect () = (
     let
+	val (ins, acs, crd) = (substitute_operators ())
 	val _ = (connect_connectors ())
     in
-	()
+	(ins, acs, crd)
     end)
 
 end
