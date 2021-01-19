@@ -32,8 +32,7 @@ end M;
 end P5;
 
 /*
- * Cardinality of connections.  Taking cardinality of an outside one
- * is an error.
+ * Cardinality of connections.  Cardinality is a count of connect.
  */
 
 package P7
@@ -45,7 +44,7 @@ end C0;
 model A
     C0 c0;
     equation
-    /*assert (cardinality(c0) == 3, "outside connectors");*/
+    assert (cardinality(c0) == 1 or cardinality(c0) == 3, "outside connectors");
 end A;
 
 model M
@@ -60,6 +59,9 @@ model M
     connect (a0.c0, a3.c0);
     equation
     assert (cardinality(a0.c0) == 3, "inside connectors");
+    assert (cardinality(a1.c0) == 1, "inside connectors");
+    assert (cardinality(a2.c0) == 1, "inside connectors");
+    assert (cardinality(a3.c0) == 1, "inside connectors");
 end M;
 
 end P7;
