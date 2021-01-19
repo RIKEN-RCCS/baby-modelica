@@ -2479,13 +2479,13 @@ connect_equations.
 \subsubsection*{Sides of connectors}
 
 A side is an aspect of a connector whether it is connected in a
-declaring class.  An outside_connector is an internal connection
-connected in the declaring class, and the flow direction is considered
-reversed (a value is negated) for that connection.  An opposite is an
+declaring class.  An outside_connector is an internal connection in
+the declaring class, and the flow direction is considered reversed (a
+value is negated) for that connection.  An opposite is an
 inside_connector.  A connector is considered split to the
 inside/outside ones, but they share the same variables.  The side is
-taken into account in connect_equations but (*?*) not in the
-$\mathrm{cardinality}$ function.
+taken into account in connect_equations but not in the {cardinality}
+operator.
 
 \begin{QFACT} Determination of a side of a connector must respect the
 place where the connector is declared, and inner/outer declarations
@@ -2533,8 +2533,8 @@ shall be a parameter expression.\end{qquote}
 \subsubsection*{Expandable_connectors}
 
 An expandable_connector is a set of connectors, and it is only
-connected to another ones.  A component will be included when it is
-used.  All components in an expandable_connector are implicitly
+connected to expandable_connectors.  A component will be included when
+it is used.  All components in an expandable_connector are implicitly
 considered as connectors.  An expandable_connector is first considered
 empty until a component (even a declared one) is included by using it
 explicitly.
@@ -2567,7 +2567,7 @@ in some expandable_connectors.
 
 See \specref{15}.
 
-A stream_connector is a connector cotaining stream_variables.  A
+A stream_connector is a connector containing stream_variables.  A
 stream_connector contains a single scalar real flow_variable and some
 reals of (or arrays of) stream_variables.  The record components of a
 stream_variable are considered as stream_variables.
@@ -2587,13 +2587,16 @@ predefined functions to reduce overdetermined constraints.
 aggregate in generated equations with defined eqaulity, summation, or
 negation.
 
-\subsubsection*{cardinality function}
+\subsubsection*{cardinality operator}
 
-The $\mathrm{cardinality}$ function returns the count of connections
-on the inside_connector of an argument.  $\mathrm{cardinality}$ only
-appears in equation sections (in assertions).  $\mathrm{cardinality}$
-is a translation-time constant, but the connector reference is not
-(array indices can be non-constants).
+The $\mathrm{cardinality}\,(c)$ operator returns the use count of
+connect_equations on the inside part of the argument connector.  It is
+not the size of a connection set.  Cardinality of an embedded
+connector is counted, when it is indirectly used in connect_equations.
+
+{cardinality} only appears in equation sections (in assertions).
+{cardinality} is a translation-time constant, but the connector
+reference is not (array indices can be non-constants).
 
 %%%%%%%%%%%%%%%%
 
