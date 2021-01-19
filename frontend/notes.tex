@@ -1358,8 +1358,10 @@ end M;
 
 \begin{QRULE}\label{modifier-precedence} A latter application of
 modifiers has a precedence.  The ordering is defined by a way how
-implementations should process modifications.\end{QRULE}
-
+implementations should look at the modifications.  A component
+declaration is considered latter than a modifier
+application.\end{QRULE}
+%%%%
 For example, $x0=10$ is effective over $X(\mathit{value}=20)$.
 %%%%
 \begin{quote}
@@ -1375,6 +1377,12 @@ model M
 end M;
 \end{lstlisting}
 \end{quote}
+
+\begin{qquote} (\specref{4.4.2}\/) The new environment is the result
+of merging $\bullet$\,the modification of enclosing class
+element-modification with the same name as the component
+$\bullet$\,the modification of the component declaration in that
+order.\end{qquote}
 
 %% Modifcations are handled from the outside to inside of the
 %% enclosing classes.  Modifcations to a class are handled from the
@@ -2600,9 +2608,35 @@ reference is not (array indices can be non-constants).
 
 %%%%%%%%%%%%%%%%
 
-\subsection{Conditional components}
+\subsection{Conditional connectors}
 
-\subsubsection*{Conditional declarations}
+%%\subsubsection*{Expressions for conditionals}
+
+A conditional component is a connector and it is used only in
+connect_equations.  Connect_equations with disabled components are
+considered removed.
+
+Conditional components are only used in connections.
+%%%%
+\begin{qquote} (\specref{4.4.5}\/) A component declared with a
+condition-attribute can only be modified and/or used in
+connections\end{qquote}
+%%%%
+Conditions of conditionals are translation-time constants.
+%%%%
+\begin{qquote} (\specref{4.4.5}\/) The expression must be a Boolean
+scalar expression, and must be a parameter-expression\end{qquote}
+%%%%
+Conditionals are retained after component redeclarations.
+%%%%
+\begin{qquote} (\specref{4.4.5}\/) A redeclaration of a component may
+not include a condition attribute; and the condition attribute is kept
+from the original declaration\end{qquote}
+
+The example in \specref{4.4.5}\/ indicates that: conditional
+components cannot be used in modifiers of declarations.
+
+\subsubsection*{(?) Conditional declarations}
 
 \begin{QRULE}\label{scope-with-conditional-declaration} (?) A
 condition in a conditional declaration does not affect the scope.
@@ -2628,28 +2662,6 @@ end A;
 
 Conditional components cannot have ":" as an array dimension.
 It is described in \specref{6.3}.
-
-\subsubsection*{Expressions for conditionals}
-
-Conditionals are translation-time constants.
-%%%%
-\begin{qquote} (\specref{4.4.5}\/) The expression must be a Boolean
-scalar expression, and must be a parameter-expression\end{qquote}
-
-Conditionals are effective after component redeclarations.
-%%%%
-\begin{qquote} (\specref{4.4.5}\/) A redeclaration of a component may
-not include a condition attribute; and the condition attribute is kept
-from the original declaration\end{qquote}
-
-Conditional components are only used in connections.
-%%%%
-\begin{qquote} (\specref{4.4.5}\/) A component declared with a
-condition-attribute can only be modified and/or used in
-connections\end{qquote}
-
-(?) The example in \specref{4.4.5}\/ indicates that: conditional
-components are not used in modifiers of declarations.
 
 \subsubsection*{(?) Conditional constants}
 
