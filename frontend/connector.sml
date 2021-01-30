@@ -11,7 +11,7 @@ sig
     type subject_t
 
     val xbind : unit -> unit
-    val xconnect : unit -> expression_t list * expression_t list * expression_t list
+    val xconnect : unit -> subject_t list * subject_t list * subject_t list
 end = struct
 
 open ast plain
@@ -28,6 +28,8 @@ val store_to_instance_tree = classtree.store_to_instance_tree
 val unwrap_array_of_instances = classtree.unwrap_array_of_instances
 val fetch_from_instance_tree = classtree.fetch_from_instance_tree
 val fetch_instance_tree_node = classtree.fetch_instance_tree_node
+val enumerate_instances = classtree.enumerate_instances
+val dummy_scope = classtree.dummy_scope
 
 val expression_to_string = dumper.expression_to_string
 val expression_is_literal = expression.expression_is_literal
@@ -65,10 +67,14 @@ datatype root_marker_t = Root of bool
 
 (* ================================================================ *)
 
+fun is_inside side = (side = false)
+
+fun is_outside side = (side = true)
+
 fun operator_suffix name = (
     case name of
 	"inStream" => "_mix_in_"
-      | "actualStream" => "_actual_mix_in_"
+      | "actualStream" => "_actual_in_"
       | "cardinality" => "_cardinality_"
       | _ => raise Match)
 
@@ -315,6 +321,99 @@ fun collect_connects () = (
 
 (* ================================================================ *)
 
+(* Groups a list of (subj,x) to a list of (subj,[x0,x1,...]) for the
+   elements in the same array.  The returned subject has an empty
+   subscript.  It assumes the elements of a list are ordered by array
+   index. *)
+
+fun group_to_array (ee : (subject_t * 'a) list) = (
+    let
+	fun same_array ((subj0, n0), (subj1, n1)) = (
+	    (subject_equal_sans_subscript subj0 subj1))
+
+	fun merge ee = (
+	    case ee of
+		[] => raise Match
+	      | (subjx, _) :: _ => (
+		((drop_last_subscript_of_subject subjx), (map #2 ee))))
+    in
+	(map merge (list_groups same_array ee))
+    end)
+
+fun insert_cardinality_variable (subj, nn) = (
+    let
+	val scope = (dummy_scope ())
+
+	fun scoped x = (Scoped (x, scope))
+
+	fun initializer nn = (
+	    case nn of
+		[n] => [Mod_Value ((scoped o z_literal) n)]
+	      | _ => [Mod_Value
+			  (scoped (Array_Constructor (map z_literal nn)))])
+
+	val connector = surely (fetch_from_instance_tree subj)
+	val (dim0, _) = (unwrap_array_of_instances connector)
+
+	val _ = if ((array_size dim0) = (length nn)) then () else raise Match
+
+	val suffix = (operator_suffix "cardinality")
+	val (supsubj, (Id s, _)) = (subject_prefix subj)
+	val variable = (compose_subject supsubj (Id (s ^"_"^ suffix)) [])
+	val values = (initializer nn)
+	val dimension = (map (scoped o z_literal) dim0)
+
+	val k0 = Def_Displaced (Ctag ["Integer"], the_root_subject)
+	val k1 = (fetch_displaced_class E0 k0)
+	val q = (Effort, Constant, Modeless)
+	val k2 = Def_Refine (k1, NONE, copy_type, q, (dimension, values),
+			     Annotation [], Comment [])
+	val (dim1, array1) = (instantiate_class (variable, k2))
+	val _ = if (dim0 = dim1) then () else raise Match
+	val _ = (map (bind_in_instance false) array1)
+
+	val k4 = surely (fetch_from_instance_tree variable)
+	val (_, array2) = (unwrap_array_of_instances k4)
+	(*val _ = if ((cook_step k4) = E5) then () else raise Match*)
+    in
+	()
+    end)
+
+(* Counts connect-equations on each pseudo variable in vv.  It counts
+   only on the inside part.  For counting on a pseudo variable
+   v=m.c.d.e, the counter counts the occurrences of prefixes {m.c,
+   m.c.d, m.c.d.e}. *)
+
+fun count_connects vv cc = (
+    let
+	val insides = (foldl
+			   (fn (((x, sidex), (y, sidey), subj), acc) => (
+				((if (is_inside sidex) then [x] else [])
+				 @ (if (is_inside sidey) then [y] else [])
+				 @ acc))) [] cc)
+
+	fun prefix subj x = (subject_is_prefix x subj)
+
+	fun count (subj, acc) = (
+	    let
+		val n = (list_count_true (prefix subj) insides)
+	    in
+		(acc @ [(subj, n)])
+	    end)
+
+	val paths = (map pseudo_path vv)
+	val counts = (List.concat
+			  (map (fn path =>
+				   (enumerate_instances count path []))
+			       paths))
+	val countset = (group_to_array counts)
+	val _ = (app insert_cardinality_variable countset)
+    in
+	()
+    end)
+
+(* ================================================================ *)
+
 fun find_expansion_loop subj cc0 = (
     case cc0 of
 	[] => NONE
@@ -493,10 +592,6 @@ fun expand_expandable_connectors connects = (
     end)
 
 (* ================================================================ *)
-
-fun is_inside side = (side = false)
-
-fun is_outside side = (side = true)
 
 fun unique_array_size subjs = (
     let
@@ -779,8 +874,9 @@ fun substitute_operator_expression kp (w0, acc0) = (
 val substitute_operators_in_instance
     = (substitute_expression substitute_operator_expression)
 
-(* Substitutes the uses of operators inStream(), actualStream(), and
-   cardinality(). *)
+(* Substitutes the uses of operators with corresponding variables for
+   inStream(), actualStream(), and cardinality().  It collects and
+   returns arguments for each of the operators. *)
 
 fun substitute_operators () = (
     (traverse_tree substitute_operators_in_instance
@@ -821,10 +917,11 @@ fun insert_mixin_variable mixin = (
 	()
     end)
 
-fun connect_connectors () = (
+fun connect_connectors (instream, actualstream, cardinality) = (
     let
 	val _ = (expand_equations_for_connects ())
 	val cc0 = (collect_connects ())
+	val _ = (count_connects cardinality cc0)
 	val _ = (expand_expandable_connectors cc0)
 	val cc1 = (map (fn (x, y, subj) => [x, y]) cc0)
 	val cc2 = (make_unions (op =) cc1)
@@ -852,10 +949,15 @@ fun xbind () = (
 
 fun xconnect () = (
     let
-	val (ins, acs, crd) = (substitute_operators ())
-	val _ = (connect_connectors ())
+	val uniquify = ((remove_duplicates (op =)) o (map pseudo_variable))
+
+	val vvv = (substitute_operators ())
+	val instream = (uniquify (#1 vvv))
+	val actualstream = (uniquify (#2 vvv))
+	val cardinality = (uniquify (#3 vvv))
+	val _ = (connect_connectors (instream, actualstream, cardinality))
     in
-	(ins, acs, crd)
+	(instream, actualstream, cardinality)
     end)
 
 end

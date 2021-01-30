@@ -185,7 +185,7 @@ fun assert_match_subject_sans_subscript subj0 k = (
 (* Tests if the subjects are in the inner-outer relation -- true if
    subj1 is the prefix of subj0.  (IT IGNORES SUBSCRIPTS). *)
 
-fun subject_is_prefix (subj0, subj1) = (
+fun subject_is_prefix__ (subj0, subj1) = (
     let
 	fun prefix (cc0, cc1) = (
 	    case (cc0, cc1) of
@@ -202,10 +202,7 @@ fun subject_is_prefix (subj0, subj1) = (
 	    (ns0 = ns1) andalso (prefix (cc0, cc1)))
     end)
 
-(* Tests the prefix relation with the same name part.  It is true for
-   "model.tank.system" and "model.system". *)
-
-fun subject_is_inner_outer (subj0, subj1) = (
+fun subject_is_inner_outer__ (subj0, subj1) = (
     case (subj0, subj1) of
 	(Subj (ns0, cc0), Subj (ns1, cc1)) => (
 	let
@@ -213,10 +210,24 @@ fun subject_is_inner_outer (subj0, subj1) = (
 	    val (tt1, s1) = (split_last cc1)
 	in
 	    if (s0 = s1) then
-		(subject_is_prefix (Subj (ns0, tt0), Subj (ns1, tt1)))
+		(subject_is_prefix__ (Subj (ns0, tt0), Subj (ns1, tt1)))
 	    else
 		false
 	end))
+
+(* Tests the prefix relation with the same name part.  It is true for
+   "model.tank.system" and "model.system". *)
+
+fun subject_is_inner_outer (subj0, subj1) = (
+    let
+	val (prefix0, (id0, ss0)) = (subject_prefix subj0)
+	val (prefix1, (id1, ss1)) = (subject_prefix subj1)
+    in
+	if ((id0, ss0) = (id1, ss1)) then
+	    (subject_is_prefix prefix0 prefix1)
+	else
+	    false
+    end)
 
 fun outer_but_not_inner (q : element_prefixes_t) = (
     (#Outer q) andalso (not (#Inner q)))

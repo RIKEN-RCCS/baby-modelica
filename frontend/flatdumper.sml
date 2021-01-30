@@ -549,11 +549,87 @@ fun declaraton_of_real k = (
 	  | Def_Mock_Array _ => raise Match
     end)
 
+fun declaraton_of_integer k = (
+    let
+	fun quote x = (expression_to_string x)
+
+	fun opt_slot k v preset = (
+	    if (v = preset orelse v = NIL) then ""
+	    else (k ^"="^ (quote v)))
+
+	val empty_string = L_String ""
+	val real_zero = L_Number (Z, "0")
+	val truth_value = L_Bool true
+	val false_value = L_Bool false
+	val inf = Vref (SOME PKG,
+			[(Id "Modelica", []), (Id "Constants", []),
+			 (Id "Integer_inf", [])])
+	val min_default = App (Opr Opr_neg, [inf])
+	val max_default = App (Opr Opr_id, [inf])
+    in
+	case k of
+	    Def_Body ((u, f, b), subj, (t, p, q), (c, n, x), ee, aa, ww) => (
+	    let
+		val (analogical, variability, modality) = q
+
+		val value_ = (simple_type_attribute k (Id "value"))
+		val quantity_ = (simple_type_attribute k (Id "quantity"))
+		val min_ = (simple_type_attribute k (Id "min"))
+		val max_ = (simple_type_attribute k (Id "max"))
+		val start_ = (simple_type_attribute k (Id "start"))
+		val fixed_ = (simple_type_attribute k (Id "fixed"))
+
+		val fixed_default =
+		      if ((variability_order variability)
+			  <= (variability_order Parameter)) then
+			  truth_value
+		      else
+			  false_value
+
+		val vs = (variability_to_string variability)
+		val ts = "Integer"
+		val ms = ("("^
+			  (String.concatWith
+			       ", "
+			       (List.filter
+				    (fn x => (x <> ""))
+				    [(opt_slot "quantity" quantity_
+					       empty_string),
+				     (opt_slot "min" min_ min_default),
+				     (opt_slot "max" max_ max_default),
+				     (opt_slot "start" start_ real_zero),
+				     (opt_slot "fixed" fixed_ fixed_default)]))
+			  ^")")
+		val ns = (subject_to_string subj)
+		val xs = if (value_ <> NIL) then
+			     "= "^ (quote value_)
+			 else
+			     ""
+		val ss = ((String.concatWith
+			       " "
+			       (List.filter (fn x => (x <> ""))
+					    [vs, ts, ms, ns, xs]))
+			  ^";")
+	    in
+		ss
+	    end)
+	  | Def_Der _ => ""
+	  | Def_Primitive _ => raise Match
+	  | Def_Name _ => raise Match
+	  | Def_Scoped _ => raise Match
+	  | Def_Refine _ => raise Match
+	  | Def_Extending _ => raise Match
+	  | Def_Replaced _ => raise Match
+	  | Def_Displaced _ => raise Match
+	  | Def_In_File => raise Match
+	  | Def_Mock_Array _ => raise Match
+    end)
+
 fun dump_variable s k = (
     let
 	val sx = case (type_of_simple_type k) of
 		     P_Number R => (declaraton_of_real k)
-		   | P_Number Z => ""
+		   | P_Number Z => (declaraton_of_integer k)
 		   | P_Boolean => ""
 		   | P_String => ""
 		   | P_Enum tag =>  ""

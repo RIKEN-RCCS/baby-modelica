@@ -35,6 +35,9 @@
 \newenvironment{qquote}{\begin{quote}\quotelead}%
 {\end{quote}\ignorespacesafterend}
 
+\newenvironment{specquote}[1]{\begin{qquote} (\specref{#1}\/) }%
+{\end{qquote}}
+
 \newenvironment{widequote}{%
 \list{}{\leftmargin=0mm\rightmargin=\leftmargin}%
 \item\relax}{\endlist}
@@ -568,11 +571,17 @@ shallowest position.
 
 %%%%%%%%%%%%%%%%
 
-\subsection{Stream connectors}
+\subsection{Connector operators}
 
-inStream(v) is replaced by a new variable with some associated
-equations like a $\mathit{mix}$ variable in \specref{15} (the variable
-is suffixed by \verb'_inStream').
+Operator applications on or related to connectors,
+$\mathrm{inStream}\,(v)$, $\mathrm{actualStream}\,(v)$, and
+$\mathrm{cardinality}\,(c)$ are replaced by new variables with some
+associated equations.  See a $\mathit{mix}$ variable in \specref{15}.
+
+Variables are suffixed by \verb|_mix_in_| for
+$\mathrm{inStream}\,(v)$, \verb|_actual_in_| for
+$\mathrm{actualStream}\,(v)$, and \verb|_cardinality_| for
+$\mathrm{cardinality}\,(c)$.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -2601,10 +2610,30 @@ The $\mathrm{cardinality}\,(c)$ operator returns the count of the uses
 of connect_equations on the inside part of the argument connector.  It
 is not the size of a connection set.  Cardinality of an embedded
 connector is counted, when it is indirectly used in connect_equations.
+For example, $\mathrm{cardinality}\,(c.d)$ counts an equation
+$\mathrm{connect}\,(c,\_)$.
 
-{cardinality} only appears in equation sections (in assertions).
-{cardinality} is a translation-time constant, but the connector
-reference is not (array indices can be non-constants).
+{cardinality} only appears in equation sections (only in assertions).
+{cardinality} does not take expandable_connectors, components of
+expandable_connectors, nor arrays of connectors.  {cardinality} is a
+translation-time constant.  However, $\mathrm{cardinality}\,(c)$
+cannot be replaced by a constant in general, because a connector
+reference is not a translation-time constant (array indices can be
+non-constants).
+
+The_clarification a bit differs from the_specification:
+%%%%
+\begin{specquote}{3.7.2} Returns the number of (inside and outside)
+occurrences of connector instance c in a connect-equation as an
+Integer number.  See also Section 3.7.2.3.\end{specquote}
+%%%%
+\begin{specquote}{3.7.2.3} The cardinality is counted after removing
+conditional components.  and may not be applied to expandable
+connectors, elements in expandable connectors, or to arrays of
+connectors (but can be applied to the scalar elements of array of
+connectors).  The cardinality operator should only be used in the
+condition of assert and if-statements -- that do not contain connect
+(and similar operators -- see section 8.3.3).\end{specquote}
 
 %%%%%%%%%%%%%%%%
 

@@ -533,6 +533,21 @@ fun pseudo_reference_path path = (
 fun drop_subscripts rr = (
     (map (fn (id, _) => id) rr))
 
+(* Returns a variable after dropping all subscripts.  The result is
+   not a proper variable reference. *)
+
+fun pseudo_variable x = (
+    case x of
+	Vref (SOME VAR, rr) => Subj (VAR, (map (fn (id, _) => (id, [])) rr))
+      | _ => raise Match)
+
+(* Returns components of a subject as a list of IDs. *)
+
+fun pseudo_path subj = (
+    case subj of
+	Subj (VAR, cc) => (map (fn (id, _) => id) cc)
+  | _ => raise Match)
+
 fun body_name_at_step k = (
     (class_print_name k) ^"@"^ (cook_step_to_string (cook_step k)))
 
@@ -1053,5 +1068,14 @@ fun variable_is_simple_type k = (
       | Def_In_File => raise Match
       | Def_Mock_Array _ => false
       | Def_Outer_Alias _ => raise Match)
+
+(* Returns true if a subject j0 contains j1 as a subcomponet (that is,
+   a.b is a supersubject of a.b.c) or identical. *)
+
+fun subject_is_prefix j0 j1 = (
+    case (j0, j1) of
+	(Subj (VAR, rr0), Subj (VAR, rr1)) => (
+	(list_prefix (op =) rr0 rr1))
+      | _ => raise Match)
 
 end

@@ -91,6 +91,12 @@ sig
 
     val component_class : component_slot_t -> definition_body_t
 
+    val enumerate_instances :
+	(subject_t * 'a list -> 'a list) -> id_t list
+	-> 'a list -> 'a list
+
+    val dummy_scope : unit -> scope_t
+
     val assert_stored_in_instance_tree :
 	subject_t * definition_body_t -> unit
     val assert_package_constraints : instance_node_t -> unit
@@ -216,9 +222,10 @@ val model_root_node = instance_tree
 
 fun assert_inner_outer (outer, inner) = (
     let
-	val (Subj (_, path0), (id0, ss0)) = (subject_prefix outer)
-	val (Subj (_, path1), (id1, ss1)) = (subject_prefix inner)
-	val _ = if (list_prefix (op =) path1 path0) then () else raise Match
+	val (prefix0, (id0, ss0)) = (subject_prefix outer)
+	val (prefix1, (id1, ss1)) = (subject_prefix inner)
+	val _ = if (subject_is_prefix prefix1 prefix0)
+		then () else raise Match
 	val _ = if (null ss0) then () else raise Match
 	val _ = if (null ss1) then () else raise Match
 	val _ = if (id0 = id1) then () else raise Match
@@ -985,6 +992,48 @@ fun traverse_tree f (node0, acc0) = (
 			  acc1 components)
     in
 	acc2
+    end)
+
+(* ================================================================ *)
+
+fun enumerate_in_node f path0 (node, acc) = (
+    let
+	val (subj, kx, cx) = node
+	val components = (! cx)
+    in
+	case path0 of
+	    [] => f (subj, acc)
+	  | (id :: path1) => (
+	    case (find_component id components) of
+		NONE => raise Match
+	      | SOME (slot as (Slot (id_, dim, nodes, dummy))) => (
+		let
+		    val _ = if (not (component_is_outer_alias slot))
+			    then () else raise Match
+		in
+		    (foldl (enumerate_in_node f path1) acc nodes)
+		end))
+    end)
+
+(* Enumerates all instances with a given pseudo variable.  That is,
+   given a.b.c, it enumerates a[i].b[j].c[k] for all array indices
+   (i,j,k).  It folds by calling f (subj,acc). *)
+
+fun enumerate_instances f path acc = (
+    (enumerate_in_node f path (instance_tree, acc)))
+
+(* ================================================================ *)
+
+(* Returns a scope of the model.  It is used to make a properly scoped
+   expression by wrapping literal constants. *)
+
+fun dummy_scope () = (
+    let
+	val (_, kx, _) = instance_tree
+	val model = (! kx)
+	val tag = (tag_of_body model)
+    in
+	(the_model_subject, tag)
     end)
 
 (* ================================================================ *)

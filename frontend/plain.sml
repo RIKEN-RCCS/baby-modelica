@@ -230,6 +230,8 @@ fun array_index dimension0 index0 offset = (
       | (d :: dimension1, i :: index1) => (
 	(array_index dimension1 index1 ((d * offset) + (i - 1)))))
 
+(* Returns an array size for a dimension.  It returns 1 for []. *)
+
 fun array_size dimension = (
     (array_index dimension [] 1))
 
@@ -326,7 +328,8 @@ fun list_transpose ee = (
 	    hds :: (list_transpose tls)
 	end)
 
-(* Sorts a list to make each cmp (ai,aj) true for (i<j). *)
+(* Sorts a list to make each cmp (ai,aj) true for (i<j).  It is stable
+   with (op <) but unstable with (op <=). *)
 
 fun list_sort cmp (ee : 'a list) = (
     case ee of
@@ -349,5 +352,10 @@ fun foldl_one_and_others_loop f acc dd ee = (
 
 fun foldl_one_and_others f acc ee = (
     (foldl_one_and_others_loop f acc [] ee))
+
+(* Counts true results that f returns. *)
+
+fun list_count_true f ee = (
+    (foldl (fn (x, sum) => if (f x) then (sum + 1) else sum) 0 ee))
 
 end
