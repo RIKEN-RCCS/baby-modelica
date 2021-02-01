@@ -2497,8 +2497,8 @@ connect_equations.
 
 A side is an aspect of a connector whether it is connected in a
 declaring class.  An outside_connector is an internal connection in
-the declaring class, and the flow direction is considered reversed (a
-value is negated) for that connection.  An opposite is an
+the declaring class, and the flow direction is considered reversed
+(the value is negated) for that connection.  An opposite is an
 inside_connector.  A connector is considered split to the
 inside/outside ones, but they share the same variables.  The side is
 taken into account in connect_equations but not in the {cardinality}
@@ -2507,8 +2507,8 @@ operator.
 \begin{QFACT} Determination of a side of a connector must respect the
 place where the connector is declared, and inner/outer declarations
 are ignored for that.  An outside_connector is distinguished by the
-use of a connector that is declared and used in the class (i.e., the
-first part of a composite name is a declared connector).\end{QFACT}
+use of a connector that is declared and used in the class.  That is,
+the first part of a composite name is a declared connector.\end{QFACT}
 %%%%
 For example, $c$ in $\mathrm{connect}\,(c,...)$ is an
 outside_connector when it appears in the class declaring $c$.  And
@@ -2604,6 +2604,10 @@ predefined functions to reduce overdetermined constraints.
 aggregate in generated equations with defined eqaulity, summation, or
 negation.
 
+\subsubsection*{Unconnected connectors}
+
+Flow variables are equal to zero.
+
 \subsubsection*{cardinality operator}
 
 The $\mathrm{cardinality}\,(c)$ operator returns the count of the uses
@@ -2637,19 +2641,21 @@ condition of assert and if-statements -- that do not contain connect
 
 %%%%%%%%%%%%%%%%
 
-\subsection{Conditional connectors}
+\subsection{Conditional components}
 
-%%\subsubsection*{Expressions for conditionals}
-
-A conditional component is a connector and it is used only in
-connect_equations.  Connect_equations with disabled components are
-considered removed.
+A connector declaration may have a condition to enable/disable it.
+Such a connector can be used only in connect_equations.
+Connect_equations with a disabled connector are considered removed.
 
 Conditional components are only used in connections.
 %%%%
-\begin{qquote} (\specref{4.4.5}\/) A component declared with a
+\begin{specquote}{4.4.5} A component declared with a
 condition-attribute can only be modified and/or used in
-connections\end{qquote}
+connections\end{specquote}
+%%%%
+\begin{specquote}{5.6.2} [Conditional components can be used in
+connect-statements, and if the component is conditionally disabled the
+connect-statement is removed.]\end{specquote}
 %%%%
 Conditions of conditionals are translation-time constants.
 %%%%
@@ -2665,12 +2671,15 @@ from the original declaration\end{qquote}
 The example in \specref{4.4.5}\/ indicates that: conditional
 components cannot be used in modifiers of declarations.
 
-\subsubsection*{(?) Conditional declarations}
+Conditional components cannot have ":" as an array dimension.
+It is described in \specref{6.3}.
 
-\begin{QRULE}\label{scope-with-conditional-declaration} (?) A
-condition in a conditional declaration does not affect the scope.
-Particularly, a variable with a condition can be a target of
-modifications regardless of the condition.  \end{QRULE}
+\subsubsection*{Conditional declarations}
+
+\begin{QFACT}\label{scope-with-conditional-declaration} A condition of
+a conditional component does not affect the scope.  Particularly, a
+variable with a condition can be a target of modifications regardless
+of the condition.\end{QFACT}
 
 Is the value of $x$ dependes on a condition?
 %%%%
@@ -2688,11 +2697,6 @@ end A;
 \end{quote}
 
 (* (?) Check if an inner is affected by its condition. *)
-
-Conditional components cannot have ":" as an array dimension.
-It is described in \specref{6.3}.
-
-\subsubsection*{(?) Conditional constants}
 
 %%%%%%%%%%%%%%%%
 
