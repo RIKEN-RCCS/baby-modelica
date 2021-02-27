@@ -171,8 +171,8 @@ type element_prefixes_t
 type modifier_prefixes_t
      = {Final : bool, Replaceable : bool, Each : bool}
 
-datatype connector_type_t = ConnectorS of (*expandable*) bool
-type connector_status_t = connector_type_t option
+datatype connector_type_t__ = ConnectorS__ of (*expandable*) bool
+type connector_status_t__ = connector_type_t__ option
 
 (* Implied is used by internally introduced modifiers.  See the
    copy_type definition. *)

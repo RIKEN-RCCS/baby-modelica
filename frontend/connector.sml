@@ -67,6 +67,15 @@ datatype root_marker_t = Root of bool
 
 (* ================================================================ *)
 
+fun class_is_ordinary_instance k = (
+    let
+	val _ = if (not (class_is_primitive k)) then () else raise Match
+    in
+	(not ((class_is_outer_alias k)
+	      orelse (class_is_enumerator_definition k)
+	      orelse (class_is_package k)))
+    end)
+
 fun is_inside side = (side = false)
 
 fun is_outside side = (side = true)
@@ -292,26 +301,18 @@ fun collect_connects_in_equation kp (q0, acc0) = (
     end)
 
 fun collect_connects_in_instance (k0, acc0) = (
-    if (class_is_outer_alias k0) then
-	acc0
-    else if (class_is_enumerator_definition k0) then
-	acc0
-    else if (class_is_package k0) then
+    if (not (class_is_ordinary_instance k0)) then
 	acc0
     else
 	let
-	    val _ = if (not (class_is_primitive k0)) then () else raise Match
+	    val efix = (fn (e, a) => (e, a))
+	    val qfix = (collect_connects_in_equation k0)
+	    val qwalk = (walk_in_equation qfix efix)
+	    val swalk = (fn (s, a) => (s, a))
+	    val walker = {vamp_q = qwalk, vamp_s = swalk}
+	    val (k1, acc1) = (walk_in_class walker (k0, acc0))
 	in
-	    let
-		val efix = (fn (e, a) => (e, a))
-		val qfix = (collect_connects_in_equation k0)
-		val qwalk = (walk_in_equation qfix efix)
-		val swalk = (fn (s, a) => (s, a))
-		val walker = {vamp_q = qwalk, vamp_s = swalk}
-		val (k1, acc1) = (walk_in_class walker (k0, acc0))
-	    in
-		acc1
-	    end
+	    acc1
 	end)
 
 (* Collects connect equations. *)
@@ -812,6 +813,23 @@ fun make_connect_equations connectors = (
 		(equate_connections Effort flows connectors)
 	    end
     end)
+
+(* ================================================================ *)
+
+fun collect_disabled_connectors_in_instance (k0, acc0) = (
+    if (not (class_is_ordinary_instance k0)) then
+	acc0
+    else
+	case k0 of
+	    _ => acc0)
+
+fun collect_disabled_connectors () = (
+    (traverse_tree collect_disabled_connectors_in_instance (instance_tree, [])))
+
+(* Closes disabled connectors. *)
+
+fun seal_quick_connects () = (
+    (traverse_tree collect_connects_in_instance (instance_tree, [])))
 
 (* ================================================================ *)
 
