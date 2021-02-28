@@ -358,7 +358,7 @@ fun collect_functions root = (
     let
 	fun partial k = (
 	    case k of
-		Def_Body (mk, j, (t, {Partial, ...}, q), nm, ee, aa, ww) => (
+		Def_Body (mk, j, (t, {Partial, ...}, q), nm, cc, ee, aa, ww) => (
 		Partial)
 	      | _ => raise Match)
 
@@ -479,7 +479,7 @@ fun declaraton_of_real k = (
 	val max_default = App (Opr Opr_id, [inf])
     in
 	case k of
-	    Def_Body ((u, f, b), subj, (t, p, q), (c, n, x), ee, aa, ww) => (
+	    Def_Body ((u, f, b), subj, (t, p, q), (c, n, x), cc, ee, aa, ww) => (
 	    let
 		val (analogical, variability, modality) = q
 
@@ -568,7 +568,7 @@ fun declaraton_of_integer k = (
 	val max_default = App (Opr Opr_id, [inf])
     in
 	case k of
-	    Def_Body ((u, f, b), subj, (t, p, q), (c, n, x), ee, aa, ww) => (
+	    Def_Body ((u, f, b), subj, (t, p, q), (c, n, x), cc, ee, aa, ww) => (
 	    let
 		val (analogical, variability, modality) = q
 
@@ -648,7 +648,7 @@ fun dump_enumeration s k = (
 	      | _ => false)
     in
 	case k of
-	    Def_Body (mk, j, (t, p, q), nm, ee, aa, ww) => (
+	    Def_Body (mk, j, (t, p, q), nm, cc, ee, aa, ww) => (
 	    let
 		val tag = (tag_of_body k)
 		val name = (subject_to_string (subject_of_class k))
@@ -676,7 +676,7 @@ fun dump_record s k = (
 	      | _ => false)
     in
 	case k of
-	    Def_Body (mk, j, (t, p, q), nm, ee, aa, ww) => (
+	    Def_Body (mk, j, (t, p, q), nm, cc, ee, aa, ww) => (
 	    let
 		val tag = (tag_of_body k)
 		val name = (subject_to_string (subject_of_class k))
@@ -702,7 +702,7 @@ fun dump_function s k = (
 	      | _ => false)
     in
 	case k of
-	    Def_Body (mk, j, (t, p, q), nm, ee, aa, ww) => (
+	    Def_Body (mk, j, (t, p, q), nm, cc, ee, aa, ww) => (
 	    let
 		val tag = (tag_of_body k)
 		val name = (subject_to_string (subject_of_class k))
@@ -870,7 +870,7 @@ fun dump_flat_model () = (
 
 	fun class_is_constant k = (
 	    case k of
-		Def_Body (mk, j, (t, p, q), nm, ee, aa, ww) => (
+		Def_Body (mk, j, (t, p, q), nm, cc, ee, aa, ww) => (
 		let
 		    val (lg, vc, io) = q
 		in

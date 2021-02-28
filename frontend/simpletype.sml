@@ -128,7 +128,7 @@ fun register_enumerators_for_enumeration kp = (
 
 	fun make_enumerator k subj value = (
 	    case k of
-		Def_Body (mk, j, cs, (tag, n, x), ee, aa, ww) => (
+		Def_Body (mk, j, cs, (tag, n, x), cc, ee, aa, ww) => (
 		Def_Primitive (P_Enum tag, value))
 	      | _ => raise Match)
 
@@ -149,7 +149,7 @@ fun register_enumerators_for_enumeration kp = (
 	    ()
 	else
 	    case kp of
-		Def_Body (mk, j, cs, (tag, n, x), ee, aa, ww) => (
+		Def_Body (mk, j, cs, (tag, n, x), cc, ee, aa, ww) => (
 		let
 		    val _ = if (class_is_package kp) then () else raise Match
 
@@ -217,7 +217,7 @@ fun simplify_simple_type (k0 : definition_body_t) = (
 			[s] => (make_primitive_type_by_name s)
 		      | _ => raise Match
 		end)
-	      | Def_Refine (x1, v, ts, q, (ss, mm), aa, ww) => (
+	      | Def_Refine (x1, v, ts, q, (ss, mm), cc, aa, ww) => (
 		let
 		    val _ = if (v = NONE) then () else raise Match
 		    val _ = if (q = no_component_prefixes) then ()
@@ -283,7 +283,7 @@ fun simplify_simple_type (k0 : definition_body_t) = (
 	      | Base_Classes x => if (null x) then e else raise Match)
     in
 	case k0 of
-	    Def_Body (mk, j, cs, (c, n, x), ee0, aa, ww) => (
+	    Def_Body (mk, j, cs, (c, n, x), cc, ee0, aa, ww) => (
 	    (*
 	    if (class_is_enumeration_definition k0) then
 		k0
@@ -297,7 +297,7 @@ fun simplify_simple_type (k0 : definition_body_t) = (
 		let
 		    val (t, p, (l, variability, y)) = cs
 		    val ee1 = (map (resolve variability) ee0)
-		    val k1 = Def_Body (mk, j, cs, (c, n, x), ee1, aa, ww)
+		    val k1 = Def_Body (mk, j, cs, (c, n, x), cc, ee1, aa, ww)
 		in
 		    k1
 		end)
@@ -347,6 +347,7 @@ fun enumeration_attributes kp = (
 	    Def_Refine (ty, NONE, (Implied, no_class_prefixes),
 			no_component_prefixes,
 			([], [Mod_Value value]),
+			NIL,
 			Annotation [], Comment []))
 
 	fun declare name variability ty = (
@@ -371,7 +372,7 @@ fun enumeration_attributes kp = (
 
 fun insert_attributes_to_enumeration k0 = (
     case k0 of
-	Def_Body (mk, j, cs, (c, n, x), ee0, aa, ww) => (
+	Def_Body (mk, j, cs, nm, cc, ee0, aa, ww) => (
 	if (not (class_is_enum k0)) then
 	    k0
 	else
@@ -379,7 +380,7 @@ fun insert_attributes_to_enumeration k0 = (
 		val _ = if ((cook_step k0) = E1) then () else raise Match
 		val attributes = (enumeration_attributes k0)
 		val ee1 = ee0 @ attributes
-		val k1 = Def_Body (mk, j, cs, (c, n, x), ee1, aa, ww)
+		val k1 = Def_Body (mk, j, cs, nm, cc, ee1, aa, ww)
 		val k2 = (set_cook_step E2 k1)
 	    in
 		k2
@@ -429,7 +430,7 @@ fun simple_type_attribute kp (id : id_t) = (
 
 fun type_of_simple_type k = (
     case k of
-	Def_Body (mk, j, cs, (tag, n, x), ee, a, w) => (
+	Def_Body (mk, j, cs, (tag, n, x), cc, ee, a, w) => (
 	if (class_is_enum k) then
 	    P_Enum tag
 	else

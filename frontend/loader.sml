@@ -179,7 +179,7 @@ and record_class_body pkg (d0 as Defclass _) = (
 	val Defclass ((id, _), k0) = d0
     in
 	case k0 of
-	    Def_Body (mk, j, cs, (c_, n, x), ee0, aa, ww) => (
+	    Def_Body (mk, j, cs, (c_, n, x), cc, ee0, aa, ww) => (
 	    let
 		val _ = if (c_ = bad_tag) then () else raise Match
 		val _ = if (j = bad_subject) then () else raise Match
@@ -187,7 +187,7 @@ and record_class_body pkg (d0 as Defclass _) = (
 		val _ = if (x = bad_subject) then () else raise Match
 		val tag = (qualify_name (id, pkg))
 		val ee1 = (map (record_e tag) ee0)
-		val k1 = Def_Body (mk, j, cs, (tag, n, x), ee1, aa, ww)
+		val k1 = Def_Body (mk, j, cs, (tag, n, x), cc, ee1, aa, ww)
 		val d1 = Defclass ((id, pkg), k1)
 		val d2 = (store_to_loaded_classes false d1)
 	    in
@@ -205,9 +205,9 @@ and record_class_body pkg (d0 as Defclass _) = (
 	  | Def_Name _ => (
 	    Defclass ((id, pkg), k0))
 	  | Def_Scoped _ => raise Match
-	  | Def_Refine (kx, NONE, ts, q, (ss, mm), aa, ww) => (
+	  | Def_Refine (kx, NONE, ts, q, (ss, mm), cc, aa, ww) => (
 	    Defclass ((id, pkg), k0))
-	  | Def_Refine (kx, SOME _, ts, q, (ss, mm), aa, ww) => raise Match
+	  | Def_Refine (kx, SOME _, ts, q, (ss, mm), cc, aa, ww) => raise Match
 	  | Def_Extending (true, bx, kx) => raise Match
 	  | Def_Extending (false, bx, kx) => (
 	    let

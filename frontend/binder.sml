@@ -504,7 +504,7 @@ fun bind_in_class ctx binder k0 = (
 	end
     else
 	case k0 of
-	    Def_Body (mk, j, cs, (c, n, x), ee0, aa, ww) => (
+	    Def_Body (mk, j, cs, nm, cc, ee0, aa, ww) => (
 	    let
 		val _ = if (step_is_at_least E3 k0) then () else raise Match
 		(*val ctx = {k = kp}*)
@@ -512,7 +512,7 @@ fun bind_in_class ctx binder k0 = (
 
 		val walk_e = (bind_in_class_element ctx binder)
 		val ee1 = (map walk_e ee0)
-		val k1 = Def_Body (mk, j, cs, (c, n, x), ee1, aa, ww)
+		val k1 = Def_Body (mk, j, cs, nm, cc, ee1, aa, ww)
 		val k2 = (set_cook_step E5 k1)
 	    in
 		k2

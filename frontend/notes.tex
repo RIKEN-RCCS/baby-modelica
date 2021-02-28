@@ -2606,7 +2606,9 @@ negation.
 
 \subsubsection*{Unconnected connectors}
 
-Flow variables are equal to zero.
+Flow variables are set to zero for unconnected connectors.
+Conditional connectors are unconnected if their conditions are false.
+See Section~\ref{conditional-component}.
 
 \subsubsection*{cardinality operator}
 
@@ -2641,11 +2643,13 @@ condition of assert and if-statements -- that do not contain connect
 
 %%%%%%%%%%%%%%%%
 
-\subsection{Conditional components}
+\subsection{Conditional_components}\label{conditional-component}
 
-A connector declaration may have a condition to enable/disable it.
-Such a connector can be used only in connect_equations.
-Connect_equations with a disabled connector are considered removed.
+A declaration may have a condition to enable/disable it.  A disabled
+non-connector component is unusable.  Connectors in a disabled
+component are disabled.  A conditional connector can be used only in
+connect_equations.  Connect_equations with a disabled connector are
+considered removed.
 
 \subsubsection*{Restrictions of conditional connectors}
 
@@ -2664,15 +2668,16 @@ Conditions of conditionals are translation-time constants.
 \begin{qquote} (\specref{4.4.5}\/) The expression must be a Boolean
 scalar expression, and must be a parameter-expression\end{qquote}
 %%%%
-Conditionals are retained after component redeclarations.
+Conditions of conditionals are retained after component
+redeclarations.
 %%%%
 \begin{qquote} (\specref{4.4.5}\/) A redeclaration of a component may
 not include a condition attribute; and the condition attribute is kept
 from the original declaration\end{qquote}
-
-The example in \specref{4.4.5}\/ indicates that: conditional
-components cannot be used in modifiers of declarations.
-
+%%%%
+Conditional components cannot be used in modifiers of declarations.
+It is indicated by the example in \specref{4.4.5}.
+%%%%
 Conditional components cannot have ":" as an array dimension.
 It is described in \specref{6.3}.
 
@@ -5291,6 +5296,6 @@ Baby-Modelica is distributed under the BSD 2-Clause License.
 
 %% Local Variables:
 %% indent-tabs-mode: nil
-%% paragraph-start: "^\f\\|[ \t]*$\\|%%%%$"
+%% paragraph-start: "\f\\|[ \t]*$\\|%%%%$"
 %% paragraph-separate: "[ \t\f]*$\\|%%%%$"
 %% End:

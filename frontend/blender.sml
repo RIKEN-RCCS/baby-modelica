@@ -175,13 +175,14 @@ fun assert_modifiers_are_scoped mm = (
 	      | Def_Primitive _ => raise Match
 	      | Def_Name _ => raise Match
 	      | Def_Scoped _ => true
-	      | Def_Refine (kx, v, ts, q, (ssx, mmx), aa, ww) => (
+	      | Def_Refine (kx, v, ts, q, (ssx, mmx), cc, aa, ww) => (
 		let
 		    val c0 = (List.all test_expression_is_scoped ssx)
 		    val c1 = (List.all test_modifier_is_scoped mmx)
-		    val c2 = (test_body_is_scoped kx)
+		    val c2 = (test_expression_is_scoped cc)
+		    val c3 = (test_body_is_scoped kx)
 		in
-		    (c0 andalso c1 andalso c2)
+		    (c0 andalso c1 andalso c2 andalso c3)
 		end)
 	      | Def_Extending _ => raise Match
 	      | Def_Replaced _ => raise Match
@@ -287,11 +288,11 @@ fun record_defining_class (subj, k0) = (
 	      | Def_Primitive _ => raise Match
 	      | Def_Name _ => k0
 	      | Def_Scoped _ => k0
-	      | Def_Refine (x0, v, ts, q, (ss, mm), aa, ww) => (
+	      | Def_Refine (x0, v, ts, q, (ss, mm), cc, aa, ww) => (
 		let
 		    val x1 = (record_defining_class_in_class (subsubj, x0))
 		in
-		    Def_Refine (x1, v, ts, q, (ss, mm), aa, ww)
+		    Def_Refine (x1, v, ts, q, (ss, mm), cc, aa, ww)
 		end)
 	      | Def_Extending (true, _, _) => raise Match
 	      | Def_Extending (false, (kb, mm), x0) => (
@@ -401,7 +402,7 @@ and closure_constraint (scope : scope_t) (k0, mm0, a0, w) = (
 
 and closure_class (scope : scope_t) k0 = (
     case k0 of
-	Def_Body (mk, j, cs, nm, ee, aa, ww) => (
+	Def_Body (mk, j, cs, nm, cc, ee, aa, ww) => (
 	let
 	    val _ = if (j = bad_subject) then () else raise Match
 	    val (subj, tag) = scope
@@ -414,12 +415,12 @@ and closure_class (scope : scope_t) k0 = (
       | Def_Primitive _ => raise Match
       | Def_Name n => Def_Scoped (n, scope)
       | Def_Scoped _ => raise Match
-      | Def_Refine (x0, v, ts, q, (ss0, mm0), aa, ww) => (
+      | Def_Refine (x0, v, ts, q, (ss0, mm0), cc, aa, ww) => (
 	let
 	    val x1 = (closure_class scope x0)
 	    val ss1 = (map (closure_expression scope) ss0)
 	    val mm1 = (map (closure_modifier scope) mm0)
-	    val k1 = Def_Refine (x1, v, ts, q, (ss1, mm1), aa, ww)
+	    val k1 = Def_Refine (x1, v, ts, q, (ss1, mm1), cc, aa, ww)
 	in
 	    k1
 	end)
@@ -527,7 +528,7 @@ fun prepare_for_modification main pkg (subj, k0) = (
 	val _ = if ((cook_step k0) = E0) then () else raise Match
     in
 	case k0 of
-	    Def_Body ((u, f_, b_), j_, cs, (c, n, x), ee, aa, ww) => (
+	    Def_Body ((u, f_, b_), j_, cs, (c, n, x), cc, ee, aa, ww) => (
 	    let
 		val _ = if (f_ = PKG) then () else raise Match
 		val _ = if (b_ = ENUM orelse b_ = MAIN) then ()
@@ -537,7 +538,7 @@ fun prepare_for_modification main pkg (subj, k0) = (
 			else raise Match
 		val mark = (marker (b_, main))
 		val k1 = Def_Body ((u, pkg, mark), subj, cs,
-				   (c, n, x), ee, aa, ww)
+				   (c, n, x), cc, ee, aa, ww)
 		val k2 = (attach_scope (subj, k1))
 		val k3 = (record_defining_class (subj, k2))
 		val k4 = (set_cook_step E1 k3)
@@ -695,7 +696,7 @@ and cook_class_refining main pkg (subj, k0) siblings = (
 	val aa = Annotation []
 	val k1 = (collect_refining
 		      main pkg (subj, k0)
-		      (noname, noprefixes, [], aa) siblings)
+		      (noname, noprefixes, [], NIL, aa) siblings)
     in
 	k1
     end)
@@ -705,9 +706,9 @@ and cook_class_refining main pkg (subj, k0) siblings = (
    of merging modifiers, because the passed modifiers are more recent
    and appended to the tail. *)
 
-and collect_refining main pkg (subj, k0) (name1, (t1, p1, q1), mm1, aa1) siblings = (
+and collect_refining main pkg (subj, k0) (name1, (t1, p1, q1), mm1, cc1, aa1) siblings = (
     case k0 of
-	Def_Body (mk, j, (t0, p0, q0), nm0, ee, aa0, ww0) => (
+	Def_Body (mk, j, (t0, p0, q0), nm0, cc0, ee, aa0, ww0) => (
 	let
 	    val _ = tr_cook_vvv (";; collect_refining"^
 				 (if main then ":main" else ":base") ^" ("^
@@ -719,6 +720,7 @@ and collect_refining main pkg (subj, k0) (name1, (t1, p1, q1), mm1, aa1) sibling
 	    val ctx = k0
 	    val (tx, px) = (merge_type_prefixes (t0, p0) (t1, p1))
 	    val qx = (merge_component_prefixes q0 q1)
+	    val ccx = (choose_non_nil cc1 cc0)
 	    val aax = (merge_annotations ctx aa0 aa1)
 	    val (tag, name_, enclosing) = nm0
 	    val _ = if (name_ = bad_subject) then () else raise Match
@@ -728,7 +730,7 @@ and collect_refining main pkg (subj, k0) (name1, (t1, p1, q1), mm1, aa1) sibling
 	    val namex = (take_decisive_name namec)
 	    val identity = (identify_class_name namex)
 	    val nmx = (tag, identity, enclosing)
-	    val k1 = Def_Body (mk, j, (tx, px, qx), nmx, ee, aax, ww0)
+	    val k1 = Def_Body (mk, j, (tx, px, qx), nmx, ccx, ee, aax, ww0)
 	    val k3 = (make_modified_class k1 mm1 (Annotation []) (Comment []))
 	in
 	    k3
@@ -761,10 +763,10 @@ and collect_refining main pkg (subj, k0) (name1, (t1, p1, q1), mm1, aa1) sibling
 		in
 		    (collect_refining
 			 main pkg (subj, x0)
-			 (name1, (t1, p1, q1), mm1, aa1) siblings)
+			 (name1, (t1, p1, q1), mm1, cc1, aa1) siblings)
 		end)
 	end)
-      | Def_Refine (k1, name0, ts0, q0, (ss0, mm0), aa0, ww0) => (
+      | Def_Refine (k1, name0, ts0, q0, (ss0, mm0), cc0, aa0, ww0) => (
 	let
 	    val _ = tr_cook_vvv (";; collect_refining (refine "^
 				(class_print_name k0) ^")")
@@ -772,6 +774,7 @@ and collect_refining main pkg (subj, k0) (name1, (t1, p1, q1), mm1, aa1) sibling
 	    val _ = (assert_expressions_are_scoped ss0)
 	    val ctx = k0
 	    val mmx = (merge_modifiers ctx mm0 mm1)
+	    val ccx = (choose_non_nil cc1 cc0)
 	    val aax = (merge_annotations ctx aa0 aa1)
 	    val (tx, px) = (merge_type_prefixes ts0 (t1, p1))
 	    val qx = (merge_component_prefixes q0 q1)
@@ -781,11 +784,11 @@ and collect_refining main pkg (subj, k0) (name1, (t1, p1, q1), mm1, aa1) sibling
 	    val nameopt = (take_optional_name namex)
 	in
 	    if (not (null ss0)) then
-		Def_Refine (k1, nameopt, (tx, px), qx, (ss0, mmx), aax, ww0)
+		Def_Refine (k1, nameopt, (tx, px), qx, (ss0, mmx), ccx, aax, ww0)
 	    else
 		(collect_refining
 		     main pkg (subj, k1)
-		     (namex, (tx, px, qx), mmx, aax) siblings)
+		     (namex, (tx, px, qx), mmx, ccx, aax) siblings)
 	end)
       | Def_Extending (true, (x0, mm0), body0) => (
 	let
@@ -801,20 +804,20 @@ and collect_refining main pkg (subj, k0) (name1, (t1, p1, q1), mm1, aa1) sibling
 	in
 	    (collect_refining
 		 main pkg (subj, k3)
-		 (name1, (t1, p1, q1), mm1, aa1) siblings)
+		 (name1, (t1, p1, q1), mm1, cc1, aa1) siblings)
 	end)
       | Def_Extending (false, _, _) => raise Match
       | Def_Replaced (x0, _) => (
 	(collect_refining
 	     main pkg (subj, x0)
-	     (name1, (t1, p1, q1), mm1, aa1) siblings))
+	     (name1, (t1, p1, q1), mm1, cc1, aa1) siblings))
       | Def_Displaced _ => (
 	let
 	    val x1 = (fetch_displaced_class E0 k0)
 	in
 	    (collect_refining
 		 main pkg (subj, x1)
-		 (name1, (t1, p1, q1), mm1, aa1) siblings)
+		 (name1, (t1, p1, q1), mm1, cc1, aa1) siblings)
 	end)
       | Def_In_File => raise Match
       | Def_Mock_Array _ => raise Match)
@@ -832,7 +835,7 @@ and cook_class_body main pkg (subj, k0) siblings = (
 	    val aa = Annotation []
 	in
 	    (cook_class_with_modifiers
-		 main pkg (subj, k0) [] aa siblings)
+		 main pkg (subj, k0) [] NIL aa siblings)
 	end)
       | Def_Der _ => (
 	let
@@ -841,12 +844,12 @@ and cook_class_body main pkg (subj, k0) siblings = (
 	    val aa = Annotation []
 	in
 	    (cook_class_with_modifiers
-		 main pkg (subj, k0) [] aa siblings)
+		 main pkg (subj, k0) [] NIL aa siblings)
 	end)
       | Def_Primitive _ => raise Match
       | Def_Name _ => raise Match
       | Def_Scoped _ => raise Match
-      | Def_Refine (k1, v, ts, q, (ss, mm), aa, ww) => (
+      | Def_Refine (k1, v, ts, q, (ss, mm), cc, aa, ww) => (
 	if (not (null ss)) then
 	    k0
 	else
@@ -856,7 +859,7 @@ and cook_class_body main pkg (subj, k0) siblings = (
 		val _ = if (null ss) then () else raise Match
 	    in
 		(cook_class_with_modifiers
-		     main pkg (subj, k1) mm aa siblings)
+		     main pkg (subj, k1) mm cc aa siblings)
 	    end)
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
@@ -879,7 +882,7 @@ and cook_class_body main pkg (subj, k0) siblings = (
    chain of an extends-relation to check a cycle in the base class
    hierarchy.  The passed modifiers are scoped in the environment. *)
 
-and cook_class_with_modifiers main pkg (subj, k0) mm a siblings0 = (
+and cook_class_with_modifiers main pkg (subj, k0) mm cc aa siblings0 = (
     let
 	val _ = if (class_is_body k0) then () else raise Match
 	val _ = (assert_modifiers_are_scoped mm)
@@ -913,7 +916,7 @@ and cook_class_with_modifiers main pkg (subj, k0) mm a siblings0 = (
 	val _ = (store_to_instance_tree_if packagemain subj k3)
 	val k4 = (gather_bases main pkg k3 siblings1)
 	val k5 = (associate_modifiers k4 mm)
-	val k8 = (rectify_modified_class (k5, q) (t, p) a)
+	val k8 = (rectify_modified_class (k5, q) (t, p) aa)
 	val k9 = (simplify_simple_type k8)
 	val _ = (store_to_instance_tree_if packagemain subj k9)
 	val _ = (register_enumerators_for_enumeration k9)

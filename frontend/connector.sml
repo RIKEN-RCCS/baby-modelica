@@ -147,8 +147,8 @@ fun literalize_subscripts kp w0 = (
 
 fun record_of_connect k = (
     case k of
-	Def_Body (mk, j, cs, nm, ee, aa, ww) => (
-	Def_Body (mk, j, cs, nm, ee, aa, ww))
+	Def_Body (mk, j, cs, nm, cc, ee, aa, ww) => (
+	Def_Body (mk, j, cs, nm, cc, ee, aa, ww))
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
       | Def_Name _ => raise Match
@@ -163,8 +163,8 @@ fun record_of_connect k = (
 
 fun unmark_expandable_connector k = (
     case k of
-	Def_Body (mk, j, (Connector true, p, q), nm, ee, aa, ww) => (
-	Def_Body (mk, j, (Connector false, p, q), nm, ee, aa, ww))
+	Def_Body (mk, j, (Connector true, p, q), nm, cc, ee, aa, ww) => (
+	Def_Body (mk, j, (Connector false, p, q), nm, cc, ee, aa, ww))
       | Def_Body _ => raise Match
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
@@ -180,7 +180,7 @@ fun unmark_expandable_connector k = (
 
 fun connect_rule_marker k = (
     case k of
-	Def_Body (_, _, (t, p, (efs, _, _)), _, _, _, _) => efs
+	Def_Body (mk, j, (t, p, (efs, _, _)), nm, cc, ee, aa, ww) => efs
       | _ => raise error_connector_is_not_record)
 
 fun marked_as_effort k = ((connect_rule_marker k) = Effort)
@@ -368,7 +368,7 @@ fun insert_cardinality_variable (subj, nn) = (
 	val k1 = (fetch_displaced_class E0 k0)
 	val q = (Effort, Constant, Modeless)
 	val k2 = Def_Refine (k1, NONE, copy_type, q, (dimension, values),
-			     Annotation [], Comment [])
+			     NIL, Annotation [], Comment [])
 	val (dim1, array1) = (instantiate_class (variable, k2))
 	val _ = if (dim0 = dim1) then () else raise Match
 	val _ = (map (bind_in_instance false) array1)
@@ -523,7 +523,7 @@ fun make_record_instances subj dim0 k0 = (
 	val dim1 = (map z_literal dim0)
 	val q = (Effort, Continuous, Modeless)
 	val k1 = Def_Refine (k0, NONE, copy_type, q,
-			     (dim1, []), Annotation [], Comment [])
+			     (dim1, []), NIL, Annotation [], Comment [])
 	val (dim, array) = (instantiate_class (subj, k1))
     in
 	(dim, array)
@@ -909,10 +909,10 @@ fun insert_connect_equations eqns = (
 	val model0 = (! kx)
     in
 	case model0 of
-	    Def_Body (mk, j, cs, nm, ee0, aa, ww) => (
+	    Def_Body (mk, j, cs, nm, cc, ee0, aa, ww) => (
 	    let
 		val ee1 = (ee0 @ [section])
-		val model1 = Def_Body (mk, j, cs, nm, ee1, aa, ww)
+		val model1 = Def_Body (mk, j, cs, nm, cc, ee1, aa, ww)
 		val _ = (kx := model1)
 	    in
 		()

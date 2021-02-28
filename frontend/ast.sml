@@ -314,7 +314,7 @@ and type_marker_t = ENUM | MAIN | BASE | SIMP
    class-tag slot is an original name of a body.  The second slot is a
    class name after potential renaming (for an instance).  The third
    slot is an enclosing class (for a package).  Field abbreviation is:
-   Def_Body(mk,j,cs,nm,ee,aa,ww).  Def_Der is a derivative definition.
+   Def_Body(mk,j,cs,nm,cc,ee,aa,ww).  Def_Der is a derivative definition.
    Def_Body and Def_Der represent the classes after syntaxing.
    Def_Primitive is primitive types.  Def_Name specifies a class name
    in the language.  Def_Scoped replaces Def_Name by attaching scope
@@ -323,7 +323,7 @@ and type_marker_t = ENUM | MAIN | BASE | SIMP
    Def_Refine holds component_prefixes but it usually only uses a
    type_prefix part.  The entire component_prefixes are needed at
    instantiation.  Its field abbreviation is:
-   Def_Refine(k,t,q,(ss,mm),a,w).  Def_Extending represents an
+   Def_Refine(k,t,q,(ss,mm),cc,aa,ww).  Def_Extending represents an
    extends-redeclaration.  It is a pair of a base with modifiers and a
    body.  The boolean slot is an extended-flag indicating a base class
    is set, and it is true when it replaces a replaceable.  It is used
@@ -347,6 +347,7 @@ and definition_body_t
       ((cook_step_t * instantiation_t * type_marker_t)
        * subject_t * class_specifier_t
        * (class_tag_t * subject_t * (*enclosing*) subject_t)
+       * ((*conditional*) expression_t)
        * element_t list * annotation_t * comment_t)
     | Def_Der of
       (class_tag_t * class_specifier_t
@@ -359,6 +360,7 @@ and definition_body_t
       (definition_body_t
        * subject_t option * type_prefixes_t * component_prefixes_t
        * (subscripts_t * modifier_t list)
+       * (*conditional*) expression_t
        * annotation_t * comment_t)
     | Def_Extending of
       ((*extended*) bool * (definition_body_t * modifier_t list)
@@ -582,11 +584,12 @@ fun make_predefinition_body enum body aa ww = (
     Def_Body ((E0, PKG, enum),
 	      bad_subject, bad_class,
 	      (bad_tag, bad_subject, bad_subject),
+	      NIL,
 	      body, aa, ww))
 
 fun make_short_predefinition k io (ss, mm) aa ww = (
     Def_Refine (k, NONE, bad_type,
-		(Effort, Continuous, io), (ss, mm), aa, ww))
+		(Effort, Continuous, io), (ss, mm), NIL, aa, ww))
 
 fun name_append (Name ss) (Id s) = (Name (ss @ [s]))
 
@@ -657,13 +660,13 @@ fun set_class_prefixes (t1, p1) (Defclass ((v, g), k0)) = (
     let
 	fun set_prefixes (t1, p1) k = (
 	    case k of
-		Def_Body ((u, f, b), j, cs0, (c, n, x), ee, aa, ww) => (
+		Def_Body ((u, f, b), j, cs0, (c, n, x), cc, ee, aa, ww) => (
 		let
 		    val _ = if (cs0 = bad_class) then () else raise Match
 		    val (t0, p0, q) = cs0
 		    val cs1 = (t1, p1, q)
 		in
-		    Def_Body ((u, f, b), j, cs1, (c, n, x), ee, aa, ww)
+		    Def_Body ((u, f, b), j, cs1, (c, n, x), cc, ee, aa, ww)
 		end)
 	      | Def_Der (c, cs0, n, vv, aa, ww) => (
 		let
@@ -676,12 +679,12 @@ fun set_class_prefixes (t1, p1) (Defclass ((v, g), k0)) = (
 	      | Def_Primitive _ => raise Match
 	      | Def_Name _ => raise Match
 	      | Def_Scoped _ => raise Match
-	      | Def_Refine (kx, v, ts0, q, (ss, mm), a, w) => (
+	      | Def_Refine (kx, v, ts0, q, (ss, mm), cc, aa, ww) => (
 		let
 		    val _ = if (ts0 = bad_type) then () else raise Match
 		    val ts1 = (t1, p1)
 		in
-		    Def_Refine (kx, v, ts1, q, (ss, mm), a, w)
+		    Def_Refine (kx, v, ts1, q, (ss, mm), cc, aa, ww)
 		end)
 	      | Def_Extending (g, x, kx) => (
 		Def_Extending (g, x, (set_prefixes (t1, p1) kx)))
@@ -701,15 +704,15 @@ fun set_class_final (Defclass ((v, g), k0)) = (
 
 	fun set_body fix k = (
 	    case k of
-		Def_Body (mk, j, (t, p, q), (c, n, x), ee, aa, ww) => (
-		Def_Body (mk, j, (t, (fix p), q), (c, n, x), ee, aa, ww))
+		Def_Body (mk, j, (t, p, q), (c, n, x), cc, ee, aa, ww) => (
+		Def_Body (mk, j, (t, (fix p), q), (c, n, x), cc, ee, aa, ww))
 	      | Def_Der (c, (t, p, q), n, vv, aa, ww) => (
 		Def_Der (c, (t, (fix p), q), n, vv, aa, ww))
 	      | Def_Primitive _ => raise Match
 	      | Def_Name _ => raise Match
 	      | Def_Scoped _ => raise Match
-	      | Def_Refine (kx, v, (t, p), q, (ss, mm), aa, ww) => (
-		Def_Refine (kx, v, (t, (fix p)), q, (ss, mm), aa, ww))
+	      | Def_Refine (kx, v, (t, p), q, (ss, mm), cc, aa, ww) => (
+		Def_Refine (kx, v, (t, (fix p)), q, (ss, mm), cc, aa, ww))
 	      | Def_Extending (g, x, kx) => (
 		Def_Extending (g, x, (set_body fix kx)))
 	      | Def_Replaced _ => raise Match
@@ -728,7 +731,7 @@ fun set_class_final (Defclass ((v, g), k0)) = (
 fun make_component_clause
 	((q, n) : component_type_specifier_t)
 	(ss0 : subscripts_t)
-	((v, ss1, mm, c, a, w) : declaration_with_subscripts_t) = (
+	((v, ss1, mm, cc, aa, ww) : declaration_with_subscripts_t) = (
     let
 	val ssx = (merge_subscripts ss0 ss1)
 	val k0 = if ((null ssx) andalso (null mm)) then
@@ -736,9 +739,9 @@ fun make_component_clause
 		 else
 		     Def_Refine (Def_Name n, NONE, copy_type,
 				 no_component_prefixes,
-				 (ssx, mm), Annotation [], Comment [])
+				 (ssx, mm), NIL, Annotation [], Comment [])
     in
-	Defvar (v, q, k0, c, a, w)
+	Defvar (v, q, k0, cc, aa, ww)
     end)
 
 fun attach_comment_to_equation q (aa, ww) = (

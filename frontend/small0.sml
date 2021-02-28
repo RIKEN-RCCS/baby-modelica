@@ -74,12 +74,12 @@ fun definition_body (Defclass ((v, g), b)) = b
 
 fun innate_tag k = (
     case k of
-	Def_Body (mk, j, cs, (tag, n, x), ee, aa, ww) => tag
+	Def_Body (mk, j, cs, (tag, n, x), cc, ee, aa, ww) => tag
       | Def_Der (tag, cs, n, vv, aa, ww) => tag
       | Def_Primitive _ => raise Match
       | Def_Name _ => raise Match
       | Def_Scoped _ => raise Match
-      | Def_Refine (kx, v, ts, q, (ss, mm), aa, ww) => (innate_tag kx)
+      | Def_Refine (kx, v, ts, q, (ss, mm), cc, aa, ww) => (innate_tag kx)
       | Def_Extending (_, x, kx) => (innate_tag kx)
       | Def_Replaced (kx, _) => (innate_tag kx)
       | Def_Displaced (tag, _) => tag
@@ -88,7 +88,7 @@ fun innate_tag k = (
 
 fun tag_of_body k = (
     case k of
-	Def_Body (mk, j, cs, (tag, n, x), ee, aa, ww) => tag
+	Def_Body (mk, j, cs, (tag, n, x), cc, ee, aa, ww) => tag
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
       | Def_Name _ => raise Match
@@ -102,7 +102,7 @@ fun tag_of_body k = (
 
 fun body_elements (k : definition_body_t) = (
     case k of
-	Def_Body (mk, j, cs, nm, ee, aa, ww) => ee
+	Def_Body (mk, j, cs, nm, cc, ee, aa, ww) => ee
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
       | Def_Name _ => raise Match
@@ -120,8 +120,8 @@ fun class_elements (Defclass ((v, g), k)) = (body_elements k)
 
 fun replace_body_elements (k : definition_body_t) ee = (
     case k of
-	Def_Body (mk, j, cs, nm, ee_, aa, ww) => (
-	Def_Body (mk, j, cs, nm, ee, aa, ww))
+	Def_Body (mk, j, cs, nm, cc, ee_, aa, ww) => (
+	Def_Body (mk, j, cs, nm, cc, ee, aa, ww))
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
       | Def_Name _ => raise Match
@@ -292,7 +292,7 @@ fun class_is_encapsulated k = (
 	fun check (t, {Encapsulated, ...}, _) = Encapsulated
     in
 	case k of
-	    Def_Body (mk, j, cs, nm, ee, aa, ww) => (check cs)
+	    Def_Body (mk, j, cs, nm, cc, ee, aa, ww) => (check cs)
 	  | Def_Der (c, cs, n, vv, aa, ww) => (check cs)
 	  | Def_Primitive _ => raise Match
 	  | Def_Name _ => raise Match
@@ -391,7 +391,7 @@ fun body_is_declaration_form k = (
       | Def_Primitive _ => true
       | Def_Name _ => true
       | Def_Scoped _ => true
-      | Def_Refine (kx, v, ts, q, (ss, mm), aa, ww) => (
+      | Def_Refine (kx, v, ts, q, (ss, mm), cc, aa, ww) => (
 	(body_is_declaration_form kx))
       | Def_Extending _ => false
       | Def_Replaced _ => false

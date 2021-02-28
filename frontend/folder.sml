@@ -102,7 +102,7 @@ fun primitive_type_is_string p = (
 
 fun value_of_instance w0 kp = (
     case kp of
-	Def_Body (mk, subj, cs, (c, n, x), ee, aa, ww) => (
+	Def_Body (mk, subj, cs, nm, cc, ee, aa, ww) => (
 	if (not (class_is_simple_type kp)) then
 	    let
 		val _ = if (class_is_package kp) then
