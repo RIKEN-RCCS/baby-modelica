@@ -29,6 +29,7 @@ val unwrap_array_of_instances = classtree.unwrap_array_of_instances
 val fetch_from_instance_tree = classtree.fetch_from_instance_tree
 val fetch_instance_tree_node = classtree.fetch_instance_tree_node
 val enumerate_instances = classtree.enumerate_instances
+val access_node = classtree.access_node
 val dummy_scope = classtree.dummy_scope
 
 val expression_to_string = dumper.expression_to_string
@@ -277,6 +278,71 @@ fun choose_connect_rule r0 rules = (
 	  | (Stream, Stream) => Stream
 	  | (Flow, Stream) => raise error_connect_rule_conflict
 	  | (Stream, Flow) => raise error_connect_rule_conflict))
+
+(* ================================================================ *)
+
+fun expression_is_bool_literal w = (
+    ((expression_is_literal w)
+     andalso
+     case w of
+         L_Bool _ => true
+       | _ => false))
+
+(* Evaluates a condtion of a condtional component and set the
+   condition with a boolean literal.  It returns a enabled state. *)
+
+fun enable_instance enable0 k0 = (
+    let
+	val simplify = (fold_constants k0 false [])
+    in
+	if (not (class_is_ordinary_instance k0)) then
+	    enable0
+	else
+	    case k0 of
+	        Def_Body (mk, j, cs, nm, cc0, ee, aa, ww) => (
+		let
+		    val subj = (subject_of_class k0)
+		    val cc1 = (simplify cc0)
+		    val cc2 = if (cc1 = NIL) then L_Bool true else cc1
+		    val _ = if (expression_is_bool_literal cc2) then ()
+			    else raise error_non_constant_conditional
+		    val enable1 = (enable0 andalso (literal_to_bool cc2))
+		    val cc3 = L_Bool enable1
+		    val k1 = Def_Body (mk, j, cs, nm, cc3, ee, aa, ww)
+		    val _ = (store_to_instance_tree subj k1)
+		in
+		    enable1
+		end)
+	      | Def_Der _ => raise Match
+	      | Def_Primitive _ => raise Match
+	      | Def_Name _ => raise Match
+	      | Def_Scoped _ => raise Match
+	      | Def_Refine _ => raise Match
+	      | Def_Extending _ => raise Match
+	      | Def_Replaced _ => raise Match
+	      | Def_Displaced _ => raise Match
+	      | Def_In_File => raise Match
+	      | Def_Mock_Array _ => raise Match
+    end)
+
+(* Evaluates a condtion of a condtional component and descends the
+   tree.  It disables subcomponents if enable=false. *)
+
+fun enable_component_node enable0 node = (
+    let
+	val (kp, components) = (access_node node)
+	val enable1 = (enable_instance enable0 kp)
+	val _ = (app (fn (Slot (v, dim, nodes, _)) =>
+			 (app (enable_component_node enable1) nodes))
+		     components)
+    in
+	()
+    end)
+
+(* Disables condtional components by scanning all instances. *)
+
+fun disable_components () = (
+    (enable_component_node true instance_tree))
 
 (* ================================================================ *)
 
@@ -969,6 +1035,7 @@ fun xconnect () = (
     let
 	val uniquify = ((remove_duplicates (op =)) o (map pseudo_variable))
 
+	val _ = (disable_components ())
 	val vvv = (substitute_operators ())
 	val instream = (uniquify (#1 vvv))
 	val actualstream = (uniquify (#2 vvv))

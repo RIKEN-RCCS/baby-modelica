@@ -83,13 +83,15 @@ sig
     val traverse_tree :
 	(definition_body_t * 'a -> 'a) -> instance_node_t * 'a -> 'a
 
+    val access_node :
+	instance_node_t -> (definition_body_t * component_slot_t list)
+
     val dereference_outer_alias : component_slot_t -> instance_node_t
     val component_is_outer_alias : component_slot_t -> bool
     val component_is_expandable : component_slot_t -> bool
+    val component_class : component_slot_t -> definition_body_t
 
     val clear_syntaxer_tables : unit -> unit
-
-    val component_class : component_slot_t -> definition_body_t
 
     val enumerate_instances :
 	(subject_t * 'a list -> 'a list) -> id_t list
@@ -966,28 +968,36 @@ fun clear_syntaxer_tables () = (
 
 (* ================================================================ *)
 
-(* Calls f on each node (with a folding argument) in the
-   class_tree/instance_tree. *)
+(* Accesses an instance-tree node and returns an instance and a list
+   of components.  Each component is Slot(v,d,a,_), where ID "v", a
+   dimension "d", and an array of nodes "a". *)
 
-fun traverse_tree f (node0, acc0) = (
+fun access_node node0 = (
     let
 	val (subj, kx, cx) = node0
 	val kp = (! kx)
+	val c0 = (! cx)
+	val components = (List.filter (not o component_is_outer_alias) c0)
 
 	val _ = if ((cook_step kp) <> E0) then () else raise Match
 	val _ = if ((class_is_package kp) orelse (step_is_at_least E5 kp))
 		then () else raise Match
-
-	val acc1 = (f (kp, acc0))
-	val c0 = (! cx)
-	val components = (List.filter (not o component_is_outer_alias) c0)
-
 	val _ = if (null components) then ()
 		else if (not (class_is_simple_type kp)) then ()
 		else if (class_is_enum kp) then ()
 		else raise error_attribute_access_to_simple_type
+    in
+	(kp, components)
+    end)
 
-	val acc2 = (foldl (fn (Slot (v, dim, nodes, dummy), accx) =>
+(* Calls f on each instance (with a folding argument) in the
+   class_tree/instance_tree. *)
+
+fun traverse_tree f (node0, acc0) = (
+    let
+	val (kp, components) = (access_node node0)
+	val acc1 = (f (kp, acc0))
+	val acc2 = (foldl (fn (Slot (v, dim, nodes, _), accx) =>
 			      (foldl (traverse_tree f) accx nodes))
 			  acc1 components)
     in
@@ -999,7 +1009,8 @@ fun traverse_tree f (node0, acc0) = (
 fun enumerate_in_node f path0 (node, acc) = (
     let
 	val (subj, kx, cx) = node
-	val components = (! cx)
+	(*val components = (! cx)*)
+	val (kp, components) = (access_node node)
     in
 	case path0 of
 	    [] => f (subj, acc)

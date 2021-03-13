@@ -18,18 +18,20 @@ fun tr_tree_vvv (s : string) = if false then (print (s ^"\n")) else ()
 type cooker_t =
        cook_step_t -> (subject_t * definition_body_t) -> definition_body_t
 
-(* instance_node_t represents the nodes in the instance_tree.  It is a
-   pair of a class definition and its elements/components associated
-   by names.  Each node is a pair of references and updated by effect.
-   component_slot_t is an array the dimension and the entries of the
-   size.  An optional definition exists only when the array is empty
-   to retain the type information.  Note that the instance_tree is
-   modified at the leaves, because creation of instances is started at
-   the root and develops towards its components. *)
+(* component_slot_t is a component as a tuple of a name, a dimension,
+   and an array of entries of the size.  An optional definition exists
+   only when the array is empty for retaining the type information. *)
 
 datatype component_slot_t
     = Slot of (id_t * int list * instance_node_t list
 	       * definition_body_t option)
+
+(* instance_node_t represents a node in the instance_tree.  It is a
+   pair of a class definition and its elements/components associated
+   by names.  Each node is a pair of references and updated by effect.
+   Note that the instance_tree is modified at the leaves, because
+   creation of instances is started at the root and develops towards
+   its components. *)
 
 withtype instance_node_t
 	 = (subject_t * definition_body_t ref * component_slot_t list ref)
@@ -198,6 +200,11 @@ fun r_literal x = (
 
 fun z_literal x = (
     L_Number (Z, (Int.toString x)))
+
+fun literal_to_bool w = (
+    case w of
+	L_Bool b => b
+      | _ => raise error_non_constant_value)
 
 (* ================================================================ *)
 

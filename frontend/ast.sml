@@ -99,8 +99,10 @@ datatype predefined_operator_t
    scalar component.  Instances refers to instances, and also it
    internally refers to a function.  Iref is an iterator variable
    reference.  Cref is a connector reference with the side
-   information.  Others, Array_fill, Array_diagonal, etc. are
-   predefined functions. *)
+   information.  Connector references are introduced to the arguments
+   to connect-equations (and the cardinality-operator) during binding.
+   Others, Array_fill, Array_diagonal, etc. are predefined
+   functions. *)
 
 datatype expression_t
     = NIL

@@ -16,8 +16,6 @@ sig
     val make_reference :
 	definition_body_t -> bool -> expression_t -> expression_t
 
-    val bind_in_expression :
-	ctx_t -> bool -> binder_t -> expression_t -> expression_t
     val bind_in_value :
 	ctx_t -> bool -> definition_body_t -> definition_body_t
     val bind_in_scoped_expression :
@@ -342,19 +340,20 @@ and bind_in_expression ctx buildphase binder w0 = (
 (* Binds elements in a simple-type.  This is used, because general
    walkers do not traverse the elements in simple-types. *)
 
-and bind_in_simple_type buildphase k0 = (
+and bind_in_simple_type buildphase binder k0 = (
     case k0 of
-	Def_Body _ => (
+	Def_Body (mk, j, cs, nm, cc0, ee0, aa, ww) => (
 	let
 	    (*val attributes = not buildphase*)
 	    val _ = if (class_is_simple_type k0) then () else raise Match
 	    val _ = if (step_is_at_least E3 k0) then () else raise Match
 
 	    val subj = (subject_of_class k0)
+	    val walk_x = (bind_in_expression {k = k0} buildphase binder)
+	    val cc1 = (walk_x cc0)
 	    val walk_p = (bind_in_simple_type_element buildphase k0)
-	    val ee0 = (body_elements k0)
 	    val ee1 = (map walk_p ee0)
-	    val k1 = (replace_body_elements k0 ee1)
+	    val k1 = Def_Body (mk, j, cs, nm, cc1, ee1, aa, ww)
 	    val k2 = (set_cook_step E5 k1)
 	    val _ = (store_to_instance_tree subj k2)
 	in
@@ -463,7 +462,8 @@ and bind_in_value_declaration ctx buildphase k0 = (
 	    let
 		(*val attributes = (not buildphase)*)
 		val subj = (subject_of_class k0)
-		val k2 = (bind_in_simple_type buildphase k0)
+		val binder = fn x => raise Match
+		val k2 = (bind_in_simple_type buildphase binder k0)
 	    in
 		k2
 	    end)
@@ -497,22 +497,24 @@ fun bind_in_class ctx binder k0 = (
     if (class_is_simple_type k0) then
 	let
 	    val buildphase = false
-	    val k1 = (bind_in_simple_type buildphase k0)
+	    val k1 = (bind_in_simple_type buildphase binder k0)
 	    val _ = (assert_cook_step E5 k1)
 	in
 	    k1
 	end
     else
 	case k0 of
-	    Def_Body (mk, j, cs, nm, cc, ee0, aa, ww) => (
+	    Def_Body (mk, j, cs, nm, cc0, ee0, aa, ww) => (
 	    let
 		val _ = if (step_is_at_least E3 k0) then () else raise Match
 		(*val ctx = {k = kp}*)
 		(*fun binder w = raise error_undefined_variable*)
 
+		val walk_x = (bind_in_expression ctx false binder)
 		val walk_e = (bind_in_class_element ctx binder)
+		val cc1 = (walk_x cc0)
 		val ee1 = (map walk_e ee0)
-		val k1 = Def_Body (mk, j, cs, nm, cc, ee1, aa, ww)
+		val k1 = Def_Body (mk, j, cs, nm, cc1, ee1, aa, ww)
 		val k2 = (set_cook_step E5 k1)
 	    in
 		k2
