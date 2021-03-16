@@ -106,14 +106,15 @@
 
 \subsection{Baby-Modelica}
 
-Baby-Modelica is a simple parser+flattener of the Modelica language
-specification 3.4.  Its intended use is to create data extraction
-tools for Modelica models.  It parses and does some syntactic
-transformations, and can dump a flat model.  A generated flat model is
-hopefully to be re-readble by Modelica compliers.  Current status is a
-pre-zero version, and we are working towards version zero.  The
-version number of Baby-Modelica is the last digits, appended to the
-version number of the Modelica language specification.
+Baby-Modelica is a simple frontend (parser+flattener) for the Modelica
+language specification 3.4.  It parses the source code then performs
+simple syntactic transformations, and optionally dumps a flat model.
+Flattening a model is an essential part of Modelica, and it resolves
+all the language features for object-oriented-ness.  A generated flat
+model is hopefully to be re-readable by Modelica compilers.  Current
+status is a pre-zero version, and we are working towards version zero.
+The version number of Baby-Modelica is the last digits, appended to
+the version number of the Modelica language specification.
 
 This random memo accompanies the source code.  We apologize if it is
 illegible.  This document often refers to the sections of
@@ -547,9 +548,10 @@ modifications of values change the function.
 
 \section{Syntaxing}
 
-{Syntaxing} performs simple transformations to make a flat model.  It
-rewrites connect_equations to equations.  In that rewriting, it
-expands if-equations and for-equations that include connect_equations.
+{Syntaxing} performs simple semantic transformations to make a flat
+model.  It rewrites connect_equations to equations.  In that
+rewriting, it expands if-equations and for-equations that include
+connect_equations.
 
 %%%%%%%%%%%%%%%%
 
@@ -566,8 +568,8 @@ Section~\ref{sec:implicit-iterator-ranges}.
 
 Instantiation of expandable_connectors is delayed, while other (usual)
 classes are instantiated by descending the model hierarchy.  Expanding
-expandable_connectors is performed first for the connector at the
-shallowest position.
+expandable_connectors is performed in steps starting from a connector
+at the shallowest position.
 
 %%%%%%%%%%%%%%%%
 
@@ -577,7 +579,6 @@ Operator applications on or related to connectors,
 $\mathrm{inStream}\,(v)$, $\mathrm{actualStream}\,(v)$, and
 $\mathrm{cardinality}\,(c)$ are replaced by new variables with some
 associated equations.  See a $\mathit{mix}$ variable in \specref{15}.
-
 Variables are suffixed by \verb|_mix_in_| for
 $\mathrm{inStream}\,(v)$, \verb|_actual_in_| for
 $\mathrm{actualStream}\,(v)$, and \verb|_cardinality_| for
@@ -5199,14 +5200,15 @@ Copyright (C) 2018-2021 RIKEN R-CCS
 
 __Baby-Modelica comes with ABSOLUTELY NO WARRANTY.__
 
-Baby-Modelica is a simple parser+flattener of the Modelica language
-specification 3.4.  Its intended use is to create data extraction
-tools for Modelica models.  It parses and does some syntactic
-transformations, and can dump a flat model.  A generated flat model is
-hopefully to be re-readble by Modelica compliers.  Current status is a
-pre-zero version, and we are working towards version zero.  The
-version number of Baby-Modelica is the last digits, appended to the
-version number of the Modelica language specification.
+Baby-Modelica is a simple frontend (parser+flattener) for the Modelica
+language specification 3.4.  It parses the source code then performs
+simple syntactic transformations, and optionally dumps a flat model.
+Flattening a model is an essential part of Modelica, and it resolves
+all the language features for object-oriented-ness.  A generated flat
+model is hopefully to be re-readable by Modelica compilers.  Current
+status is a pre-zero version, and we are working towards version zero.
+The version number of Baby-Modelica is the last digits, appended to
+the version number of the Modelica language specification.
 
 Baby-Modelica is written in SML'97 (Standard ML) and developed mainly
 with Poly/ML (on SUNOS 5.11/amd64), but it may work with SML/NJ or

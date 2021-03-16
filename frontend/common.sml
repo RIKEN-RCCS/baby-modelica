@@ -1087,6 +1087,9 @@ fun subject_is_prefix j0 j1 = (
 	(list_prefix (op =) rr0 rr1))
       | _ => raise Match)
 
+fun subject_is_component subj0 subj1 = (
+    (subject_is_prefix subj1 subj0))
+
 (* Chooses a non-nil expression, or errs if both are non-nil. *)
 
 fun choose_non_nil x0 x1 = (
