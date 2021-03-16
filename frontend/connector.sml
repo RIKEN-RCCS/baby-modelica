@@ -326,7 +326,8 @@ fun enable_instance enable0 k0 = (
     end)
 
 (* Evaluates a condtion of a condtional component and descends the
-   tree.  It disables subcomponents if enable=false. *)
+   tree.  It disables subcomponents of a disabled component if
+   enable0=false. *)
 
 fun enable_component_node enable0 node = (
     let
@@ -446,8 +447,9 @@ fun insert_cardinality_variable (subj, nn) = (
 	()
     end)
 
-(* Counts connect-equations on each pseudo variable in vv.  It counts
-   only on the inside part.  For counting on a pseudo variable
+(* Counts connect-equations on each pseudo variable in vv.  The
+   results are stored as equations of cardinality of connectors.  It
+   counts only on the inside part.  For counting on a pseudo variable
    v=m.c.d.e, the counter counts the occurrences of prefixes {m.c,
    m.c.d, m.c.d.e}. *)
 
@@ -882,20 +884,40 @@ fun make_connect_equations connectors = (
 
 (* ================================================================ *)
 
-fun collect_disabled_connectors_in_instance (k0, acc0) = (
-    if (not (class_is_ordinary_instance k0)) then
-	acc0
-    else
-	case k0 of
-	    _ => acc0)
+fun make_seal_equation v = (
+    Eq_Eq ((L_Number (R, "0"), Instances ([], [v])),
+	   Annotation [], Comment []))
 
-fun collect_disabled_connectors () = (
-    (traverse_tree collect_disabled_connectors_in_instance (instance_tree, [])))
+(* Collects flow components which are not connected.  It is to seal
+   flow components like quick-connects.  It takes the all connectors
+   in connect-equations.  Components are considered as connected when
+   they are subcomponents of a connected connectors. *)
 
-(* Closes disabled connectors. *)
-
-fun seal_quick_connects () = (
-    (traverse_tree collect_connects_in_instance (instance_tree, [])))
+fun collect_unconnected_flow_components connected = (
+    let
+	fun collect (node, acc0) = (
+	    let
+		val (subj, _, _) = node
+		val (kp, components) = (access_node node)
+	    in
+		if (List.exists (subject_is_component subj) connected) then
+		    acc0
+		else
+		    let
+			val acc1 = if (marked_as_flow kp) then
+				       acc0 @ [subj]
+				   else
+				       acc0
+			val acc2 = (foldl (fn (Slot (_, _, nodes, _), acc) =>
+					      (foldl collect acc nodes))
+					  acc1 components)
+		    in
+			acc2
+		    end
+	    end)
+    in
+	(collect (instance_tree, []))
+    end)
 
 (* ================================================================ *)
 
@@ -968,7 +990,7 @@ fun substitute_operators () = (
 
 (* ================================================================ *)
 
-fun insert_connect_equations eqns = (
+fun insert_equations_section eqns = (
     let
 	val section = Element_Equations (false, eqns)
 	val (subj, kx, cx) = instance_tree
@@ -1004,6 +1026,7 @@ fun insert_mixin_variable mixin = (
 fun connect_connectors (instream, actualstream, cardinality) = (
     let
 	val _ = (expand_equations_for_connects ())
+
 	val cc0 = (collect_connects ())
 	val _ = (count_connects cardinality cc0)
 	val _ = (expand_expandable_connectors cc0)
@@ -1011,9 +1034,14 @@ fun connect_connectors (instream, actualstream, cardinality) = (
 	val cc2 = (make_unions (op =) cc1)
 	val x = (map make_connect_equations cc2)
 	val mixins = (List.concat (map #1 x))
-	val eqns = (List.concat (map #2 x))
-	val _ = (insert_connect_equations eqns)
+	val eqns0 = (List.concat (map #2 x))
+	val _ = (insert_equations_section eqns0)
 	val _ = (app insert_mixin_variable mixins)
+
+	val connectors = (map #1 (foldl (op @) [] cc1))
+	val flows = (collect_unconnected_flow_components connectors)
+	val eqns1 = (map make_seal_equation flows)
+	val _ = (insert_equations_section eqns1)
     in
 	()
     end)
