@@ -63,8 +63,8 @@ val expand_equations_for_connects = syntaxer.expand_equations_for_connects
    is for Connections.branch() (hard edge).  Root+true is for
    Connections.root(), Root+false is Connections.potentialRoot(). *)
 
-datatype edge_marker_t = Edge of bool
-datatype root_marker_t = Root of bool
+datatype edge_marker_t__ = Edge of bool
+datatype root_marker_t__ = Root of bool
 
 (* ================================================================ *)
 
@@ -279,6 +279,22 @@ fun choose_connect_rule r0 rules = (
 	  | (Flow, Stream) => raise error_connect_rule_conflict
 	  | (Stream, Flow) => raise error_connect_rule_conflict))
 
+fun instance_is_enabled k = (
+    case k of
+	Def_Body (mk, j, cs, nm, L_Bool b, ee, aa, ww) => b
+      | Def_Body _ => raise error_conditional_is_not_determined
+      | Def_Der _ => raise Match
+      | Def_Primitive _ => raise Match
+      | Def_Name _ => raise Match
+      | Def_Scoped _ => raise Match
+      | Def_Refine _ => raise Match
+      | Def_Extending _ => raise Match
+      | Def_Replaced _ => raise Match
+      | Def_Displaced _ => raise Match
+      | Def_In_File => raise Match
+      | Def_Mock_Array _ => raise Match
+      | Def_Outer_Alias _ => raise Match)
+
 (* ================================================================ *)
 
 fun expression_is_bool_literal w = (
@@ -347,25 +363,45 @@ fun disable_components () = (
 
 (* ================================================================ *)
 
-fun collect_connects_in_equation kp (q0, acc0) = (
+fun make_connects (x0, sidex) (y0, sidey) subj acc0 = (
     let
-	val subj = (subject_of_class kp)
+	fun connect ((x, y), acc) = (
+	    if ((instance_is_enabled x) andalso (instance_is_enabled y)) then
+		let
+		    val x0 = (subject_of_class x)
+		    val y0 = (subject_of_class y)
+		in
+		    (acc @ [((x0, sidex), (y0, sidey), subj)])
+		end
+	    else
+		acc)
+
+	val kx = surely (fetch_from_instance_tree x0)
+	val ky = surely (fetch_from_instance_tree y0)
+	val (dimx, xx) = (unwrap_array_of_instances kx)
+	val (dimy, yy) = (unwrap_array_of_instances ky)
+	val _ = if (dimx = dimy) then ()
+		else raise error_mismatch_connector_arrays
     in
-	case q0 of
-	    Eq_Eq _ => (q0, acc0)
-	  | Eq_Connect ((Cref (x0, sidex), Cref (y0, sidey)), aa, ww) => (
-	    let
-		val x1 = (literalize_subscripts kp x0)
-		val y1 = (literalize_subscripts kp y0)
-	    in
-		(q0, (((x1, sidex), (y1, sidey), subj) :: acc0))
-	    end)
-	  | Eq_Connect ((_, _), aa, ww) => raise Match
-	  | Eq_If _ => (q0, acc0)
-	  | Eq_When _ => (q0, acc0)
-	  | Eq_App _ => (q0, acc0)
-	  | Eq_For _ => (q0, acc0)
+	(foldl connect acc0 (ListPair.zipEq (xx, yy)))
     end)
+
+fun collect_connects_in_equation kp (q0, acc0) = (
+    case q0 of
+	Eq_Eq _ => (q0, acc0)
+      | Eq_Connect ((Cref (x0, sidex), Cref (y0, sidey)), aa, ww) => (
+	let
+	    val x1 = (literalize_subscripts kp x0)
+	    val y1 = (literalize_subscripts kp y0)
+	    val subj = (subject_of_class kp)
+	in
+	    (q0, (make_connects (x1, sidex) (y1, sidey) subj acc0))
+	end)
+      | Eq_Connect ((_, _), aa, ww) => raise Match
+      | Eq_If _ => (q0, acc0)
+      | Eq_When _ => (q0, acc0)
+      | Eq_App _ => (q0, acc0)
+      | Eq_For _ => (q0, acc0))
 
 fun collect_connects_in_instance (k0, acc0) = (
     if (not (class_is_ordinary_instance k0)) then
@@ -382,7 +418,8 @@ fun collect_connects_in_instance (k0, acc0) = (
 	    acc1
 	end)
 
-(* Collects connect equations. *)
+(* Collects connect-equations.  It attaches an instance name (a
+   subject) to a connect-equation where it is found. *)
 
 fun collect_connects () = (
     (traverse_tree collect_connects_in_instance (instance_tree, [])))

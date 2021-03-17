@@ -371,4 +371,6 @@ val error_missing_flow_variables = Match
 
 fun error_bad_intrinsic_call name = Match
 
+val error_conditional_is_not_determined = Match
+
 end
