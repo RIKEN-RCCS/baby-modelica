@@ -297,15 +297,15 @@ fun instance_is_enabled k = (
 
 (* ================================================================ *)
 
-fun expression_is_bool_literal w = (
+fun expression_is_boolean_literal w = (
     ((expression_is_literal w)
      andalso
      case w of
          L_Bool _ => true
        | _ => false))
 
-(* Evaluates a condtion of a condtional component and set the
-   condition with a boolean literal.  It returns a enabled state. *)
+(* Evaluates a condition of a conditional component and sets the
+   condition as a boolean literal.  It returns an enabled state. *)
 
 fun enable_instance enable0 k0 = (
     let
@@ -320,7 +320,7 @@ fun enable_instance enable0 k0 = (
 		    val subj = (subject_of_class k0)
 		    val cc1 = (simplify cc0)
 		    val cc2 = if (cc1 = NIL) then L_Bool true else cc1
-		    val _ = if (expression_is_bool_literal cc2) then ()
+		    val _ = if (expression_is_boolean_literal cc2) then ()
 			    else raise error_non_constant_conditional
 		    val enable1 = (enable0 andalso (literal_to_bool cc2))
 		    val cc3 = L_Bool enable1
@@ -356,12 +356,14 @@ fun enable_component_node enable0 node = (
 	()
     end)
 
-(* Disables condtional components by scanning all instances. *)
+(* Disables conditional components by scanning all instances. *)
 
 fun disable_components () = (
     (enable_component_node true instance_tree))
 
 (* ================================================================ *)
+
+(* Lists connector pairs when not disabled. *)
 
 fun make_connects (x0, sidex) (y0, sidey) subj acc0 = (
     let
@@ -513,9 +515,8 @@ fun count_connects vv cc = (
 				   (enumerate_instances count path []))
 			       paths))
 	val countset = (group_to_array counts)
-	val _ = (app insert_cardinality_variable countset)
     in
-	()
+	countset
     end)
 
 (* ================================================================ *)
@@ -1021,7 +1022,7 @@ val substitute_operators_in_instance
    inStream(), actualStream(), and cardinality().  It collects and
    returns arguments for each of the operators. *)
 
-fun substitute_operators () = (
+fun substitute_connector_operators () = (
     (traverse_tree substitute_operators_in_instance
 		   (instance_tree, ([], [], []))))
 
@@ -1065,8 +1066,11 @@ fun connect_connectors (instream, actualstream, cardinality) = (
 	val _ = (expand_equations_for_connects ())
 
 	val cc0 = (collect_connects ())
-	val _ = (count_connects cardinality cc0)
+	val countset = (count_connects cardinality cc0)
+	val _ = (app insert_cardinality_variable countset)
+
 	val _ = (expand_expandable_connectors cc0)
+
 	val cc1 = (map (fn (x, y, subj) => [x, y]) cc0)
 	val cc2 = (make_unions (op =) cc1)
 	val x = (map make_connect_equations cc2)
@@ -1101,7 +1105,7 @@ fun xconnect () = (
 	val uniquify = ((remove_duplicates (op =)) o (map pseudo_variable))
 
 	val _ = (disable_components ())
-	val vvv = (substitute_operators ())
+	val vvv = (substitute_connector_operators ())
 	val instream = (uniquify (#1 vvv))
 	val actualstream = (uniquify (#2 vvv))
 	val cardinality = (uniquify (#3 vvv))
