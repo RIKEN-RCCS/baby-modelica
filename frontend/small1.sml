@@ -39,6 +39,7 @@ fun reference_as_subject x = (
 	    (*val cc1 = (drop_dot_of_package_root ns cc0)*)
 	in
 	    Subj (ns, cc0)
-	end))
+	end)
+      | _ => raise Match)
 
 end

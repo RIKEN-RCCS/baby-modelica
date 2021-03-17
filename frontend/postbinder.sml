@@ -92,6 +92,7 @@ fun bind_in_class ctx binder k0 = (
 	    end)
 	  | Def_Der _ => raise Match
 	  | Def_Primitive _ => raise Match
+	  | Def_Outer_Alias _ => raise Match
 	  | Def_Name _ => raise Match
 	  | Def_Scoped _ => raise Match
 	  | Def_Refine _ => raise Match
@@ -228,6 +229,7 @@ and bind_in_constraint kp binder (r : constraint_t) = (
 	    Def_Body _ => raise Match
 	  | Def_Der _ => raise Match
 	  | Def_Primitive _ => raise Match
+	  | Def_Outer_Alias _ => raise Match
 	  | Def_Name cn => (
 	    case (find_class cooker (subj, kp) cn) of
 		NONE => raise (error_class_not_found cn kp)

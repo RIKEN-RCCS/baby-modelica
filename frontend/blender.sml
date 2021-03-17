@@ -173,6 +173,7 @@ fun assert_modifiers_are_scoped mm = (
 		Def_Body _ => raise Match
 	      | Def_Der _ => raise Match
 	      | Def_Primitive _ => raise Match
+	      | Def_Outer_Alias _ => raise Match
 	      | Def_Name _ => raise Match
 	      | Def_Scoped _ => true
 	      | Def_Refine (kx, v, ts, q, (ssx, mmx), cc, aa, ww) => (
@@ -286,6 +287,7 @@ fun record_defining_class (subj, k0) = (
 		Def_Body _ => raise Match
 	      | Def_Der _ => k0
 	      | Def_Primitive _ => raise Match
+	      | Def_Outer_Alias _ => raise Match
 	      | Def_Name _ => k0
 	      | Def_Scoped _ => k0
 	      | Def_Refine (x0, v, ts, q, (ss, mm), cc, aa, ww) => (
@@ -413,6 +415,7 @@ and closure_class (scope : scope_t) k0 = (
 	end)
       | Def_Der _ => k0
       | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
       | Def_Name n => Def_Scoped (n, scope)
       | Def_Scoped _ => raise Match
       | Def_Refine (x0, v, ts, q, (ss0, mm0), cc, aa, ww) => (
@@ -547,6 +550,7 @@ fun prepare_for_modification main pkg (subj, k0) = (
 	    end)
 	  | Def_Der _ => raise Match
 	  | Def_Primitive _ => raise Match
+	  | Def_Outer_Alias _ => raise Match
 	  | Def_Name _ => raise Match
 	  | Def_Scoped _ => raise Match
 	  | Def_Refine _ => raise Match
@@ -744,6 +748,7 @@ and collect_refining main pkg (subj, k0) (name1, (t1, p1, q1), mm1, cc1, aa1) si
 	    (ensure_in_instance_tree (subj, k0))
 	end)
       | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => raise Match
       | Def_Scoped (name, scope) => (
 	let
@@ -847,6 +852,7 @@ and cook_class_body main pkg (subj, k0) siblings = (
 		 main pkg (subj, k0) [] NIL aa siblings)
 	end)
       | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine (k1, v, ts, q, (ss, mm), cc, aa, ww) => (

@@ -208,6 +208,7 @@ fun simplify_simple_type (k0 : definition_body_t) = (
 		Def_Body _ => raise Match
 	      | Def_Der _ => raise Match
 	      | Def_Primitive _ => raise Match
+	      | Def_Outer_Alias _ => raise Match
 	      | Def_Name _ => raise Match
 	      | Def_Scoped (Name n, (subjx, tag)) => (
 		let
@@ -303,6 +304,7 @@ fun simplify_simple_type (k0 : definition_body_t) = (
 		end)
 	  | Def_Der _ => raise Match
 	  | Def_Primitive _ => raise Match
+	  | Def_Outer_Alias _ => raise Match
 	  | Def_Name _ => raise Match
 	  | Def_Scoped _ => raise Match
 	  | Def_Refine _ => raise Match
@@ -387,6 +389,7 @@ fun insert_attributes_to_enumeration k0 = (
 	    end)
       | Def_Der _ => k0
       | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
@@ -443,6 +446,7 @@ fun type_of_simple_type k = (
 	      | Ctag _ => raise Match)
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match

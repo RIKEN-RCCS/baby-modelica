@@ -284,6 +284,11 @@ fun subject_as_reference (Subj (ns, cc0)) = (
 	Vref (SOME ns, (map (mapr (map z_literal)) cc0))
     end)
 
+fun path_of_reference w = (
+    case w of
+	Vref (_, rr) => rr
+      | _ => raise Match)
+
 (* Checks if a class is in a processed form, which can appear in the
    instance_tree.  The other forms are syntactic.  Def_Primitive only
    appears in the instance_tree as an enumerator. *)
@@ -293,6 +298,7 @@ fun assert_proper_class (k : definition_body_t) = (
 	Def_Body _ => ()
       | Def_Der _ => ()
       | Def_Primitive _ => ()
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
@@ -329,6 +335,7 @@ fun set_cook_step step (k : definition_body_t) = (
 	Def_Body ((step, f, b), j, cs, nm, cc, ee, aa, ww))
       | Def_Der _ => k
       | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => k
       | Def_Scoped _ => raise Match
       | Def_Refine _ => k
@@ -370,6 +377,7 @@ fun definition_is_displaceable (Defclass ((v, g), k)) = (
 	Def_Body _ => true
       | Def_Der _ => false
       | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => false
       | Def_Scoped _ => raise Match
       | Def_Refine _ => false
@@ -384,6 +392,7 @@ fun class_is_body k = (
 	Def_Body _ => true
       | Def_Der _ => false
       | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => false
       | Def_Scoped _ => false
       | Def_Refine _ => false
@@ -398,6 +407,7 @@ fun class_is_refining k0 = (
 	Def_Body _ => false
       | Def_Der _ => false
       | Def_Primitive _ => false
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => false
       | Def_Scoped _ => false
       | Def_Refine _ => true
@@ -412,6 +422,7 @@ fun body_is_displaced k = (
 	Def_Body _ => false
       | Def_Der _ => false
       | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => false
       | Def_Scoped _ => false
       | Def_Refine _ => false
@@ -426,6 +437,7 @@ fun body_is_in_file k = (
 	Def_Body _ => false
       | Def_Der _ => false
       | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => false
       | Def_Scoped _ => false
       | Def_Refine _ => false
@@ -444,6 +456,7 @@ fun class_is_enum k = (
 	Def_Body ((u, f, enum), j, cs, nm, cc, ee, aa, ww) => (enum = ENUM)
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
@@ -477,6 +490,7 @@ fun class_is_outer_alias k = (
 	Def_Body _ => false
       | Def_Der _ => false
       | Def_Primitive _ => false
+      | Def_Outer_Alias _ => true
       | Def_Name _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
@@ -484,8 +498,7 @@ fun class_is_outer_alias k = (
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
       | Def_In_File => raise Match
-      | Def_Mock_Array _ => raise Match
-      | Def_Outer_Alias _ => true)
+      | Def_Mock_Array _ => raise Match)
 
 (* ================================================================ *)
 
@@ -628,6 +641,7 @@ fun body_is_root k = (
 	(tag = the_root_tag))
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
@@ -642,6 +656,7 @@ fun class_is_root_body k = (
 	Def_Body _ => (body_is_root k)
       | Def_Der _ => false
       | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => false
       | Def_Scoped _ => false
       | Def_Refine _ => false
@@ -760,6 +775,7 @@ fun marker_of_body k = (
 	Def_Body ((u, f, b), j, cs, nm, cc, ee, aa, ww) => b
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
@@ -804,6 +820,7 @@ fun naming_of_class k = (
 	    (subj, tag))
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
@@ -823,6 +840,7 @@ fun enclosing_of_body k = (
 	end)
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
@@ -842,6 +860,7 @@ fun identity_name_of_body k = (
 	end)
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
@@ -870,6 +889,7 @@ fun assign_enclosing k enclosing = (
 	end)
       | Def_Der _ => k
       | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => k
       | Def_Scoped _ => k
       | Def_Refine _ => k
@@ -916,6 +936,7 @@ fun class_is_primitive k = (
 	Def_Body _ => false
       | Def_Der _ => false
       | Def_Primitive _ => true
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
@@ -949,6 +970,7 @@ fun class_is_simple_type k = (
 	    end)
 	  | Def_Der _ => false
 	  | Def_Primitive _ => true
+	  | Def_Outer_Alias _ => raise Match
 	  | Def_Name _ => raise Match
 	  | Def_Scoped _ => raise Match
 	  | Def_Refine (kx, v, ts, q, (ss, mm), cc, aa, ww) => (
@@ -977,6 +999,7 @@ fun kind_of_class k = (
 	Def_Body (mk, j, (kind, p, q), nm, cc, ee, aa, ww) => SOME kind
       | Def_Der _ => NONE
       | Def_Primitive _ => NONE
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
@@ -1014,6 +1037,7 @@ fun class_name_of_instance k = (
 	Def_Body (mk, j, cs, (tag, name, enclosing), cc, ee, aa, ww) => name
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
@@ -1034,6 +1058,7 @@ fun class_is_connector expandable k = (
 	  | _ => false)
       | Def_Der _ => false
       | Def_Primitive _ => false
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
@@ -1043,8 +1068,7 @@ fun class_is_connector expandable k = (
       | Def_In_File => raise Match
       | Def_Mock_Array (_, [], SOME x) => (class_is_connector expandable x)
       | Def_Mock_Array (_, array, dummy) => (
-	(List.all (class_is_connector expandable) array))
-      | Def_Outer_Alias _ => raise Match)
+	(List.all (class_is_connector expandable) array)))
 
 (* Tests a variable is a non-array. *)
 
@@ -1053,6 +1077,7 @@ fun variable_is_monomer k = (
 	Def_Body _ => true
       | Def_Der _ => true
       | Def_Primitive _ => true
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
@@ -1060,14 +1085,14 @@ fun variable_is_monomer k = (
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
       | Def_In_File => raise Match
-      | Def_Mock_Array _ => false
-      | Def_Outer_Alias _ => raise Match)
+      | Def_Mock_Array _ => false)
 
 fun variable_is_simple_type k = (
     case k of
 	Def_Body _ => (class_is_enum k) orelse (class_is_simple_type k)
       | Def_Der _ => false
       | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
@@ -1075,8 +1100,7 @@ fun variable_is_simple_type k = (
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
       | Def_In_File => raise Match
-      | Def_Mock_Array _ => false
-      | Def_Outer_Alias _ => raise Match)
+      | Def_Mock_Array _ => false)
 
 (* Returns true if a subject j0 contains j1 as a subcomponet (that is,
    a.b is a supersubject of a.b.c) or identical. *)

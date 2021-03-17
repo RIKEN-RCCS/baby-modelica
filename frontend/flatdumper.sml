@@ -539,6 +539,7 @@ fun declaraton_of_real k = (
 	    end)
 	  | Def_Der _ => ""
 	  | Def_Primitive _ => raise Match
+	  | Def_Outer_Alias _ => raise Match
 	  | Def_Name _ => raise Match
 	  | Def_Scoped _ => raise Match
 	  | Def_Refine _ => raise Match
@@ -615,6 +616,7 @@ fun declaraton_of_integer k = (
 	    end)
 	  | Def_Der _ => ""
 	  | Def_Primitive _ => raise Match
+	  | Def_Outer_Alias _ => raise Match
 	  | Def_Name _ => raise Match
 	  | Def_Scoped _ => raise Match
 	  | Def_Refine _ => raise Match

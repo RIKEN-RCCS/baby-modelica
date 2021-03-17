@@ -293,6 +293,7 @@ fun walk_in_class (vamp : 'a vamper_t) (k0 : definition_body_t, acc0) = (
 	    end)
 	  | Def_Der _ => (k0, acc0)
 	  | Def_Primitive _ => (k0, acc0)
+	  | Def_Outer_Alias _ => raise Match
 	  | Def_Name _ => raise Match
 	  | Def_Scoped _ => raise Match
 	  | Def_Refine _ => raise Match

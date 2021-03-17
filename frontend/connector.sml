@@ -152,6 +152,7 @@ fun record_of_connect k = (
 	Def_Body (mk, j, cs, nm, cc, ee, aa, ww))
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
@@ -159,8 +160,7 @@ fun record_of_connect k = (
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
       | Def_In_File => raise Match
-      | Def_Mock_Array _ => raise Match
-      | Def_Outer_Alias _ => raise Match)
+      | Def_Mock_Array _ => raise Match)
 
 fun unmark_expandable_connector k = (
     case k of
@@ -169,6 +169,7 @@ fun unmark_expandable_connector k = (
       | Def_Body _ => raise Match
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
@@ -176,8 +177,7 @@ fun unmark_expandable_connector k = (
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
       | Def_In_File => raise Match
-      | Def_Mock_Array _ => raise Match
-      | Def_Outer_Alias _ => raise Match)
+      | Def_Mock_Array _ => raise Match)
 
 fun connect_rule_marker k = (
     case k of
@@ -285,6 +285,7 @@ fun instance_is_enabled k = (
       | Def_Body _ => raise error_conditional_is_not_determined
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
       | Def_Name _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
@@ -292,8 +293,7 @@ fun instance_is_enabled k = (
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
       | Def_In_File => raise Match
-      | Def_Mock_Array _ => raise Match
-      | Def_Outer_Alias _ => raise Match)
+      | Def_Mock_Array _ => raise Match)
 
 (* ================================================================ *)
 
@@ -331,6 +331,7 @@ fun enable_instance enable0 k0 = (
 		end)
 	      | Def_Der _ => raise Match
 	      | Def_Primitive _ => raise Match
+	      | Def_Outer_Alias _ => raise Match
 	      | Def_Name _ => raise Match
 	      | Def_Scoped _ => raise Match
 	      | Def_Refine _ => raise Match

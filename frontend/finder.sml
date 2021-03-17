@@ -275,7 +275,8 @@ and look_for_inner_loop (cooker : cooker_t) cv (prefix0 : subject_t) = (
 			    val (prefix1, _) = (subject_prefix subj0)
 			in
 			    (search cooker cv prefix1)
-			end))))
+			end)
+		      | Subj (PKG, _) => raise Match)))
     in
 	case (search cooker cv prefix0) of
 	    SOME inner => inner

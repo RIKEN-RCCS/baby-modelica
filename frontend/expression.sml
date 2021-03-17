@@ -284,6 +284,7 @@ fun expression_is_literal w = (
       (*| Instance _ => false*)
       | Instances _ => false
       | Iref _ => false
+      | Cref _ => false
       | Array_fill _ => false
       | Array_diagonal _ => false)
 

@@ -99,8 +99,7 @@ fun discern_connector_component subj w = (
 	    val k = surely (fetch_from_instance_tree component)
 	in
 	    (class_is_connector false k)
-	end)
-      | _ => raise Match)
+	end))
 
 (* ================================================================ *)
 
@@ -128,7 +127,8 @@ fun extend_reference subj rr1 = (
 	    val _ = (assert_no_subscript_to_subject subj)
 	    val _ = (assert_match_subject_name id1 subj)
 	    val Subj (ns, _) = subj
-	    val Vref (_, rr0) = (subject_as_reference subj)
+	    val vref = (subject_as_reference subj)
+	    val rr0 = (path_of_reference vref)
 	    val (prefix, _) = (split_last rr0)
 	in
 	    Vref (SOME ns, (prefix @ rr1))

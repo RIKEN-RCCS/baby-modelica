@@ -125,6 +125,7 @@ fun lookup_in_declared (cooker : cooker_t) ctx fullaccess kp id = (
 				Def_Body _ => raise Match
 			      | Def_Der _ => SOME (subsubj, k0)
 			      | Def_Primitive _ => raise Match
+			      | Def_Outer_Alias _ => raise Match
 			      | Def_Name _ => raise Match
 			      | Def_Scoped _ => SOME (subsubj, k0)
 			      | Def_Refine _ => SOME (subsubj, k0)
