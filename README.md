@@ -1,4 +1,4 @@
-# Baby-Modelica 3.4.0 (2020-01-29)
+# Baby-Modelica 3.4.0 (2021-03-18)
 
 Copyright (C) 2018-2021 RIKEN R-CCS
 
@@ -36,7 +36,7 @@ If someone might be unfamiliar with SML, see
 ## Source code files and directories
 
 See frontend/notes.pdf first, then start with frontend/bbm.sml.
-* [frontend/notes.pdf](frontend/notes.pdf): random implementation notes
+* [frontend/notes.pdf](frontend/notes.pdf): Modelica reference manual and implementation notes
 * frontend/bbm.sml: a list of the source code files
 
 The toplevel directories are as follows.
