@@ -1,13 +1,13 @@
 (* flatdumper.sml -*-Coding: us-ascii-unix;-*- *)
 (* Copyright (C) 2018-2021 RIKEN R-CCS *)
 
-(* DUMPER OF A FLAT MODEL. *)
+(* A DUMPER IN A SUBSET OF MODELICA. *)
 
 (* The dumper does not dump empty arrays (dimension-size=0), so it is
    needed to remove the references to them. *)
 
-structure flatdumper
-: sig
+structure flatdumper :
+sig
     val xdump : unit -> unit
 end = struct
 
@@ -21,9 +21,15 @@ val subject_to_instance_tree_path = classtree.subject_to_instance_tree_path
 val extract_base_classes = classtree.extract_base_classes
 val traverse_tree = classtree.traverse_tree
 
+val list_elements = finder.list_elements
+
 val simple_type_attribute = simpletype.simple_type_attribute
 val type_of_simple_type = simpletype.type_of_simple_type
 val take_enumarator_element = simpletype.take_enumarator_element
+val enumeration_bounds = simpletype.enumeration_bounds
+
+datatype operator_type_t = datatype operator.operator_type_t
+val operator_type = operator.operator_type
 
 fun tr_flat (s : string) = if true then (print (s ^"\n")) else ()
 fun tr_flat_vvv (s : string) = if false then (print (s ^"\n")) else ()
@@ -37,16 +43,36 @@ fun variability_to_string variability = (
       | Discrete => "discrete"
       | Continuous => "")
 
-(*val expression_to_string = dumper.expression_to_string*)
+(* Returns a string for an expression.  Call it with assoc=0.  assoc
+   is an associativity of an outside expression.  It parenthesizes a
+   string if the expression is with an associativity less-than that.
+   All binary operators are left associative. *)
 
-fun expression_to_string w = (
+fun expression_to_string assoc w = (
     let
-	fun ref_to_string rr = (
-	    ((String.concatWith ".")
-		 (map (fn (Id v, []) => v | (Id v, e) => (v ^ "[]")) rr)))
+	(* Operator associativity. *)
+
+	val simple_expression = 1
+	val logical_expression = 2 (*left*)
+	val logical_term = 3 (*left*)
+	val logical_factor = 4
+	val relation = 5
+	val arithmetic_expression = 6 (*left*)
+	val arithmetic_term = 7 (*left*)
+	val arithmetic_factor = 8
+
+	fun path_component (Id v, ss) = (
+	    case ss of
+		[] => v
+	      | _ => (v ^"["^ ((String.concatWith ", ")
+				   (map (expression_to_string 0) ss))
+		      ^"]"))
+
+	fun reference_path_to_string rr = (
+	    ((String.concatWith ".") (map path_component rr)))
 
 	fun for_index_to_string (Id v, x) = (
-	    ("("^ v ^" : "^ (expression_to_string x) ^")"))
+	    (v ^" : "^ (expression_to_string (simple_expression + 1) x)))
 
 	fun predefined_operator_to_string p = (
 	    case p of
@@ -62,68 +88,147 @@ fun expression_to_string w = (
 	      | Opr_div => "/"
 	      | Opr_mul_ew => ".*"
 	      | Opr_div_ew => "./"
-	      | Opr_expt => "exp"
-	      | Opr_expt_ew => ".exp"
+	      | Opr_expt => "^"
+	      | Opr_expt_ew => ".^"
 	      | Opr_not => "not"
 	      | Opr_and => "and"
-	      | Opr_ior => "ior"
-	      | Opr_concat => "concat"
+	      | Opr_ior => "or"
+	      | Opr_concat => raise Match
 	      | Opr_eq => "="
 	      | Opr_ne => "<>"
 	      | Opr_gt => ">"
 	      | Opr_lt => "<"
 	      | Opr_ge => ">="
 	      | Opr_le => "<=")
+
+	fun predefined_operator_associativity p = (
+	    case p of
+		Opr_id => arithmetic_expression
+	      | Opr_neg => arithmetic_expression
+	      | Opr_id_ew => arithmetic_expression
+	      | Opr_neg_ew => arithmetic_expression
+	      | Opr_add => arithmetic_expression
+	      | Opr_sub => arithmetic_expression
+	      | Opr_add_ew => arithmetic_expression
+	      | Opr_sub_ew => arithmetic_expression
+	      | Opr_mul => arithmetic_term
+	      | Opr_div => arithmetic_term
+	      | Opr_mul_ew => arithmetic_term
+	      | Opr_div_ew => arithmetic_term
+	      | Opr_expt => arithmetic_factor
+	      | Opr_expt_ew => arithmetic_factor
+	      | Opr_not => logical_factor
+	      | Opr_and => logical_term
+	      | Opr_ior => logical_expression
+	      | Opr_concat => raise Match
+	      | Opr_eq => relation
+	      | Opr_ne => relation
+	      | Opr_gt => relation
+	      | Opr_lt => relation
+	      | Opr_ge => relation
+	      | Opr_le => relation)
+
+	fun conditional_clause (c, v) = (
+	    case c of
+		Otherwise => ["else", (expression_to_string 0 v)]
+	      | _ => (
+		["elseif",
+		 (expression_to_string 0 c),
+		 "then",
+		 (expression_to_string 0 v)]))
     in
 	case w of
 	    NIL => raise Match
 	  | Colon => ":"
-	  | Otherwise => "Otherwise"
+	  | Otherwise => "true"
 	  | Scoped (x1, scope) => raise Match
 	  | Vref (_, []) => raise Match
 	  | Vref (NONE, rr) => raise Match
 	  | Vref (SOME ns, rr0) => (
 	    if (ns = PKG) then
-		(ref_to_string ((Id "", []) :: rr0))
+		(reference_path_to_string ((Id "", []) :: rr0))
 	    else
-		(ref_to_string rr0))
+		(reference_path_to_string rr0))
 	  | Opr p => (predefined_operator_to_string p)
+	  | App (Opr p, [a0]) => (
+	    let
+		val assoc1 = (predefined_operator_associativity p)
+		val weaker = (assoc1 < assoc)
+		val nn = (expression_to_string 0 (Opr p))
+		val s0 = (expression_to_string assoc1 a0)
+		val ss = case (operator_type p) of
+			     ARITHMETIC_UOP => (nn ^" "^ s0)
+			   | ARITHMETIC_BOP => raise Match
+			   | BOOLEAN_UOP => (nn ^" "^ s0)
+			   | BOOLEAN_BOP => raise Match
+			   | STRING_CONCAT_OP => raise Match
+			   | RELATIONAL_OP => raise Match
+	    in
+		ss
+	    end)
+	  | App (Opr p, [a0, a1]) => (
+	    let
+		val assoc1 = (predefined_operator_associativity p)
+		val weaker = (assoc1 < assoc)
+		val nn = (expression_to_string 0 (Opr p))
+		val s0 = (expression_to_string assoc1 a0)
+		val s1 = (expression_to_string (assoc1 + 1) a1)
+		val ss0 = case (operator_type p) of
+			      ARITHMETIC_UOP => raise Match
+			    | ARITHMETIC_BOP => (s0 ^" "^ nn ^" "^ s1)
+			    | BOOLEAN_UOP => raise Match
+			    | BOOLEAN_BOP => (s0 ^" "^ nn ^" "^ s1)
+			    | STRING_CONCAT_OP => raise Match
+			    | RELATIONAL_OP => (s0 ^" "^ nn ^" "^ s1)
+		val ss1 = if weaker then ("("^ ss0 ^")") else ss0
+	    in
+		ss1
+	    end)
+	  | App (Opr p, _) => raise Match
+	  | App (f as Vref _, aa) => (
+	    let
+		val nn = (expression_to_string 0 f)
+		val ss = ((String.concatWith ", ")
+			      (map (expression_to_string 0) aa))
+	    in
+		(nn ^"("^ ss ^")")
+	    end)
 	  | App (f, aa) => (
 	    let
-		val s = ((String.concatWith " ")
-			     (map expression_to_string (f :: aa)))
+		val n = (expression_to_string 0 f)
+		val ss = ((String.concatWith ", ")
+			      (map (expression_to_string 0) aa))
 	    in
-		("(App "^ s ^")")
+		(n ^"("^ ss ^")")
 	    end)
 	  | ITE cc => (
 	    let
-		val s = ((String.concatWith " ")
-			     (map (fn (x, y) =>
-				      ("("^ (expression_to_string x)
-				       ^" => "^
-				       (expression_to_string y) ^")")) cc))
+		val ss1 = case (List.concat (map conditional_clause cc)) of
+			      "elseif" :: ss0 => ("if" :: ss0)
+			    | "else" :: ss0 => ss0
+			    | _ => raise Match
 	    in
-		("(ITE "^ s ^")")
+		((String.concatWith " ") ss1)
 	    end)
 	  | Der aa => (
 	    let
-		val s = ((String.concatWith " ")
-			     (map expression_to_string aa))
+		val s = ((String.concatWith ", ")
+			     (map (expression_to_string 0) aa))
 	    in
-		("(Der "^ s ^")")
+		("der("^ s ^")")
 	    end)
 	  | Pure aa => (
 	    let
-		val s = ((String.concatWith " ")
-			     (map expression_to_string aa))
+		val s = ((String.concatWith ", ")
+			     (map (expression_to_string 0) aa))
 	    in
-		("(Pure "^ s ^")")
+		("pure("^ s ^")")
 	    end)
 	  | Closure (n, aa) => (
 	    let
 		val s = ((String.concatWith " ")
 			     ((name_to_string n)
-			      :: (map expression_to_string aa)))
+			      :: (map (expression_to_string assoc) aa)))
 	    in
 		("(Closure "^ s ^")")
 	    end)
@@ -134,54 +239,65 @@ fun expression_to_string w = (
 	  | L_String s => ("\""^ s ^"\"")
 	  | Array_Triple (x0, y0, NONE) => (
 	    let
-		val sx = (expression_to_string x0)
-		val sy = (expression_to_string y0)
+		val assoc1 = simple_expression
+		val weaker = (assoc1 < assoc)
+		val sx = (expression_to_string (assoc1 + 1) x0)
+		val sy = (expression_to_string (assoc1 + 1) y0)
 	    in
-		("(Triple "^ sx ^" : "^ sy ^")")
+		if (weaker) then
+		    ("("^ sx ^" : "^ sy ^")")
+		else
+		    (sx ^" : "^ sy)
 	    end)
 	  | Array_Triple (x0, y0, SOME z0) => (
 	    let
-		val sx = (expression_to_string x0)
-		val sy = (expression_to_string y0)
-		val sz = (expression_to_string z0)
+		val assoc1 = simple_expression
+		val weaker = (assoc1 < assoc)
+		val sx = (expression_to_string (assoc1 + 1) x0)
+		val sy = (expression_to_string (assoc1 + 1) y0)
+		val sz = (expression_to_string (assoc1 + 1) z0)
 	    in
-		("(Triple "^ sx ^" : "^ sy ^" : "^ sz ^")")
+		if (weaker) then
+		    ("("^ sx ^" : "^ sy ^" : "^ sz ^")")
+		else
+		    (sx ^" : "^ sy ^" : "^ sz)
 	    end)
 	  | Array_Constructor aa => (
 	    let
-		val s = ((String.concatWith " ")
-			     (map expression_to_string aa))
+		val ss = ((String.concatWith ", ")
+			      (map (expression_to_string 0) aa))
 	    in
-		("(Array_Constructor "^ s ^")")
+		("{"^ ss ^"}")
 	    end)
 	  | Array_Comprehension (x, uu) => (
 	    let
-		val s = ((String.concatWith " ")
-			     ((expression_to_string x)
-			      :: (map for_index_to_string uu)))
+		val xs = (expression_to_string assoc x)
+		val fors = (map for_index_to_string uu)
+		val ss = (String.concatWith ", "  fors)
 	    in
-		("(Comprehension"^ s ^")")
+		("{"^ xs ^" for "^ ss ^"}")
 	    end)
 	  | Array_Concatenation aa => (
 	    let
 		val s = ((String.concatWith " ; ")
 			     (map ((String.concatWith " , ")
-				   o (map expression_to_string))
+				   o (map (expression_to_string assoc)))
 				  aa))
 	    in
 		("(Array_Concatenation "^ s ^")")
 	    end)
+	  | Tuple [NIL] => ("()")
 	  | Tuple aa => (
 	    let
-		val s = ((String.concatWith " ")
-			     (map expression_to_string aa))
+		val ss = ((String.concatWith ", ")
+			     (map (expression_to_string 0) aa))
 	    in
-		("(Tuple "^ s ^")")
+		("("^ ss ^")")
 	    end)
 	  | Reduction_Argument (x, uu) => (
 	    let
 		val s = ((String.concatWith " ")
-			     ((expression_to_string x)
+			     ((expression_to_string assoc x)
 			      :: (map for_index_to_string uu)))
 	    in
 		("(Reduction_Argument"^ s ^")")
@@ -189,21 +305,21 @@ fun expression_to_string w = (
 	  | Named_Argument (n, x) => (
 	    let
 		val s0 = (name_to_string n)
-		val s1 = (expression_to_string x)
+		val s1 = (expression_to_string assoc x)
 	    in
 		(""^ s0 ^"="^ s1 ^"")
 	    end)
 	  | Pseudo_Split (x, ss) => (
 	    let
-		val s0 = (expression_to_string x)
-		val s1 = ((String.concatWith ",")
+		val s0 = (expression_to_string assoc x)
+		val s1 = ((String.concatWith ", ")
 			      (map Int.toString ss))
 	    in
 		("(Pseudo_Split "^ s0 ^"["^ s1 ^"])")
 	    end)
 	  | Component_Ref (x, id) => (
 	    let
-		val s0 = (expression_to_string x)
+		val s0 = (expression_to_string assoc x)
 		val s1 = (id_to_string id)
 	    in
 		("(Component_Ref "^ s0 ^", "^ s1 ^")")
@@ -228,31 +344,33 @@ fun expression_to_string w = (
 	    end)
 	  *)
 	  | Instances ([], [subj]) => (
-	    ("(Instance "^ (subject_to_string subj) ^")"))
+	    (subject_to_string subj))
 	  | Instances ([], _) => raise Match
-	  | Instances (dim, subjs) => (
+	  | Instances (dim, subjs) => raise Match
+	  (*(
 	    let
 		val _ = if (not (null dim)) then () else raise Match
-		val ds = ((String.concatWith ",")
+		val ds = ((String.concatWith ", ")
 			      (map Int.toString dim))
 	    in
 		case subjs of
 		    [] => ("(Instance ["^ ds ^"])")
 		  | (subj :: _) => (
 		    ("(Instance ["^ ds ^"] "^ (subject_to_string subj) ^")"))
-	    end)
+	    end)*)
 	  | Iref v => (id_to_string v)
-	  | Cref (e, b) => (expression_to_string e)
+	  | Lref (rr, j) => (reference_path_to_string rr)
+	  | Cref (e, b) => (expression_to_string assoc e)
 	  | Array_fill (e, n) => (
 	    let
-		val se = (expression_to_string e)
-		val sn = (expression_to_string n)
+		val se = (expression_to_string assoc e)
+		val sn = (expression_to_string assoc n)
 	    in
-		("(fill ("^ se ^","^ sn ^")")
+		("(fill ("^ se ^", "^ sn ^")")
 	    end)
 	  | Array_diagonal v => (
 	    let
-		val sv = (expression_to_string v)
+		val sv = (expression_to_string assoc v)
 	    in
 		("(diagonal ("^ sv ^")")
 	    end)
@@ -268,28 +386,29 @@ fun collect_variables root = (
 	val the_time = Subj (VAR, [(Id "time", [])])
 	val the_end = Subj (VAR, [(Id "end", [])])
 
-	fun collect (kp, acc) = (
-	    if (step_is_less E3 kp) then
+	fun collect (k, acc) = (
+	    if (step_is_less E3 k) then
 		acc
 	    else
 		let
-		    val subj = (subject_of_class kp)
+		    val subj = (subject_of_class k)
 		in
-		    if (class_is_outer_alias kp) then
-			(* THIS WILL BE REMOVED. *)
+		    if (class_is_enumerator k) then
 			acc
-		    else if (class_is_enumerator_definition kp) then
+		    else if (class_is_argument k) then
 			acc
-		    else if (class_is_package kp) then
+		    else if (class_is_package k) then
 			acc
 		    else if (subj = the_time orelse subj = the_end) then
 			acc
-		    else if (class_is_simple_type kp) then
+		    else if (class_is_simple_type k) then
 			let
-			    val _ = if (step_is_at_least E5 kp) then ()
+			    val _ = if (not (class_is_outer_alias k)) then ()
+				    else raise Match
+			    val _ = if (step_is_at_least E5 k) then ()
 				    else raise Match
 			in
-			    acc @ [kp]
+			    acc @ [k]
 			end
 		    else
 			acc
@@ -304,15 +423,16 @@ fun collect_variables root = (
 fun collect_enumerations root = (
     let
 	fun collect (kp, acc) = (
-	    if (class_is_outer_alias kp) then
-		(* THIS WILL BE REMOVED. *)
+	    if (class_is_enumerator kp) then
 		acc
-	    else if (class_is_enumerator_definition kp) then
+	    else if (class_is_argument kp) then
 		acc
 	    else if (step_is_less E3 kp) then
 		acc
 	    else if (class_is_enumeration_definition kp) then
 		let
+		    val _ = if (not (class_is_outer_alias kp)) then ()
+			    else raise Match
 		    val _ = if ((cook_step kp) = E3) then () else raise Match
 		in
 		    acc @ [kp]
@@ -328,19 +448,17 @@ fun collect_enumerations root = (
 
 fun collect_records root = (
     let
-	fun class_is_record_definition k = (
-	    (kind_is_record k) andalso (class_is_package k))
-
 	fun collect (kp, acc) = (
-	    if (class_is_outer_alias kp) then
-		(* THIS WILL BE REMOVED. *)
+	    if (class_is_enumerator kp) then
 		acc
-	    else if (class_is_enumerator_definition kp) then
+	    else if (class_is_argument kp) then
 		acc
 	    else if (step_is_less E3 kp) then
 		acc
 	    else if (class_is_record_definition kp) then
 		let
+		    val _ = if (not (class_is_outer_alias kp)) then ()
+			    else raise Match
 		    val _ = if ((cook_step kp) = E3) then () else raise Match
 		in
 		    acc @ [kp]
@@ -356,22 +474,19 @@ fun collect_records root = (
 
 fun collect_functions root = (
     let
-	fun partial k = (
-	    case k of
-		Def_Body (mk, j, (t, {Partial, ...}, q), nm, cc, ee, aa, ww) => (
-		Partial)
-	      | _ => raise Match)
+	val partial = body_is_partial
 
 	fun collect (kp, acc) = (
-	    if (class_is_outer_alias kp) then
-		(* THIS WILL BE REMOVED. *)
+	    if (class_is_enumerator kp) then
 		acc
-	    else if (class_is_enumerator_definition kp) then
+	    else if (class_is_argument kp) then
 		acc
 	    else if (step_is_less E3 kp) then
 		acc
 	    else if ((kind_is_function kp) andalso (not (partial kp))) then
 		let
+		    val _ = if (not (class_is_outer_alias kp)) then ()
+			    else raise Match
 		    val _ = if (step_is_at_least E3 kp) then ()
 			    else raise Match
 		in
@@ -420,11 +535,12 @@ fun collect_equations initial () = (
 	(* Include equations in simple-types. *)
 
 	fun collect (kp, acc) = (
-	    if (class_is_outer_alias kp) then
-		(* THIS WILL BE REMOVED. *)
+	    if (class_is_argument kp) then
 		acc
 	    else
 		let
+		    val _ = if (not (class_is_outer_alias kp)) then ()
+			    else raise Match
 		    val (bases, _) = (extract_base_classes false kp)
 		    val subj = (subject_of_class kp)
 		    val tag = (tag_of_body kp)
@@ -445,43 +561,57 @@ fun collect_equations initial () = (
 
 (* ================================================================ *)
 
-val predefined_type_names = [
-    "Real",
-    "Integer",
-    "Boolean",
-    "String",
-    "StateSelect",
-    "AssertionLevel",
-    "Clock",
-    "ExternalObject",
-    "Connections"]
+(* Note zero in real is an integer. *)
 
-fun declaraton_of_real k = (
+val real_zero = L_Number (Z, "0")
+val integer_zero = L_Number (Z, "0")
+val string_empty = L_String ""
+val boolean_truth = L_Bool true
+val boolean_false = L_Bool false
+
+val stateselect_default
+    = Vref (SOME PKG,
+	    [(Id "StateSelect", []), (Id "default", [])])
+
+val real_inf = Vref (SOME PKG,
+		  [(Id "Modelica", []), (Id "Constants", []), (Id "inf", [])])
+
+val integer_inf = Vref (SOME PKG,
+			[(Id "Modelica", []), (Id "Constants", []),
+			 (Id "Integer_inf", [])])
+
+fun optional_slot k v preset = (
     let
-	fun quote x = (expression_to_string x)
+	fun quote x = (expression_to_string 0 x)
+    in
+	if (v = NIL orelse v = preset) then ""
+	else (k ^"="^ (quote v))
+    end)
 
-	fun opt_slot k v preset = (
-	    if (v = preset orelse v = NIL) then ""
-	    else (k ^"="^ (quote v)))
+fun fixed_value variability = (
+    if ((variability_order variability)
+	<= (variability_order Parameter)) then
+	boolean_truth
+    else
+	boolean_false)
 
-	val empty_string = L_String ""
-	val real_zero = L_Number (Z, "0")
-	val truth_value = L_Bool true
-	val false_value = L_Bool false
-	val stateselect_default
-	    = Vref (SOME PKG,
-		    [(Id "StateSelect", []), (Id "default", [])])
-	val inf
-	    = Vref (SOME PKG,
-		    [(Id "Modelica", []),
-		     (Id "Constants", []), (Id "inf", [])])
+fun concat_strings separator ss = (
+    (String.concatWith separator (List.filter (fn x => (x <> "")) ss)))
+
+fun declaration_of_real modifiers k = (
+    let
+	fun quote x = (expression_to_string 0 x)
+
+	val subj = (subject_of_class k)
+	val inf = real_inf
 	val min_default = App (Opr Opr_neg, [inf])
 	val max_default = App (Opr Opr_id, [inf])
     in
 	case k of
-	    Def_Body ((u, f, b), subj, (t, p, q), (c, n, x), cc, ee, aa, ww) => (
+	    Def_Body ((u, f, b), (t, p, q), nm, cc, ee, aa, ww) => (
 	    let
-		val (analogical, variability, modality) = q
+		val (modality_, variability, causality_) = q
+		val fixed_default = (fixed_value variability)
 
 		val value_ = (simple_type_attribute k (Id "value"))
 		val quantity_ = (simple_type_attribute k (Id "quantity"))
@@ -495,44 +625,33 @@ fun declaraton_of_real k = (
 		val unbounded_ = (simple_type_attribute k (Id "unbounded"))
 		val stateSelect_ = (simple_type_attribute k (Id "stateSelect"))
 
-		val fixed_default =
-		      if ((variability_order variability)
-			  <= (variability_order Parameter)) then
-			  truth_value
-		      else
-			  false_value
+		val slots = [(optional_slot "quantity" quantity_ string_empty),
+			     (optional_slot "unit" unit_ string_empty),
+			     (optional_slot "displayUnit" displayUnit_
+					    string_empty),
+			     (optional_slot "min" min_ min_default),
+			     (optional_slot "max" max_ max_default),
+			     (optional_slot "start" start_ real_zero),
+			     (optional_slot "nominal" nominal_ NIL),
+			     (optional_slot "fixed" fixed_ fixed_default),
+			     (optional_slot "unbounded" unbounded_
+					    boolean_false),
+			     (optional_slot "stateSelect" stateSelect_
+					    stateselect_default)]
 
 		val vs = (variability_to_string variability)
 		val ts = "Real"
 		val ms = ("("^
-			  (String.concatWith
-			       ", "
-			       (List.filter
-				    (fn x => (x <> ""))
-				    [(opt_slot "quantity" quantity_
-					       empty_string),
-				     (opt_slot "unit" unit_ empty_string),
-				     (opt_slot "displayUnit" displayUnit_
-					       empty_string),
-				     (opt_slot "min" min_ min_default),
-				     (opt_slot "max" max_ max_default),
-				     (opt_slot "start" start_ real_zero),
-				     (opt_slot "nominal" nominal_ NIL),
-				     (opt_slot "fixed" fixed_ fixed_default),
-				     (opt_slot "unbounded" unbounded_
-					       false_value),
-				     (opt_slot "stateSelect" stateSelect_
-					       stateselect_default)]))
+			  (concat_strings ", " slots)
 			  ^")")
 		val ns = (subject_to_string subj)
+		val _ = if (not ((value_ <> NIL) andalso (modifiers <> "")))
+			then () else raise Match
 		val xs = if (value_ <> NIL) then
 			     "= "^ (quote value_)
 			 else
-			     ""
-		val ss = ((String.concatWith
-			       " "
-			       (List.filter (fn x => (x <> ""))
-					    [vs, ts, ms, ns, xs]))
+			     modifiers
+		val ss = ((concat_strings " " [vs, ts, ms, ns, xs])
 			  ^";")
 	    in
 		ss
@@ -540,7 +659,12 @@ fun declaraton_of_real k = (
 	  | Def_Der _ => ""
 	  | Def_Primitive _ => raise Match
 	  | Def_Outer_Alias _ => raise Match
-	  | Def_Name _ => raise Match
+	  | Def_Argument (kx, (ss, mm), aa, ww) => (
+	    if (null ss) andalso (null mm) then
+		(declaration_of_real "" kx)
+	    else
+		(declaration_of_real "(...)" kx))
+	  | Def_Named _ => raise Match
 	  | Def_Scoped _ => raise Match
 	  | Def_Refine _ => raise Match
 	  | Def_Extending _ => raise Match
@@ -550,28 +674,20 @@ fun declaraton_of_real k = (
 	  | Def_Mock_Array _ => raise Match
     end)
 
-fun declaraton_of_integer k = (
+fun declaration_of_integer modifiers k = (
     let
-	fun quote x = (expression_to_string x)
+	fun quote x = (expression_to_string 0 x)
 
-	fun opt_slot k v preset = (
-	    if (v = preset orelse v = NIL) then ""
-	    else (k ^"="^ (quote v)))
-
-	val empty_string = L_String ""
-	val real_zero = L_Number (Z, "0")
-	val truth_value = L_Bool true
-	val false_value = L_Bool false
-	val inf = Vref (SOME PKG,
-			[(Id "Modelica", []), (Id "Constants", []),
-			 (Id "Integer_inf", [])])
+	val subj = (subject_of_class k)
+	val inf = integer_inf
 	val min_default = App (Opr Opr_neg, [inf])
 	val max_default = App (Opr Opr_id, [inf])
     in
 	case k of
-	    Def_Body ((u, f, b), subj, (t, p, q), (c, n, x), cc, ee, aa, ww) => (
+	    Def_Body ((u, f, b), (t, p, q), nm, cc, ee, aa, ww) => (
 	    let
-		val (analogical, variability, modality) = q
+		val (modality_, variability, causality_) = q
+		val fixed_default = (fixed_value variability)
 
 		val value_ = (simple_type_attribute k (Id "value"))
 		val quantity_ = (simple_type_attribute k (Id "quantity"))
@@ -580,36 +696,198 @@ fun declaraton_of_integer k = (
 		val start_ = (simple_type_attribute k (Id "start"))
 		val fixed_ = (simple_type_attribute k (Id "fixed"))
 
-		val fixed_default =
-		      if ((variability_order variability)
-			  <= (variability_order Parameter)) then
-			  truth_value
-		      else
-			  false_value
+		val slots = [(optional_slot "quantity" quantity_ string_empty),
+			     (optional_slot "min" min_ min_default),
+			     (optional_slot "max" max_ max_default),
+			     (optional_slot "start" start_ real_zero),
+			     (optional_slot "fixed" fixed_ fixed_default)]
 
 		val vs = (variability_to_string variability)
 		val ts = "Integer"
 		val ms = ("("^
-			  (String.concatWith
-			       ", "
-			       (List.filter
-				    (fn x => (x <> ""))
-				    [(opt_slot "quantity" quantity_
-					       empty_string),
-				     (opt_slot "min" min_ min_default),
-				     (opt_slot "max" max_ max_default),
-				     (opt_slot "start" start_ real_zero),
-				     (opt_slot "fixed" fixed_ fixed_default)]))
+			  (concat_strings ", " slots)
 			  ^")")
 		val ns = (subject_to_string subj)
+		val _ = if (not ((value_ <> NIL) andalso (modifiers <> "")))
+			then () else raise Match
 		val xs = if (value_ <> NIL) then
 			     "= "^ (quote value_)
 			 else
-			     ""
-		val ss = ((String.concatWith
-			       " "
-			       (List.filter (fn x => (x <> ""))
-					    [vs, ts, ms, ns, xs]))
+			     modifiers
+		val ss = ((concat_strings " " [vs, ts, ms, ns, xs])
+			  ^";")
+	    in
+		ss
+	    end)
+	  | Def_Der _ => raise Match
+	  | Def_Primitive _ => raise Match
+	  | Def_Outer_Alias _ => raise Match
+	  | Def_Argument (kx, (ss, mm), aa, ww) => (
+	    if (null ss) andalso (null mm) then
+		(declaration_of_integer "" kx)
+	    else
+		(declaration_of_integer "(...)" kx))
+	  | Def_Named _ => raise Match
+	  | Def_Scoped _ => raise Match
+	  | Def_Refine _ => raise Match
+	  | Def_Extending _ => raise Match
+	  | Def_Replaced _ => raise Match
+	  | Def_Displaced _ => raise Match
+	  | Def_In_File => raise Match
+	  | Def_Mock_Array _ => raise Match
+    end)
+
+fun declaration_of_boolean modifiers k = (
+    let
+	fun quote x = (expression_to_string 0 x)
+	val subj = (subject_of_class k)
+    in
+	case k of
+	    Def_Body ((u, f, b), (t, p, q), nm, cc, ee, aa, ww) => (
+	    let
+		val (modality_, variability, causality_) = q
+		val fixed_default = (fixed_value variability)
+
+		val value_ = (simple_type_attribute k (Id "value"))
+		val quantity_ = (simple_type_attribute k (Id "quantity"))
+		val start_ = (simple_type_attribute k (Id "start"))
+		val fixed_ = (simple_type_attribute k (Id "fixed"))
+
+		val slots = [(optional_slot "quantity" quantity_ string_empty),
+			     (optional_slot "start" start_ boolean_false),
+			     (optional_slot "fixed" fixed_ fixed_default)]
+
+		val vs = (variability_to_string variability)
+		val ts = "Boolean"
+		val ms = ("("^
+			  (concat_strings ", " slots)
+			  ^")")
+		val ns = (subject_to_string subj)
+		val _ = if (not ((value_ <> NIL) andalso (modifiers <> "")))
+			then () else raise Match
+		val xs = if (value_ <> NIL) then
+			     "= "^ (quote value_)
+			 else
+			     modifiers
+		val ss = ((concat_strings " " [vs, ts, ms, ns, xs])
+			  ^";")
+	    in
+		ss
+	    end)
+	  | Def_Der _ => raise Match
+	  | Def_Primitive _ => raise Match
+	  | Def_Outer_Alias _ => raise Match
+	  | Def_Argument (kx, (ss, mm), aa, ww) => (
+	    if (null ss) andalso (null mm) then
+		(declaration_of_boolean "" kx)
+	    else
+		(declaration_of_boolean "(...)" kx))
+	  | Def_Named _ => raise Match
+	  | Def_Scoped _ => raise Match
+	  | Def_Refine _ => raise Match
+	  | Def_Extending _ => raise Match
+	  | Def_Replaced _ => raise Match
+	  | Def_Displaced _ => raise Match
+	  | Def_In_File => raise Match
+	  | Def_Mock_Array _ => raise Match
+    end)
+
+fun declaration_of_string modifiers k = (
+    let
+	fun quote x = (expression_to_string 0 x)
+	val subj = (subject_of_class k)
+    in
+	case k of
+	    Def_Body ((u, f, b), (t, p, q), nm, cc, ee, aa, ww) => (
+	    let
+		val (modality_, variability, causality_) = q
+		val fixed_default = (fixed_value variability)
+
+		val value_ = (simple_type_attribute k (Id "value"))
+		val quantity_ = (simple_type_attribute k (Id "quantity"))
+		val start_ = (simple_type_attribute k (Id "start"))
+		val fixed_ = (simple_type_attribute k (Id "fixed"))
+
+		val slots = [(optional_slot "quantity" quantity_ string_empty),
+			     (optional_slot "start" start_ string_empty),
+			     (optional_slot "fixed" fixed_ fixed_default)]
+
+		val vs = (variability_to_string variability)
+		val ts = "String"
+		val ms = ("("^
+			  (concat_strings ", " slots)
+			  ^")")
+		val ns = (subject_to_string subj)
+		val _ = if (not ((value_ <> NIL) andalso (modifiers <> "")))
+			then () else raise Match
+		val xs = if (value_ <> NIL) then
+			     "= "^ (quote value_)
+			 else
+			     modifiers
+		val ss = ((concat_strings " " [vs, ts, ms, ns, xs])
+			  ^";")
+	    in
+		ss
+	    end)
+	  | Def_Der _ => raise Match
+	  | Def_Primitive _ => raise Match
+	  | Def_Outer_Alias _ => raise Match
+	  | Def_Argument (kx, (ss, mm), aa, ww) => (
+	    if (null ss) andalso (null mm) then
+		(declaration_of_string "" kx)
+	    else
+		(declaration_of_string "(...)" kx))
+	  | Def_Named _ => raise Match
+	  | Def_Scoped _ => raise Match
+	  | Def_Refine _ => raise Match
+	  | Def_Extending _ => raise Match
+	  | Def_Replaced _ => raise Match
+	  | Def_Displaced _ => raise Match
+	  | Def_In_File => raise Match
+	  | Def_Mock_Array _ => raise Match
+    end)
+
+fun declaration_of_enumeration modifiers k = (
+    let
+	fun quote x = (expression_to_string 0 x)
+	val subj = (subject_of_class k)
+    in
+	case k of
+	    Def_Body ((u, f, b), (t, p, q), nm, cc, ee, aa, ww) => (
+	    let
+		val (modality_, variability, causality_) = q
+		val fixed_default = (fixed_value variability)
+		val (min_default, max_default) = (enumeration_bounds k)
+
+		val namesubj = (identity_name_of_body k)
+		val name = (subject_to_string namesubj)
+
+		val value_ = (simple_type_attribute k (Id "value"))
+		val quantity_ = (simple_type_attribute k (Id "quantity"))
+		val min_ = (simple_type_attribute k (Id "min"))
+		val max_ = (simple_type_attribute k (Id "max"))
+		val start_ = (simple_type_attribute k (Id "start"))
+		val fixed_ = (simple_type_attribute k (Id "fixed"))
+
+		val slots = [(optional_slot "quantity" quantity_ string_empty),
+			     (optional_slot "min" min_ min_default),
+			     (optional_slot "max" max_ max_default),
+			     (optional_slot "start" start_ min_default),
+			     (optional_slot "fixed" fixed_ fixed_default)]
+
+		val vs = (variability_to_string variability)
+		val ts = (name)
+		val ms = ("("^
+			  (concat_strings ", " slots)
+			  ^")")
+		val ns = (subject_to_string subj)
+		val _ = if (not ((value_ <> NIL) andalso (modifiers <> "")))
+			then () else raise Match
+		val xs = if (value_ <> NIL) then
+			     "= "^ (quote value_)
+			 else
+			     modifiers
+		val ss = ((concat_strings " " [vs, ts, ms, ns, xs])
 			  ^";")
 	    in
 		ss
@@ -617,7 +895,12 @@ fun declaraton_of_integer k = (
 	  | Def_Der _ => ""
 	  | Def_Primitive _ => raise Match
 	  | Def_Outer_Alias _ => raise Match
-	  | Def_Name _ => raise Match
+	  | Def_Argument (kx, (ss, mm), aa, ww) => (
+	    if (null ss) andalso (null mm) then
+		(declaration_of_enumeration "" kx)
+	    else
+		(declaration_of_enumeration "(...)" kx))
+	  | Def_Named _ => raise Match
 	  | Def_Scoped _ => raise Match
 	  | Def_Refine _ => raise Match
 	  | Def_Extending _ => raise Match
@@ -630,11 +913,11 @@ fun declaraton_of_integer k = (
 fun dump_variable s k = (
     let
 	val sx = case (type_of_simple_type k) of
-		     P_Number R => (declaraton_of_real k)
-		   | P_Number Z => (declaraton_of_integer k)
-		   | P_Boolean => ""
-		   | P_String => ""
-		   | P_Enum tag =>  ""
+		     P_Number R => (declaration_of_real "" k)
+		   | P_Number Z => (declaration_of_integer "" k)
+		   | P_Boolean => (declaration_of_boolean "" k)
+		   | P_String => (declaration_of_string "" k)
+		   | P_Enum tag =>  (declaration_of_enumeration "" k)
 	val ss = if (sx = "") then "" else (sx ^"\n")
 	val _ = (TextIO.output (s, ss))
     in
@@ -650,7 +933,7 @@ fun dump_enumeration s k = (
 	      | _ => false)
     in
 	case k of
-	    Def_Body (mk, j, (t, p, q), nm, cc, ee, aa, ww) => (
+	    Def_Body (mk, (t, p, q), nm, cc, ee, aa, ww) => (
 	    let
 		val tag = (tag_of_body k)
 		val name = (subject_to_string (subject_of_class k))
@@ -678,7 +961,7 @@ fun dump_record s k = (
 	      | _ => false)
     in
 	case k of
-	    Def_Body (mk, j, (t, p, q), nm, cc, ee, aa, ww) => (
+	    Def_Body (mk, (t, p, q), nm, cc, ee, aa, ww) => (
 	    let
 		val tag = (tag_of_body k)
 		val name = (subject_to_string (subject_of_class k))
@@ -695,7 +978,7 @@ fun dump_record s k = (
 	  | _ => raise Match
     end)
 
-fun dump_function s k = (
+fun function_is_predefined k = (
     let
 	fun predefined tag = (
 	    case tag of
@@ -703,18 +986,47 @@ fun dump_function s k = (
 					 predefined_function_names)
 	      | _ => false)
     in
+	(predefined (tag_of_body k))
+    end)
+
+fun dump_predefined s k = (
+    let
+	val _ = if (function_is_predefined k) then () else raise Match
+	val name = (subject_to_string (subject_of_class k))
+	val dummy = ("/* function (predefined) "^ name ^" */\n")
+    in
+	(TextIO.output (s, dummy))
+    end)
+
+(*(Function false, {Encapsulated = false, Final = false, Partial = false},*)
+(*(Effort, Continuous, Acausal)*)
+
+fun dump_function s k = (
+    let
+	fun kind_string t = (
+	    case t of
+		Function pure  => if pure then "pure functions" else "function"
+	      | _ => raise Match)
+	fun class_prefixes_string {Final, Encapsulated, Partial} = ()
+	fun component_prefixes_string (a, v, d) = ()
+    in
 	case k of
-	    Def_Body (mk, j, (t, p, q), nm, cc, ee, aa, ww) => (
+	    Def_Body (mk, (t, p, q), nm, cc, ee, aa, ww) => (
 	    let
-		val tag = (tag_of_body k)
+		val pp = (kind_string t)
 		val name = (subject_to_string (subject_of_class k))
-		val dummy = ("/* function (predefined) "^ name ^" */\n")
-		val ss = ("/* function "^ name ^" */\n")
+
+		val _ = (assert_cooked_at_least E3 k)
+		val bindings = (list_elements true k)
+		val (_, states) =
+		      (List.partition binding_is_class bindings)
+		(*val _ = raise Match*)
+
+		val _ = (TextIO.output (s, (pp ^" "^ name ^"\n")))
+		val _ = (TextIO.output (s, "end "^ name ^";\n"))
+		val _ = (TextIO.output (s, "\n"))
 	    in
-		if ((predefined tag)) then
-		    (TextIO.output (s, dummy))
-		else
-		    (TextIO.output (s, ss))
+		()
 	    end)
 	  | _ => raise Match
     end)
@@ -722,36 +1034,26 @@ fun dump_function s k = (
 fun for_index_to_string i = (
     case i of
 	(v, Colon) => (id_to_string v)
-      | (v, e) => ((id_to_string v) ^" in "^ (expression_to_string e)))
+      | (v, e) => ((id_to_string v) ^" in "^ (expression_to_string 0 e)))
 
 fun dump_equation s q = (
     let
 	fun dump_conditional key s ((e, qq), start) = (
 	    case e of
 		Otherwise => (
-		if (not start) then
-		    let
-			(*val _ = if (not start) then () else raise Match*)
-			val _ = (TextIO.output (s, "else\n"))
-			val _ = (app (dump_equation s) qq)
-		    in
-			false
-		    end
-		else
-		    let
-			val _ = (app (dump_equation s) qq)
-		    in
-			false
-		    end)
+		let
+		    val cc0 = if (start) then "" else ("else")
+		    val cc1 = if (cc0 = "") then "" else (cc0 ^"\n")
+		    val _ = (TextIO.output (s, cc1))
+		    val _ = (app (dump_equation s) qq)
+		in
+		    false
+		end)
 	      | _ => (
 		let
-		    val _ = if (start) then
-				(TextIO.output (s, (key ^" ")))
-			    else
-				(TextIO.output (s, (("else"^ key) ^" ")))
-		    val _ = (TextIO.output
-				 (s, ("("^ (expression_to_string e) ^")")))
-		    val _ = (TextIO.output (s, " then\n"))
+		    val pp = if (start) then key else ("else"^ key)
+		    val cc = (pp ^" "^ (expression_to_string 0 e) ^" then")
+		    val _ = (TextIO.output (s, (cc ^"\n")))
 		    val _ = (app (dump_equation s) qq)
 		in
 		    false
@@ -760,74 +1062,67 @@ fun dump_equation s q = (
 	case q of
 	    Eq_Eq ((e0, e1), aa, ww) => (
 	    let
-		val _ = (TextIO.output
-			     (s, ("("^
-				  (expression_to_string e0)
-				  ^" = "^
-				  (expression_to_string e1) ^")\n")))
+		val ss = ((expression_to_string 0 e0)
+			  ^" = "^ (expression_to_string 0 e1))
+		val _ = (TextIO.output (s, (ss ^";\n")))
 	    in
 		()
 	    end)
 	  | Eq_Connect ((Cref (e0, side0), Cref (e1, side1)), aa, ww) => (
 	    let
 		val _ = (TextIO.output
-			     (s, ("/*connect ("^
-				  (expression_to_string e0)
+			     (s, ("/*connect("^
+				  (expression_to_string 0 e0)
 				  (*^(if side0 then "(+)" else "(-)")*)
 				  ^", "^
-				  (expression_to_string e1)
+				  (expression_to_string 0 e1)
 				  (*^(if side1 then "(+)" else "(-)")*)
 				  ^")*/\n")))
 	    in
 		()
 	    end)
-	  | Eq_Connect ((e0, e1), aa, ww) =>
-	    (*raise Match*)
-	      (
-		let
-		    val _ = (TextIO.output
-				 (s, ("/*connect ("^
-				      (expression_to_string e0)
-				      ^", "^
-				      (expression_to_string e1)
-				      ^")*/\n")))
-		in
-		    ()
-		end)
+	  | Eq_Connect ((e0, e1), aa, ww) => (
+	    let
+		val _ = (TextIO.output
+			     (s, ("/*connect("^
+				  (expression_to_string 0 e0)
+				  ^", "^
+				  (expression_to_string 0 e1)
+				  ^")*/\n")))
+	    in
+		()
+	    end)
 	  | Eq_If (cc, aa, ww) => (
 	    let
 		val _ = (foldl (dump_conditional "if" s) true cc)
+		val _ = (TextIO.output (s, "end if;\n"))
 	    in
 		()
 	    end)
 	  | Eq_When (cc, aa, ww) => (
 	    let
 		val _ = (foldl (dump_conditional "when" s) true cc)
-		val _ = (TextIO.output (s, "end when\n"))
+		val _ = (TextIO.output (s, "end when;\n"))
 	    in
 		()
 	    end)
 	  | Eq_For ((ii, qq), aa, ww) => (
 	    let
-		val _ = (TextIO.output (s, "for "))
-		val ss = ((String.concatWith)
-			      ", "
+		val ss = ((String.concatWith ", ")
 			      (map for_index_to_string ii))
-		val _ = (TextIO.output (s, ss))
-		val _ = (TextIO.output (s, " loop\n"))
+		val _ = (TextIO.output (s, ("for "^ ss ^" loop\n")))
 		val _ = (app (dump_equation s) qq)
-		val _ = (TextIO.output (s, "end for\n"))
+		val _ = (TextIO.output (s, "end for;\n"))
 	    in
 		()
 	    end)
 	  | Eq_App ((f, ee), aa, ww) => (
 	    let
-		val _ = (TextIO.output (s, (expression_to_string f)))
-		val _ = (TextIO.output (s, "("))
-		val _ = (TextIO.output
-			     (s, ((String.concatWith)
-				      "," (map expression_to_string ee))))
-		val _ = (TextIO.output (s, ")\n"))
+		val nn = (expression_to_string 0 f)
+		val sa = ((String.concatWith ", ")
+			      (map (expression_to_string 0) ee))
+		val ss = (nn ^"("^ sa ^")")
+		val _ = (TextIO.output (s, (ss ^ ";\n")))
 	    in
 		()
 	    end)
@@ -869,17 +1164,6 @@ fun dump_equations s (subj, ee) = (
 fun dump_flat_model () = (
     let
 	val _ = tr_flat (";; Flatten a model in \"x.mo\"...")
-
-	fun class_is_constant k = (
-	    case k of
-		Def_Body (mk, j, (t, p, q), nm, cc, ee, aa, ww) => (
-		let
-		    val (lg, vc, io) = q
-		in
-		    vc = Constant orelse vc = Parameter
-		end)
-	      | Def_Der _ => false
-	      | _ => raise Match)
 
 	val filename = "x.mo"
 	val s = (TextIO.openOut filename)
@@ -938,9 +1222,11 @@ fun dump_flat_model () = (
 	val _ = (TextIO.output (s, "\n"))
 
 	val funs0 = (collect_functions PKG)
-	val funs1 = (collect_functions VAR)
-	val _ = (app (dump_function s) funs0)
-	val _ = (app (dump_function s) funs1)
+	val (funs1, funs2)  = (List.partition function_is_predefined funs0)
+	val funs3 = (collect_functions VAR)
+	val _ = (app (dump_predefined s) funs1)
+	val _ = (app (dump_function s) funs2)
+	val _ = (app (dump_function s) funs3)
 
 	(* Equation sections. *)
 

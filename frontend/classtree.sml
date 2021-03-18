@@ -41,7 +41,7 @@ sig
     val store_to_instance_tree :
 	subject_t -> definition_body_t -> definition_body_t
 
-    val instantiate_outer_alias :
+    val insert_outer_alias :
 	instantiation_t -> subject_t -> subject_t -> definition_body_t
     val substitute_outer_reference : expression_t -> expression_t
 
@@ -73,7 +73,7 @@ sig
 
     val fetch_base_class :
 	exn -> subject_t * class_tag_t -> definition_body_t
-    val fetch_class_by_scope :
+    val fetch_class_by_part :
 	subject_t * class_tag_t -> subject_t * definition_body_t
 
     val fetch_instance_tree_node : subject_t -> instance_node_t option
@@ -84,12 +84,16 @@ sig
 	(definition_body_t * 'a -> 'a) -> instance_node_t * 'a -> 'a
 
     val access_node :
-	instance_node_t -> (definition_body_t * component_slot_t list)
+	cook_step_t -> bool -> instance_node_t
+	-> (definition_body_t * component_slot_t list)
 
     val dereference_outer_alias : component_slot_t -> instance_node_t
     val component_is_outer_alias : component_slot_t -> bool
     val component_is_expandable : component_slot_t -> bool
     val component_class : component_slot_t -> definition_body_t
+
+    val find_in_components :
+	id_t -> component_slot_t list -> component_slot_t option
 
     val clear_syntaxer_tables : unit -> unit
 
@@ -174,7 +178,7 @@ fun store_to_loaded_classes overwrite (d as Defclass ((v, pkg), k)) = (
 
 fun fetch_from_loaded_classes (tag : class_tag_t) = (
     if (tag_is_root tag) then
-	SOME the_root_class_definition
+	SOME the_package_root_definition
     else
 	let
 	    val s = (tag_to_string tag)
@@ -187,7 +191,8 @@ fun fetch_from_loaded_classes (tag : class_tag_t) = (
 		  | Def_Der _ => raise Match
 		  | Def_Primitive _ => raise Match
 		  | Def_Outer_Alias _ => raise Match
-		  | Def_Name _ => raise Match
+		  | Def_Argument _ => raise Match
+		  | Def_Named _ => raise Match
 		  | Def_Scoped _ => raise Match
 		  | Def_Refine _ => raise Match
 		  | Def_Extending _ => raise Match
@@ -209,7 +214,7 @@ type component_slot_t = common.component_slot_t
    instance_tree but for a separate root. *)
 
 val class_tree : instance_node_t =
-      (the_root_subject, ref the_root_class, ref [])
+      (the_package_root_subject, ref the_package_root, ref [])
 
 (* The instance_tree is rooted by the model, and stores the instances
    and their packages.  The instance_tree only stores instances at
@@ -308,7 +313,7 @@ fun access_component subj (Slot (v, dim, ee, dummy)) (index : int list) = (
 	    (access_component subj (Slot (v, dim1, ee1, dummy)) [])
 	end))
 
-fun find_component id components = (
+fun find_in_components id components = (
     (List.find (fn (Slot (x, _, _, _)) => (x = id)) components))
 
 (* Descends the instance_tree by one step. *)
@@ -318,7 +323,7 @@ fun descend_instance_tree_node id (node0 : instance_node_t) = (
 	val (subj, kx, cx) = node0
 	val components = (! cx)
     in
-	case (find_component id components) of
+	case (find_in_components id components) of
 	    NONE => NONE
 	  | SOME slot => SOME slot
     end)
@@ -331,7 +336,7 @@ fun descend_instance_tree_step__ (id, index) (node0 : instance_node_t) = (
 	val (subj, kx, cx) = node0
 	val components = (! cx)
     in
-	case (find_component id components) of
+	case (find_in_components id components) of
 	    NONE => NONE
 	  | SOME slot => (
 	    let
@@ -354,7 +359,7 @@ fun descend_instance_tree path0 (node0 : instance_node_t) = (
 	    val (subj, kx, cx) = node0
 	    val components = (! cx)
 	in
-	    case (find_component id components) of
+	    case (find_in_components id components) of
 		NONE => NONE
 	      | SOME slot => (
 		if (component_is_outer_alias slot) then
@@ -541,12 +546,14 @@ fun store_to_instance_tree subj kp = (
 		    (store_scalar upnode node id (subj, kp)))
 		  | Def_Der _ => (
 		    (store_scalar upnode node id (subj, kp)))
-		  | Def_Primitive (P_Enum _ , e) => (
+		  | Def_Primitive (P_Enum _ , e, _) => (
 		    (store_scalar upnode node id (subj, kp)))
-		  | Def_Primitive (_ , e) => raise Match
+		  | Def_Primitive (_ , e, _) => raise Match
 		  | Def_Outer_Alias _ => (
 		    (store_scalar upnode node id (subj, kp)))
-		  | Def_Name _ => raise Match
+		  | Def_Argument _ => (
+		    (store_scalar upnode node id (subj, kp)))
+		  | Def_Named _ => raise Match
 		  | Def_Scoped _ => raise Match
 		  | Def_Refine _ => (
 		    (store_scalar upnode node id (subj, kp)))
@@ -575,7 +582,7 @@ fun unwrap_array_of_instances k = (
 fun clear_instance_tree () = (
     let
 	val (_, kx0, cx0) = class_tree
-	val _ = kx0 := the_root_class
+	val _ = kx0 := the_package_root
 	val _ = cx0 := []
 	val (_, kx1, cx1) = instance_tree
 	val _ = kx1 := Def_In_File
@@ -681,12 +688,12 @@ fun record_inner_outer outer inner = (
     end)
 
 (* Inserts an alias instance to record an inner-outer matching in the
-   class_tree/instance_tree.  An outer reference will be substituted
-   by an inner reference, but it is delayed until processing
-   connectors (connectors need to distinguish internal connections).
-   It temporarily instantiates an outer reference as an alias. *)
+   instance_tree.  An outer reference will be substituted by an inner
+   reference, but it is delayed until processing connectors.  It is
+   because the place where a connector is declared matters in
+   distinguishing the side of a connector. *)
 
-fun instantiate_outer_alias var outer inner = (
+fun insert_outer_alias var outer inner = (
     let
 	val _ = (assert_inner_outer (outer, inner))
 	val k = Def_Outer_Alias (var, outer, inner)
@@ -907,7 +914,7 @@ fun fetch_base_class ex (subj, tag) = (
       | SOME kx => (
 	surely (seek_declaring_class ex kx tag)))
 
-fun fetch_class_by_scope (subj, tag) = (
+fun fetch_class_by_part (subj, tag) = (
     let
 	val ex = Match
 	val k0 = (fetch_base_class ex (subj, tag))
@@ -945,7 +952,7 @@ fun assert_enclosings_are_cooked k0 = (
 	val tag = (tag_of_body k0)
 	val (_, pkg) = (tag_prefix tag)
     in
-	if (pkg = the_root_tag) then
+	if (pkg = the_package_root_tag) then
 	    ()
 	else
 	    let
@@ -970,33 +977,38 @@ fun clear_syntaxer_tables () = (
 (* ================================================================ *)
 
 (* Accesses an instance-tree node and returns an instance and a list
-   of components.  Each component is Slot(v,d,a,_), where ID "v", a
-   dimension "d", and an array of nodes "a". *)
+   of components.  It may access a package-tree node, too.  Components
+   include packages.  Each component is Slot(v,d,a,_), where ID "v", a
+   dimension "d", and an array of nodes "a".  It takes a required step
+   E3 or E5. *)
 
-fun access_node node0 = (
+fun access_node step (exclude_outer_alias : bool) node0 = (
     let
 	val (subj, kx, cx) = node0
 	val kp = (! kx)
-	val c0 = (! cx)
-	val components = (List.filter (not o component_is_outer_alias) c0)
+	val components = (! cx)
 
 	val _ = if ((cook_step kp) <> E0) then () else raise Match
-	val _ = if ((class_is_package kp) orelse (step_is_at_least E5 kp))
+	val _ = if (step_is_at_least E3 kp) then () else raise Match
+	val _ = if ((class_is_package kp) orelse (step_is_at_least step kp))
 		then () else raise Match
 	val _ = if (null components) then ()
 		else if (not (class_is_simple_type kp)) then ()
 		else if (class_is_enum kp) then ()
 		else raise error_attribute_access_to_simple_type
     in
-	(kp, components)
+	if (not exclude_outer_alias) then
+	    (kp, components)
+	else
+	    (kp, (List.filter (not o component_is_outer_alias) components))
     end)
 
-(* Calls f on each instance (with a folding argument) in the
+(* Calls f on each package/instance with a folding argument in the
    class_tree/instance_tree. *)
 
 fun traverse_tree f (node0, acc0) = (
     let
-	val (kp, components) = (access_node node0)
+	val (kp, components) = (access_node E5 true node0)
 	val acc1 = (f (kp, acc0))
 	val acc2 = (foldl (fn (Slot (v, dim, nodes, _), accx) =>
 			      (foldl (traverse_tree f) accx nodes))
@@ -1011,12 +1023,12 @@ fun enumerate_in_node f path0 (node, acc) = (
     let
 	val (subj, kx, cx) = node
 	(*val components = (! cx)*)
-	val (kp, components) = (access_node node)
+	val (kp, components) = (access_node E5 true node)
     in
 	case path0 of
 	    [] => f (subj, acc)
 	  | (id :: path1) => (
-	    case (find_component id components) of
+	    case (find_in_components id components) of
 		NONE => raise Match
 	      | SOME (slot as (Slot (id_, dim, nodes, dummy))) => (
 		let
@@ -1079,8 +1091,11 @@ fun name_to_subject (Name (nn : string list)) = (
    package-root is inaccessible. *)
 
 fun xfetch1 (s : string) = (
+    (fetch_from_instance_tree (scan_string_as_subject s)))
+
+fun xfetch1__ (s : string) = (
     (fetch_from_instance_tree
-	 (name_to_subject (Name (String.fields (fn c => (c = #".")) s)))))
+	 ))
 
 fun xfetch2 (subjtag : string) = (
     let

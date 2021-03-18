@@ -217,6 +217,8 @@ fun expression_to_string w = (
 	    in
 		("(#iterator ("^ sv ^")")
 	    end)
+	  | Lref (rr, j) => (
+	    (ref_to_string rr))
 	  | Cref (x, b) => (expression_to_string x)
 	  | Array_fill (e, n) => (
 	    let

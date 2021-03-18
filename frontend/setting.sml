@@ -3,7 +3,7 @@
 
 (* LIBRARY PATHS. *)
 
-structure settings  :
+structure settings :
 sig
     val modelica_paths : string list
     val modelica_msl : string
@@ -32,20 +32,18 @@ fun get_msl () = (
 val modelica_paths = (get_paths ())
 val modelica_msl = (get_msl ())
 
-(* Maps a qualified name (the empty string is a prefix for the unnamed
-   root) to a versioned file path of the MSL. *)
+(* Maps a qualified name (the empty string is a prefix for the
+   package-root) to a versioned file path of the MSL. *)
 
 fun make_modelica_versioned_path qn = (
     case qn of
 	[] => raise Match
-      | ("" :: name) => (
-	case name of
-	    [] => raise Match
-	  | ("Modelica" :: nn) => (
-	    (("Modelica" ^" "^ modelica_msl) :: nn))
-	  | ("ModelicaServices" :: nn) => (
-	    (("ModelicaServices" ^" "^ modelica_msl) :: nn))
-	  | _ => name)
+      | "" :: [] => raise Match
+      | "" :: "Modelica" :: nn => (
+	(("Modelica" ^" "^ modelica_msl) :: nn))
+      | "" :: "ModelicaServices" :: nn => (
+	(("ModelicaServices" ^" "^ modelica_msl) :: nn))
+      | "" :: name => name
       | _ => raise Match)
 
 end

@@ -54,16 +54,7 @@ fun tag_as_name tag = (
       | Ctag [] => raise Match
       | Ctag nn => Name ("" :: nn))
 
-(* Returns true if a qualified-name is a single part. *)
-
-fun class_is_at_top_level tag = (
-    case tag of
-	Ctag [""] => raise Match
-      | Ctag [] => false
-      | Ctag [_] => true
-      | Ctag _ => false)
-
-fun declaration_id (Defvar (v, _, _, _, _, _)) = v
+fun declaration_id (Defvar (v, _)) = v
 
 fun same_class k0 k1 = (
     (tag_of_definition k0) = (tag_of_definition k1))
@@ -74,11 +65,12 @@ fun definition_body (Defclass ((v, g), b)) = b
 
 fun innate_tag k = (
     case k of
-	Def_Body (mk, j, cs, (tag, n, x), cc, ee, aa, ww) => tag
+	Def_Body (mk, cs, (j, n, tag, x), cc, ee, aa, ww) => tag
       | Def_Der (tag, cs, n, vv, aa, ww) => tag
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => raise Match
+      | Def_Argument _ => raise Match
+      | Def_Named _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine (kx, v, ts, q, (ss, mm), cc, aa, ww) => (innate_tag kx)
       | Def_Extending (_, x, kx) => (innate_tag kx)
@@ -87,28 +79,14 @@ fun innate_tag k = (
       | Def_In_File => raise Match
       | Def_Mock_Array _ => raise Match)
 
-fun tag_of_body k = (
-    case k of
-	Def_Body (mk, j, cs, (tag, n, x), cc, ee, aa, ww) => tag
-      | Def_Der _ => raise Match
-      | Def_Primitive _ => raise Match
-      | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => raise Match
-      | Def_Scoped _ => raise Match
-      | Def_Refine _ => raise Match
-      | Def_Extending _ => raise Match
-      | Def_Replaced _ => raise Match
-      | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
-      | Def_Mock_Array _ => raise Match)
-
 fun body_elements (k : definition_body_t) = (
     case k of
-	Def_Body (mk, j, cs, nm, cc, ee, aa, ww) => ee
+	Def_Body (mk, cs, nm, cc, ee, aa, ww) => ee
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => raise Match
+      | Def_Argument _ => raise Match
+      | Def_Named _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
       | Def_Extending _ => raise Match
@@ -123,12 +101,13 @@ fun class_elements (Defclass ((v, g), k)) = (body_elements k)
 
 fun replace_body_elements (k : definition_body_t) ee = (
     case k of
-	Def_Body (mk, j, cs, nm, cc, ee_, aa, ww) => (
-	Def_Body (mk, j, cs, nm, cc, ee, aa, ww))
+	Def_Body (mk, cs, nm, cc, ee_, aa, ww) => (
+	Def_Body (mk, cs, nm, cc, ee, aa, ww))
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => raise Match
+      | Def_Argument _ => raise Match
+      | Def_Named _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
       | Def_Extending _ => raise Match
@@ -161,7 +140,7 @@ fun assert_match_subject subj k = (
 fun drop_last_subscript_of_subject subj = (
     if (subj = the_model_subject) then
 	subj
-    else if (subj = the_root_subject) then
+    else if (subj = the_package_root_subject) then
 	subj
     else
 	let
@@ -278,37 +257,8 @@ fun subst_element_along f (k0, a0) = (
 fun subst_body_element f (k : definition_body_t) = (
     (replace_body_elements k (gather_in_body_elements f k)))
 
-(* Finds a class element for which (f e) returns SOME. *)
-
-fun find_in_elements f (k : definition_body_t) = (
-    (list_find_some f (body_elements k)))
-
-(* Finds all elements in a class for which (f e) returns SOME. *)
-
-fun find_all_in_elements f (b : definition_body_t) = (
-    (gather_some f (body_elements b)))
-
-fun app_in_element f (d as Defclass ((v, g), k)) = (
+fun app_in_element__ f (d as Defclass ((v, g), k)) = (
     (app f (class_elements d)))
-
-fun class_is_encapsulated k = (
-    let
-	fun check (t, {Encapsulated, ...}, _) = Encapsulated
-    in
-	case k of
-	    Def_Body (mk, j, cs, nm, cc, ee, aa, ww) => (check cs)
-	  | Def_Der (c, cs, n, vv, aa, ww) => (check cs)
-	  | Def_Primitive _ => raise Match
-	  | Def_Outer_Alias _ => raise Match
-	  | Def_Name _ => raise Match
-	  | Def_Scoped _ => raise Match
-	  | Def_Refine _ => raise Match
-	  | Def_Extending _ => raise Match
-	  | Def_Replaced _ => raise Match
-	  | Def_Displaced _ => raise Match
-	  | Def_In_File => raise Match
-	  | Def_Mock_Array _ => raise Match
-    end)
 
 (* Tests if modifiers is empty or a single value. *)
 
@@ -325,10 +275,6 @@ fun modifier_is_value nn = (
 	  | Mod_Value _ => true)
       | _ => false)
 
-fun predefined_reference (Id v) = Subj (VAR, [(Id v, [])])
-
-fun global_element dd = (Public, no_element_prefixes, dd, NONE)
-
 (* ================================================================ *)
 
 (*AHO*)
@@ -340,8 +286,8 @@ fun classes_are_similar x y = (
     case (x, y) of
 	(Def_Body _, Def_Body _) => (innate_tag x) = (innate_tag y)
       | (Def_Der _, Def_Der _) => x = y
-      | (Def_Name _, _) => raise Match
-      | (_, Def_Name _) => raise Match
+      | (Def_Named _, _) => raise Match
+      | (_, Def_Named _) => raise Match
       | (Def_Scoped _, _) => raise Match
       | (_, Def_Scoped _) => raise Match
       | (Def_Refine _, Def_Refine _) => (innate_tag x) = (innate_tag y)
@@ -384,8 +330,22 @@ fun binding_is_class (Naming (_, _, _, _, (z, r, dx, h))) = (
    package after modifier applications, so it is not necessary to
    check the class definition (k) when it is not processed yet. *)
 
-fun declaration_is_constant (Defvar (v, (fs, vc, io), k, c, a, w)) = (
-    (vc = Constant orelse vc = Parameter))
+fun declaration_is_constant (Defvar (v, k)) = (
+    case k of
+	Def_Body _ => raise Match
+      | Def_Der _ => false
+      | Def_Primitive _ => false
+      | Def_Outer_Alias _ => raise Match
+      | Def_Argument _ => raise Match
+      | Def_Named _ => raise Match
+      | Def_Scoped _ => raise Match
+      | Def_Refine (kx, v, ts, (fs, vc, io), (ss, mm), cc, aa, ww) => (
+	(vc = Constant orelse vc = Parameter))
+      | Def_Extending _ => raise Match
+      | Def_Replaced _ => raise Match
+      | Def_Displaced _ => raise Match
+      | Def_In_File => raise Match
+      | Def_Mock_Array _ => raise Match)
 
 (* Tests if the class is proper for variable declaration form. *)
 
@@ -395,7 +355,8 @@ fun body_is_declaration_form k = (
       | Def_Der _ => false
       | Def_Primitive _ => true
       | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => true
+      | Def_Argument _ => raise Match
+      | Def_Named _ => true
       | Def_Scoped _ => true
       | Def_Refine (kx, v, ts, q, (ss, mm), cc, aa, ww) => (
 	(body_is_declaration_form kx))
@@ -456,7 +417,8 @@ fun body_is_unmodifiable k = (
       | Def_Der _ => true
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => raise Match
+      | Def_Argument _ => raise Match
+      | Def_Named _ => raise Match
       | Def_Scoped _ => false
       | Def_Refine _ => false
       | Def_Extending _ => false
@@ -473,7 +435,8 @@ fun body_is_extending k = (
       | Def_Der _ => false
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => false
+      | Def_Argument _ => raise Match
+      | Def_Named _ => false
       | Def_Scoped _ => false
       | Def_Refine _ => false
       | Def_Extending _ => true

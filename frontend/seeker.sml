@@ -31,10 +31,10 @@ val ensure_in_instance_tree = classtree.ensure_in_instance_tree
 val assemble_package_if_fresh = classtree.assemble_package_if_fresh
 val assert_stored_in_instance_tree = classtree.assert_stored_in_instance_tree
 
-val lookup_class_in_root = loader.lookup_class_in_root
+val lookup_class_in_package_root = loader.lookup_class_in_package_root
 val fetch_enclosing_class = loader.fetch_enclosing_class
 
-val list_elements = finder.list_elements
+val find_element = finder.find_element
 
 datatype seek_mode_t = Seek_Export | Seek_Base
 type seek_context_t = {Scope : scope_t, Name : name_t, Mode : seek_mode_t}
@@ -45,6 +45,16 @@ fun tr_seek (s : string) = if true then (print (s ^"\n")) else ()
 fun tr_seek_vvv (s : string) = if false then (print (s ^"\n")) else ()
 
 (* ================================================================ *)
+
+(* Finds a class element for which (f e) returns SOME. *)
+
+fun find_in_elements f (k : definition_body_t) = (
+    (list_find_some f (body_elements k)))
+
+(* Finds all elements in a class for which (f e) returns SOME. *)
+
+fun find_all_in_elements f (k : definition_body_t) = (
+    (gather_some f (body_elements k)))
 
 (* Lists classes of direct importing candidates.  Note that a search
    for importing is not transitive.  It returns a pair (class,id),
@@ -126,7 +136,8 @@ fun lookup_in_declared (cooker : cooker_t) ctx fullaccess kp id = (
 			      | Def_Der _ => SOME (subsubj, k0)
 			      | Def_Primitive _ => raise Match
 			      | Def_Outer_Alias _ => raise Match
-			      | Def_Name _ => raise Match
+			      | Def_Argument _ => raise Match
+			      | Def_Named _ => raise Match
 			      | Def_Scoped _ => SOME (subsubj, k0)
 			      | Def_Refine _ => SOME (subsubj, k0)
 			      | Def_Extending _ => raise Match
@@ -152,8 +163,8 @@ fun lookup_in_declared (cooker : cooker_t) ctx fullaccess kp id = (
 	val _ = if (class_is_body kp) then () else raise Match
 	val enclosing = (subject_of_class kp)
     in
-	if (body_is_root kp) then
-	    case (lookup_class_in_root id) of
+	if (body_is_package_root kp) then
+	    case (lookup_class_in_package_root id) of
 		NONE => NONE
 	      | SOME (subj, kx) => SOME (subj, kx)
 	else
@@ -173,15 +184,14 @@ fun lookup_in_main_and_bases (cooker : cooker_t) ctx kp id = (
 	val enclosing = (subject_of_class kp)
 	val (openscope, fullaccess) = (false, false)
     in
-	if (body_is_root kp) then
+	if (body_is_package_root kp) then
 	    case (lookup_in_declared cooker ctx fullaccess kp id) of
 		SOME (subj, kx) => SOME (enclosing, (subj, kx))
 	      | NONE => raise (error_name_not_found id kp)
 	else if (step_is_at_least E3 kp) then
 	    let
-		val bindings = (list_elements cooker true kp)
 	    in
-		case (find_in_bindings id bindings) of
+		case (find_element true kp id) of
 		    NONE => raise (error_name_not_found id kp)
 		  | SOME (Naming (_, subj, _, _, (z, r, EL_Class dx, h))) => (
 		    let
@@ -266,8 +276,8 @@ fun find_import_class (cooker : cooker_t) kp name = (
 	val ctx = {Scope=scope, Name=name, Mode=Seek_Export}
 	val (Name nn) = (drop_explicit_dot name)
 	val _ = if (not (null nn)) then () else raise Match
-	val rootsubj = the_root_subject
-	val root = the_root_class
+	val rootsubj = the_package_root_subject
+	val root = the_package_root
 	val enclosing = rootsubj
     in
 	(lookup_composite_loop cooker ctx enclosing (rootsubj, root) nn)
@@ -308,7 +318,7 @@ fun lookup_for_bases (cooker : cooker_t) ctx kp id = (
 	case (lookup_in_declared cooker ctx fullaccess kp id) of
 	    SOME (subjx, kx) => SOME (enclosing, (subjx, kx))
 	  | NONE => (
-	    if (body_is_root kp) then
+	    if (body_is_package_root kp) then
 		raise (error_name_not_found id kp)
 	    else if (not openscope) then
 		raise (error_name_not_found id kp)
@@ -353,8 +363,8 @@ fun find_base_class (cooker : cooker_t) kp name = (
 	  | Name ("" :: tt) => (
 	    let
 		val _ = if (not (null tt)) then () else raise Match
-		val root = (the_root_subject, the_root_class)
-		val enclosing = the_root_subject
+		val root = (the_package_root_subject, the_package_root)
+		val enclosing = the_package_root_subject
 	    in
 		(lookup_composite_loop cooker ctx enclosing root tt)
 	    end)

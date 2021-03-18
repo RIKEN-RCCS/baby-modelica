@@ -86,6 +86,7 @@ fun contains_cardinality (w, contains0) = (
 	(contains_cardinality (x, contains0)))
       | Instances _ => contains0
       | Iref _ => contains0
+      | Lref _ => contains0
       | Cref _ => contains0
       | Array_fill (x, y) => (
 	(foldl contains_cardinality contains0 [x, y]))
@@ -220,7 +221,7 @@ fun expand_equations kp env q0 = (
 fun expand_equations_in_instance (k0, acc0) = (
     if (class_is_outer_alias k0) then
 	acc0
-    else if (class_is_enumerator_definition k0) then
+    else if (class_is_enumerator k0) then
 	acc0
     else if (class_is_package k0) then
 	acc0

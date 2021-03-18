@@ -19,10 +19,13 @@ sig
 	definition_body_t -> definition_body_t
     val insert_attributes_to_enumeration :
 	definition_body_t -> definition_body_t
+
     val take_enumarator_element :
 	definition_body_t -> enum_list_t option
     val register_enumerators_for_enumeration :
 	definition_body_t -> unit
+    val enumeration_bounds :
+	definition_body_t -> expression_t * expression_t
 
     val simple_type_attribute :
 	definition_body_t -> id_t -> expression_t
@@ -117,30 +120,28 @@ fun unify_value_and_initializer kp mm0 = (
 (* ================================================================ *)
 
 (* Makes enumerators for a given enumeration and makes them visible in
-   the instance_tree.  Each enumerator has its value in the
-   initializer slot.  It is called at processing a definition of an
-   enumeration.  It stores the enumeration prior to the enumerators to
-   make a hierarchy. *)
+   the instance_tree.  Each enumerator has its value in the value
+   slot.  It is called at processing an enumeration definition.  It
+   stores the enumeration prior to the enumerators to make a
+   hierarchy. *)
 
 fun register_enumerators_for_enumeration kp = (
     let
 	val _ = (assert_class_is_body kp)
 
-	fun make_enumerator k subj value = (
-	    case k of
-		Def_Body (mk, j, cs, (tag, n, x), cc, ee, aa, ww) => (
-		Def_Primitive (P_Enum tag, value))
-	      | _ => raise Match)
+	fun make_enumerator k value = (
+	    let
+		val tag = (tag_of_body k)
+	    in
+		Def_Primitive (P_Enum tag, value, Constant)
+	    end)
 
 	fun enumerate kp tag (v, a, w) = (
 	    let
 		val subj = (subject_of_class kp)
 		val subsubj = (compose_subject subj v [])
-		val value = L_Enum (tag, v)
-		val k1 = (make_enumerator kp subsubj value)
-		(*val k2 = (set_cook_step E5 k1)*)
-		val k2 = k1
-		val _ = (store_to_instance_tree subsubj k2)
+		val k1 = (make_enumerator kp (L_Enum (tag, v)))
+		val _ = (store_to_instance_tree subsubj k1)
 	    in
 		()
 	    end)
@@ -149,11 +150,12 @@ fun register_enumerators_for_enumeration kp = (
 	    ()
 	else
 	    case kp of
-		Def_Body (mk, j, cs, (tag, n, x), cc, ee, aa, ww) => (
+		Def_Body _ => (
 		let
 		    val _ = if (class_is_package kp) then () else raise Match
 
 		    val subj = (subject_of_class kp)
+		    val tag = (tag_of_body kp)
 		    val _ = (assert_cook_step E3 kp)
 		    val _ = (assert_stored_in_instance_tree (subj, kp))
 		    val vvx = (take_enumarator_element kp)
@@ -181,7 +183,7 @@ fun make_primitive_type_by_name n = (
 		   | "StateSelect" => P_Enum (Ctag [n])
 		   | _ => raise Match
     in
-	Def_Primitive (ty, NIL)
+	Def_Primitive (ty, NIL, Continuous)
     end)
 
 (* Simplifies a simple-type (except enumerations) using primitive
@@ -193,9 +195,19 @@ fun make_primitive_type_by_name n = (
 
 fun simplify_simple_type (k0 : definition_body_t) = (
     let
-	val _ = if (step_is_at_least E3 k0) then () else raise Match
-	val _ = if ((cook_step k0) = E3) then () else raise Match
+	val _ = if ((cook_step k0) = E2) then () else raise Match
 	val subj = (subject_of_class k0)
+
+	fun check_component_prefixes (mode, variability, causality) = (
+	    let
+		val _ = if ((mode = Effort)
+			    andalso ((variability = Continuous)
+				     orelse (variability = Parameter))
+			    andalso (causality = Acausal)) then ()
+			else raise Match
+	    in
+		()
+	    end)
 
 	fun just_value_modifier mm = (
 	    case mm of
@@ -209,7 +221,8 @@ fun simplify_simple_type (k0 : definition_body_t) = (
 	      | Def_Der _ => raise Match
 	      | Def_Primitive _ => raise Match
 	      | Def_Outer_Alias _ => raise Match
-	      | Def_Name _ => raise Match
+	      | Def_Argument _ => raise Match
+	      | Def_Named _ => raise Match
 	      | Def_Scoped (Name n, (subjx, tag)) => (
 		let
 		    val _ = if (subj = subjx) then () else raise Match
@@ -221,16 +234,16 @@ fun simplify_simple_type (k0 : definition_body_t) = (
 	      | Def_Refine (x1, v, ts, q, (ss, mm), cc, aa, ww) => (
 		let
 		    val _ = if (v = NONE) then () else raise Match
-		    val _ = if (q = no_component_prefixes) then ()
-			    else raise Match
+		    val _ = if (cc = NIL) then () else raise Match
+		    val _ = (check_component_prefixes q)
 		    val _ = if (null ss) then ()
 			    else raise error_array_modifier_to_attribute
 		    val x2 = (primitivize x1)
 		    val value = (just_value_modifier mm)
 		in
 		    case x2 of
-			Def_Primitive (ty, v_) => (
-			Def_Primitive (ty, value))
+			Def_Primitive (ty, v_, va) => (
+			Def_Primitive (ty, value, va))
 		      | Def_Body _ => raise Match
 		      | _ => raise Match
 		end)
@@ -240,34 +253,31 @@ fun simplify_simple_type (k0 : definition_body_t) = (
 	      | Def_In_File => raise Match
 	      | Def_Mock_Array _ => raise Match)
 
-	fun set_fixed k value = (
-	    case k of
-		Def_Primitive (P_Boolean, ov) => (
-		let
-		    val _ = if (ov = NIL orelse ov = value) then ()
-			    else (warn_ignore_fixed ())
-		in
-		    Def_Primitive (P_Boolean, value)
-		end)
-	      | _ => raise Match)
+	fun set_value_to_fixed_slot v k value = (
+	    if (v <> Id "fixed") then
+		k
+	    else
+		case k of
+		    Def_Primitive (P_Boolean, ov, va) => (
+		    let
+			val _ = if (ov = NIL orelse ov = value) then ()
+				else (warn_ignore_fixed ())
+		    in
+			Def_Primitive (P_Boolean, value, va)
+		    end)
+		  | _ => raise Match)
 
-	fun resolve variability e = (
+	fun resolve fixed e = (
 	    case e of
 		Import_Clause _ => raise Match
 	      | Extends_Clause _ => raise Match
 	      | Element_Class _ => e
 	      | Element_State (z, r, d0, h) => (
 		let
-		    val Defvar (v, q, x0, c, a, w) = d0
-		    val _ = if (c = NONE) then () else raise Match
+		    val Defvar (v, x0) = d0
 		    val x1 = (primitivize x0)
-		    val fixed = L_Bool (variability = Parameter
-					orelse variability = Constant)
-		    val x2 = if (v = Id "fixed") then
-				 (set_fixed x1 fixed)
-			     else
-				 x1
-		    val d1 = Defvar (v, q, x2, c, a, w)
+		    val x2 = (set_value_to_fixed_slot v x1 fixed)
+		    val d1 = Defvar (v, x2)
 		in
 		    Element_State (z, r, d1, h)
 		end)
@@ -284,12 +294,7 @@ fun simplify_simple_type (k0 : definition_body_t) = (
 	      | Base_Classes x => if (null x) then e else raise Match)
     in
 	case k0 of
-	    Def_Body (mk, j, cs, (c, n, x), cc, ee0, aa, ww) => (
-	    (*
-	    if (class_is_enumeration_definition k0) then
-		k0
-	    else
-	    *)
+	    Def_Body (mk, cs, nm, cc, ee0, aa, ww) => (
 	    if (not (class_is_simple_type k0)) then
 		k0
 	    else if (class_is_enum k0) then
@@ -297,15 +302,18 @@ fun simplify_simple_type (k0 : definition_body_t) = (
 	    else
 		let
 		    val (t, p, (l, variability, y)) = cs
-		    val ee1 = (map (resolve variability) ee0)
-		    val k1 = Def_Body (mk, j, cs, (c, n, x), cc, ee1, aa, ww)
+		    val fixed = L_Bool (variability = Parameter
+					orelse variability = Constant)
+		    val ee1 = (map (resolve fixed) ee0)
+		    val k1 = Def_Body (mk, cs, nm, cc, ee1, aa, ww)
 		in
 		    k1
 		end)
 	  | Def_Der _ => raise Match
 	  | Def_Primitive _ => raise Match
 	  | Def_Outer_Alias _ => raise Match
-	  | Def_Name _ => raise Match
+	  | Def_Argument _ => raise Match
+	  | Def_Named _ => raise Match
 	  | Def_Scoped _ => raise Match
 	  | Def_Refine _ => raise Match
 	  | Def_Extending _ => raise Match
@@ -317,8 +325,8 @@ fun simplify_simple_type (k0 : definition_body_t) = (
 
 (* ================================================================ *)
 
-(* Takes bounds of an enumeration.  It returns NIL for ":" or an empty
-   enumeration. *)
+(* Takes the bounds of an enumeration.  It returns (NIL,NIL) for ":"
+   or an empty enumeration. *)
 
 fun enumeration_bounds kp = (
     let
@@ -341,32 +349,24 @@ fun enumeration_attributes kp = (
 	val (min, max) = (enumeration_bounds kp)
 	val tag = (innate_tag kp)
 
-	fun this_type v = Def_Primitive (P_Enum tag, v)
-	fun string_type v = Def_Primitive (P_String, L_String v)
-	val boolean_type = Def_Primitive (P_Boolean, NIL)
+	fun this_type v va = Def_Primitive (P_Enum tag, v, va)
+	fun string_type v va = Def_Primitive (P_String, L_String v, va)
+	fun boolean_type va = Def_Primitive (P_Boolean, NIL, va)
 
-	fun withvalue__ ty value = (
-	    Def_Refine (ty, NONE, (Implied, no_class_prefixes),
-			no_component_prefixes,
-			([], [Mod_Value value]),
-			NIL,
-			Annotation [], Comment []))
-
-	fun declare name variability ty = (
+	fun declare name ty = (
 	    let
 		val declaration
-		    = Defvar (Id name, (Effort, variability, Modeless),
-			      ty, NONE, Annotation [], Comment [])
+		    = Defvar (Id name, ty)
 	    in
 		(Public, no_element_prefixes, declaration, NONE)
 	    end)
     in
-	[Element_State (declare "value" Discrete (this_type NIL)),
-	 Element_State (declare "quantity" Parameter (string_type "")),
-	 Element_State (declare "min" Parameter (this_type min)),
-	 Element_State (declare "max" Parameter (this_type max)),
-	 Element_State (declare "start" Parameter (this_type min)),
-	 Element_State (declare "fixed" Parameter boolean_type)]
+	[Element_State (declare "value" (this_type NIL Discrete)),
+	 Element_State (declare "quantity" (string_type "" Parameter)),
+	 Element_State (declare "min" (this_type min Parameter)),
+	 Element_State (declare "max" (this_type max Parameter)),
+	 Element_State (declare "start" (this_type min Parameter)),
+	 Element_State (declare "fixed" (boolean_type Parameter))]
     end)
 
 (* Add attributes to an enumeration.  Enumerations have attributes,
@@ -374,7 +374,7 @@ fun enumeration_attributes kp = (
 
 fun insert_attributes_to_enumeration k0 = (
     case k0 of
-	Def_Body (mk, j, cs, nm, cc, ee0, aa, ww) => (
+	Def_Body (mk, cs, nm, cc, ee0, aa, ww) => (
 	if (not (class_is_enum k0)) then
 	    k0
 	else
@@ -382,7 +382,7 @@ fun insert_attributes_to_enumeration k0 = (
 		val _ = if ((cook_step k0) = E1) then () else raise Match
 		val attributes = (enumeration_attributes k0)
 		val ee1 = ee0 @ attributes
-		val k1 = Def_Body (mk, j, cs, nm, cc, ee1, aa, ww)
+		val k1 = Def_Body (mk, cs, nm, cc, ee1, aa, ww)
 		val k2 = (set_cook_step E2 k1)
 	    in
 		k2
@@ -390,7 +390,8 @@ fun insert_attributes_to_enumeration k0 = (
       | Def_Der _ => k0
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => raise Match
+      | Def_Argument _ => raise Match
+      | Def_Named _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
       | Def_Extending _ => raise Match
@@ -409,7 +410,7 @@ fun simple_type_attribute kp (id : id_t) = (
 	    case e of
 		Element_State (z, r, d, h) => (
 		let
-		    val Defvar (v, q, kx, c, a, w) = d
+		    val Defvar (v, kx) = d
 		in
 		    if (v = id) then
 			SOME kx
@@ -424,7 +425,7 @@ fun simple_type_attribute kp (id : id_t) = (
 	    NONE => raise Match
 	  | SOME kx => (
 	    case kx of
-		Def_Primitive (name, v) => v
+		Def_Primitive (key, v, variability) => v
 	      | _ => raise Match)
     end)
 
@@ -433,21 +434,26 @@ fun simple_type_attribute kp (id : id_t) = (
 
 fun type_of_simple_type k = (
     case k of
-	Def_Body (mk, j, cs, (tag, n, x), cc, ee, a, w) => (
-	if (class_is_enum k) then
-	    P_Enum tag
-	else
-	    case tag of
-		Ctag [""] => raise Match
-	      | Ctag ["Real"] => P_Number R
-	      | Ctag ["Integer"] => P_Number Z
-	      | Ctag ["Boolean"] => P_Boolean
-	      | Ctag ["String"] => P_String
-	      | Ctag _ => raise Match)
+	Def_Body _ => (
+	let
+	    val tag = (tag_of_body k)
+	in
+	    if (class_is_enum k) then
+		P_Enum tag
+	    else
+		case tag of
+		    Ctag [""] => raise Match
+		  | Ctag ["Real"] => P_Number R
+		  | Ctag ["Integer"] => P_Number Z
+		  | Ctag ["Boolean"] => P_Boolean
+		  | Ctag ["String"] => P_String
+		  | Ctag _ => raise Match
+	end)
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => raise Match
+      | Def_Argument (kx, sm, aa, ww) => (type_of_simple_type kx)
+      | Def_Named _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
       | Def_Extending _ => raise Match

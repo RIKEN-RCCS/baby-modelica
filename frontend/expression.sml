@@ -3,8 +3,8 @@
 
 (* Small functions on expressions. *)
 
-structure expression
-: sig
+structure expression :
+sig
     type number_type_t
     type expression_t
     type equation_t
@@ -35,6 +35,7 @@ open small1
 fun tr_expr (s : string) = if true then (print (s ^"\n")) else ()
 fun tr_expr_vvv (s : string) = if false then (print (s ^"\n")) else ()
 
+val fetch_from_instance_tree = classtree.fetch_from_instance_tree
 val instance_tree = classtree.instance_tree
 val class_tree = classtree.class_tree
 val traverse_tree = classtree.traverse_tree
@@ -284,6 +285,7 @@ fun expression_is_literal w = (
       (*| Instance _ => false*)
       | Instances _ => false
       | Iref _ => false
+      | Lref _ => false
       | Cref _ => false
       | Array_fill _ => false
       | Array_diagonal _ => false)
@@ -347,6 +349,7 @@ fun scan_for_iterator_x v (f, g) (w, acc0) = (
 	  (*| Instance _ => acc0*)
 	  | Instances _ => acc0
 	  | Iref _ => (g (w, acc0))
+	  | Lref _ => acc0
 	  | Cref _ => acc0
 	  | Array_fill (x, y) => (foldl scan_x acc0 [x, y])
 	  | Array_diagonal x => (scan_x (x, acc0))
