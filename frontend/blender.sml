@@ -922,8 +922,9 @@ and cook_class_with_modifiers main pkg (subj, k0) mm cc aa siblings0 = (
 	val _ = (store_to_instance_tree_if packagemain subj k3)
 	val k4 = (gather_bases main pkg k3 siblings1)
 	val k5 = (associate_modifiers k4 mm)
-	val k8 = (rectify_modified_class (k5, q) (t, p) aa)
-	val k9 = (simplify_simple_type k8)
+	val k6 = (rectify_modified_class (k5, q) (t, p) aa)
+	val k8 = (simplify_simple_type k6)
+	val k9 = (set_cook_step E3 k8)
 	val _ = (store_to_instance_tree_if packagemain subj k9)
 	val _ = (register_enumerators_for_enumeration k9)
 
@@ -1081,7 +1082,8 @@ and gather_bases main pkg kp siblings = (
 	val _ = (assert_no_base_list ee1)
 	val ee2 = ee1 @ [Base_List baselist] @ [Base_Classes bases1]
 	val k3 = (replace_body_elements k1 ee2)
-	val k4 = (set_cook_step E3 k3)
+	(*val k4 = (set_cook_step E3 k3)*)
+	val k4 = k3
 
 	val _ = tr_cook_vvv (";; gather_bases ("^ (class_print_name kp)
 			     ^") bases={"^

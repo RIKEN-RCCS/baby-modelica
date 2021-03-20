@@ -147,6 +147,14 @@ and instantiate_with_dimension (subj, k0) = (
 			     (subject_print_string subj) ^" : "^
 			     (class_print_name k0) ^")...")
 
+	(*AHO*)
+	(*
+	val xxx = Subj (VAR, [(Id "tank", []),
+			      (Id "portsData", [1]),
+			      (Id "diameter", [])])
+	val _ = if (subj <> xxx) then () else raise Match
+	*)
+
 	val k1 = (assemble_instance (subj, k0))
     in
 	case k1 of
@@ -172,9 +180,10 @@ and instantiate_with_dimension (subj, k0) = (
 		val k2 = Def_Refine (x0, v, ts0, q0, ([], []), cc0, aa0, ww0)
 		val f = (instantiate_at_index (subj, k2) mm0)
 		val dimarraylist = (fill_dimension f [] dim1)
-		val arraylist = (map #2 dimarraylist)
+		(*val arraylist = (map #2 dimarraylist)*)
+		(*val dimlist = (map #1 dimarraylist)*)
+		val (dimlist, arraylist) = (ListPair.unzip dimarraylist)
 		val array = (List.concat arraylist)
-		val dimlist = (map #1 dimarraylist)
 		val size = (array_size dim1)
 		val dummy = if (size <> 0) then NONE else SOME x0
 	    in
@@ -356,7 +365,7 @@ and instantiate_class_in_class kp id = (
     let
 	val cooker = assemble_package
 	val subj = (subject_of_class kp)
-	val package = (class_is_package kp)
+	(*val package = (class_is_package kp)*)
     in
 	case (find_name_initial_part cooker E3 (subj, kp) id) of
 	    NONE => raise (error_name_not_found id kp)
@@ -411,11 +420,10 @@ and instantiate_named_element kp binding = (
 	    val package = (class_is_package kp)
 	    val _ = if ((not package) orelse (declaration_is_constant dx))
 		    then () else raise error_non_constant_in_package
-	    val Defvar (_, q, k0, c, aa, ww) = dx
-	    val cc = (getOpt (c, NIL))
+	    val Defvar (_, q, k0, c0, aa, ww) = dx
+	    val cc1 = (getOpt (c0, NIL))
 	    val k1 = Def_Refine (k0, NONE, copy_type, q,
-				 ([], []), cc, aa, ww)
-	    (*val _ = print "(AHO) DROP CONDITIONAL\n"*)
+				 ([], []), cc1, aa, ww)
 	    val (dim, array) = (instantiate_class (subj, k1))
 	in
 	    (dim, array)

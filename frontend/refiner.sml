@@ -649,7 +649,7 @@ fun redeclare_state_by_elements ctx (z0, r0, d0, h0) (z1, r1, d1, h1) = (
 
 fun list_components kp = (
     let
-	val _ = if (step_is_at_least E3 kp) then () else raise Match
+	val _ = if ((cook_step kp) = E2) then () else raise Match
 
 	fun name (Naming (id, _, _, _, (z, r, d, h))) = (
 	    case d of
@@ -871,7 +871,8 @@ fun associate_to_declaration ctx (z0, r0, d0, h0) m = (
 fun dispatch_modifiers_to_class skipmain (subj, kp) mm0 = (
     let
 	val _ = if (class_is_body kp) then () else raise Match
-	val _ = if (step_is_at_least E3 kp) then () else raise Match
+	(*val _ = if (step_is_at_least E3 kp) then () else raise Match*)
+	val _ = if ((cook_step kp) = E2) then () else raise Match
 
 	fun dispatch m (e, used) = (
 	    case e of
@@ -954,7 +955,7 @@ fun associate_modifiers k0 mm0 = (
 	val _ = tr_cook_vvv (";; associate_modifiers ("^ (class_print_name k0)
 			     ^") modifiers="^ (modifier_list_to_string mm0))
 
-	val _ = if ((cook_step k0) = E3) then () else raise Match
+	val _ = if ((cook_step k0) = E2) then () else raise Match
 	val subj = (subject_of_class k0)
 	val k1 = k0
 

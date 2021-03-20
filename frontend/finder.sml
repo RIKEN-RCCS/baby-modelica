@@ -93,9 +93,11 @@ fun make_dummy_inner (cv0 : element_sum_t) subj = (
     end)
 
 (* Gathers variable/class names in a class including its imported and
-   base classes.  It incorporates the inner/outer relation.  It
-   gathers the list in classes after modifications and thus is fixed.
-   It can be called with non-main (base) classes.  Note that the
+   base classes.  It incorporates the inner/outer relation.  It can be
+   called with base (non-main) classes.  The returned list is complete
+   for step=E3 or greater, but only the list of names is usable for
+   step=E2.  It caches the list for the classes step=E3 or greater,
+   because the list is fixed after modifications.  Note that the
    entries of non-constant variables and outer classes are skipped
    when it is processed as a package. *)
 
@@ -110,22 +112,36 @@ fun list_elements (cooker : cooker_t) exclude_imported kp = (
 		(List.filter (not o binding_is_imported) bb))
 
 	val _ = if (class_is_body kp) then () else raise Match
-	val _ = if (step_is_at_least E3 kp) then () else raise Match
+	val _ = if (step_is_at_least E2 kp) then () else raise Match
 
+	val caching = (step_is_at_least E3 kp)
 	val subj = (subject_of_class kp)
 	val tag = (innate_tag kp)
-	val key = ((subject_to_string subj)
-		   ^"@"^ (tag_to_string tag))
+	val key = ((subject_to_string subj) ^"@"^ (tag_to_string tag))
+
+	(*AHO*)
+	(*
+	val xxx = Subj (VAR, [(Id "tank", []),
+			      (Id "portsData", [1])])
+	val _ = if (subj <> xxx) then () else raise Match
+	*)
     in
-	case ((HashTable.find class_bindings key)) of
-	    SOME bb => (filter bb)
-	  | NONE => (
+	if (not caching) then
 	    let
 		val bb = (gather_names_in_class cooker (subj, kp))
-		val _ = (HashTable.insert class_bindings (key, bb))
 	    in
 		(filter bb)
-	    end)
+	    end
+	else
+	    case (HashTable.find class_bindings key) of
+		SOME bb => (filter bb)
+	      | NONE => (
+		let
+		    val bb = (gather_names_in_class cooker (subj, kp))
+		    val _ = (HashTable.insert class_bindings (key, bb))
+		in
+		    (filter bb)
+		end)
     end)
 
 (* Gathers variable/class names in the class for list_elements.  See

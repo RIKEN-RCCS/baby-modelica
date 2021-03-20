@@ -193,8 +193,7 @@ fun make_primitive_type_by_name n = (
 
 fun simplify_simple_type (k0 : definition_body_t) = (
     let
-	val _ = if (step_is_at_least E3 k0) then () else raise Match
-	val _ = if ((cook_step k0) = E3) then () else raise Match
+	val _ = if ((cook_step k0) = E2) then () else raise Match
 	val subj = (subject_of_class k0)
 
 	fun just_value_modifier mm = (

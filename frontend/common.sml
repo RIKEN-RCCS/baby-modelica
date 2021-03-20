@@ -964,7 +964,7 @@ fun class_is_simple_type k = (
 	case k of
 	    Def_Body (mk, j, cs, (tag, n, x), cc, ee, aa, ww) => (
 	    let
-		val _ = if (step_is_at_least E3 k) then () else raise Match
+		(*val _ = if (step_is_at_least E2 k) then () else raise Match*)
 	    in
 		(class_is_enum k) orelse (tag_is_simple_type tag)
 	    end)
