@@ -10,8 +10,9 @@
    handled as 8-bit opaque, since there is no Unicode support in
    SML. *)
 
-structure lexer : sig
-val parse_file : string -> ast.class_definition_list_t
+structure lexer :
+sig
+    val parse_file : string -> ast.class_definition_list_t
 end = struct
 
 (*open ast*)

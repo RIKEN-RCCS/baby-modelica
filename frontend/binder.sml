@@ -1,7 +1,7 @@
 (* binder.sml -*-Coding: us-ascii-unix;-*- *)
 (* Copyright (C) 2018-2021 RIKEN R-CCS *)
 
-(* NAME RESOLVER, FIRST PART.  Name resolving attaches a prefix to a
+(* A NAME RESOLVER, FIRST PART.  Name resolving attaches a prefix to a
    variable reference to make it a full composite reference. *)
 
 (*AHO*) (* NO BINDING IN ANNOTATIONS. *)
@@ -25,7 +25,7 @@ sig
 	ctx_t -> bool -> binder_t -> (id_t * expression_t) list
 	-> (binder_t * (id_t * expression_t) list)
 
-    val bind_in_value :
+    val bind_in_value__ :
 	ctx_t -> bool -> definition_body_t -> definition_body_t
     val bind_in_scoped_expression :
 	bool -> definition_body_t -> expression_t -> expression_t
@@ -45,14 +45,14 @@ type ctx_t = {k : definition_body_t}
 
 val class_tree = classtree.class_tree
 val instance_tree = classtree.instance_tree
-val fetch_class_by_scope = classtree.fetch_class_by_scope
+val fetch_from_instance_tree = classtree.fetch_from_instance_tree
 val store_to_instance_tree = classtree.store_to_instance_tree
+val fetch_class_by_part = classtree.fetch_class_by_part
 val subject_to_instance_tree_path = classtree.subject_to_instance_tree_path
 
-val find_class = finder.find_class
 val find_name_initial_part = finder.find_name_initial_part
 
-val assemble_package = cooker.assemble_package
+val assemble_package = blender.assemble_package
 
 val obtain_array_dimension = operator.obtain_array_dimension
 
@@ -106,7 +106,7 @@ fun discern_connector_component subj w = (
 (* Tests a global reference, which starts with "" and is considered
    bound. *)
 
-fun reference_is_global x0 = (
+fun reference_is_in_package_root x0 = (
     case x0 of
 	Vref (_, []) => raise Match
       | Vref (NONE, (Id "", []) :: _) => true
@@ -134,6 +134,20 @@ fun extend_reference subj rr1 = (
 	    Vref (SOME ns, (prefix @ rr1))
 	end))
 
+(* Appends a variable reference similarily to extend_reference except
+   when it is a local variable. *)
+
+fun make_reference_in_function kp subj rr = (
+    let
+	val (name0, _) = (subject_prefix subj)
+	val name1 = (subject_of_class kp)
+    in
+	if (name0 = name1) then
+	    Lref (rr, name1)
+	else
+	    (extend_reference subj rr)
+    end)
+
 (* Makes a reference in a class.  The first part of a path matches to
    a resolved class.  The name postfix needs to be secured as a proper
    reference. *)
@@ -144,17 +158,22 @@ fun refer_in_package kp subj rr = (
       | (id, []) :: _ => (extend_reference subj rr)
       | _ => raise error_subscripts_to_package)
 
-(* Makes a reference in a variable. *)
+(* Makes a reference in a variable.  A variable name is included both
+   in the tail of a subject and in the head of a reference path. *)
 
 fun refer_in_variable kp (d as Defvar _) subj rr = (
     let
-	val _ = if (not (class_is_package kp)) then ()
+	val _ = if (not (class_is_non_function_package kp)) then ()
 		else if (declaration_is_constant d) then ()
 		else raise error_variable_in_static_class
     in
 	case rr of
 	    [] => raise Match
-	  | _ => (extend_reference subj rr)
+	  | _ => (
+	    if (not (kind_is_function kp)) then
+		(extend_reference subj rr)
+	    else
+		(make_reference_in_function kp subj rr))
     end)
 
 (* Resolves a variable reference in the given package/instance.  It is
@@ -166,14 +185,13 @@ fun make_reference kp (_ : bool) w0 = (
     case w0 of
 	Vref (_, []) => raise Match
       | Vref (NONE, rr as (id, ss_) :: rr1) => (
-	if (reference_is_global w0) then
+	if (reference_is_in_package_root w0) then
 	    Vref (SOME PKG, (drop_dot_of_package_root PKG rr))
 	else
 	    let
-		val cooker = assemble_package
 		val subjkp = (subject_of_class kp)
 	    in
-		case (find_name_initial_part cooker E3 (subjkp, kp) id) of
+		case (find_name_initial_part kp id) of
 		    NONE => raise (error_variable_name_not_found id kp)
 		  | SOME (Naming (_, subj, _, _, (z, r, EL_Class dx, h))) => (
 		    let
@@ -254,11 +272,12 @@ and bind_in_expression ctx buildphase binder w0 = (
 	  | Otherwise => Otherwise
 	  | Scoped (e, scope) => (
 	    let
-		val (subj1, k1) = (fetch_class_by_scope scope)
-		val _ = (assert_match_subject subj1 k1)
-		val _ = if (step_is_at_least E3 k1) then () else raise Match
-		val binder1 = (make_reference k1 buildphase)
-		val newctx = {k = k1}
+		val (subj1, k1) = (fetch_class_by_part scope)
+		val k2 = (body_of_argument k1)
+		val _ = (assert_match_subject subj1 k2)
+		val _ = if (step_is_at_least E3 k2) then () else raise Match
+		val binder1 = (make_reference k2 buildphase)
+		val newctx = {k = k2}
 		val walk_x1 = (bind_in_expression newctx buildphase binder1)
 	    in
 		(walk_x1 e)
@@ -341,6 +360,7 @@ and bind_in_expression ctx buildphase binder w0 = (
 	  (*| Instance _ => w0*)
 	  | Instances _ => w0
 	  | Iref _ => w0
+	  | Lref _ => w0
 	  | Cref _ => w0
 	  | Array_fill (e, s) => (
 	    Array_fill ((walk_x e), (walk_x s)))
@@ -380,13 +400,13 @@ and bind_in_simple_type_element buildphase kp e0 = (
       | Element_State (z, r, d0, h) => (
 	let
 	    (*val attributes = not buildphase*)
-	    val Defvar (v, q, k0, c, a, w) = d0
+	    val Defvar (v, k0) = d0
 	    val _ = if (class_is_primitive k0) then () else raise Match
 	in
 	    if ((not buildphase) orelse (v = Id "value")) then
 		let
 		    val k1 = (bind_in_primitive_type buildphase k0)
-		    val dx = Defvar (v, q, k1, c, a, w)
+		    val dx = Defvar (v, k1)
 		in
 		    Element_State (z, r, dx, h)
 		end
@@ -407,13 +427,13 @@ and bind_in_simple_type_element buildphase kp e0 = (
 
 and bind_in_primitive_type buildphase k0 = (
 	case k0 of
-	    Def_Primitive (t, x0) => (
+	    Def_Primitive (t, x0, va) => (
 	    let
 		fun binder w = raise error_undefined_variable
 		val walk_x = (bind_in_expression {k = k0} buildphase binder)
 		val x1 = (walk_x x0)
 	    in
-		Def_Primitive (t, x1)
+		Def_Primitive (t, x1, va)
 	    end)
 	  | _ => raise Match)
 
@@ -427,11 +447,11 @@ and bind_in_primitive_type buildphase k0 = (
    sets step=E4 early then finally sets step=E5, to detect
    re-entering. *)
 
-fun bind_in_value ctx buildphase k0 = (
+fun bind_in_value__ ctx buildphase k0 = (
     case k0 of
 	Def_Mock_Array (dim, array0, dummy) => (
 	let
-	    val array1 = (map (bind_in_value ctx buildphase) array0)
+	    val array1 = (map (bind_in_value__ ctx buildphase) array0)
 	in
 	    Def_Mock_Array (dim, array1, dummy)
 	end)
@@ -440,7 +460,7 @@ fun bind_in_value ctx buildphase k0 = (
 	    val _ = if (step_is_at_least E3 k0) then () else raise Match
 	in
 	    if (not buildphase) then
-		(bind_in_value_declaration ctx buildphase k0)
+		(bind_in_value_declaration__ ctx buildphase k0)
 	    else if (step_is_at_least E5 k0) then
 		k0
 	    else if (step_is_at_least E4 k0) then
@@ -454,26 +474,24 @@ fun bind_in_value ctx buildphase k0 = (
 		    val subj = (subject_of_class k0)
 		    val k1 = (set_cook_step E4 k0)
 		    val _ = (store_to_instance_tree subj k1)
-		    val k2 = (bind_in_value_declaration ctx buildphase k1)
+		    val k2 = (bind_in_value_declaration__ ctx buildphase k1)
 		in
 		    k2
 		end
 	end)
       | Def_Der _ => k0
-      | Def_Primitive (P_Enum tag_, L_Enum (tag, v)) => k0
+      | Def_Primitive (P_Enum _, L_Enum _, _) => k0
       | Def_Primitive _ => raise Match
       | _ => raise Match)
 
-and bind_in_value_declaration ctx buildphase k0 = (
+and bind_in_value_declaration__ ctx buildphase k0 = (
     case k0 of
 	Def_Body _ => (
 	if (not (class_is_simple_type k0)) then
 	    k0
 	else
 	    let
-		(*val attributes = (not buildphase)*)
-		val subj = (subject_of_class k0)
-		val binder = fn x => raise Match
+		fun binder _ = raise Match
 		val k2 = (bind_in_simple_type buildphase binder k0)
 	    in
 		k2

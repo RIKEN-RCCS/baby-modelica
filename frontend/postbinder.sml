@@ -1,8 +1,8 @@
 (* postbinder.sml -*-Coding: us-ascii-unix;-*- *)
 (* Copyright (C) 2018-2021 RIKEN R-CCS *)
 
-(* NAME RESOLVER, SECOND PART.  Second resolving resolves a variable
-   reference in equations/algorithms sections. *)
+(* NAME RESOLVER, SECOND PART.  The second part resolves variable
+   references in equations/algorithms sections. *)
 
 structure postbinder :
 sig
@@ -10,7 +10,7 @@ sig
     type binder_t
     type ctx_t
 
-    val bind_model : bool -> unit
+    val bind_in_model : unit -> unit
     val substitute_outer : unit -> unit
     val bind_in_instance : bool -> definition_body_t -> bool
 
@@ -27,16 +27,22 @@ type binder_t = binder.binder_t
 
 val class_tree = classtree.class_tree
 val instance_tree = classtree.instance_tree
-val fetch_class_by_scope = classtree.fetch_class_by_scope
 val store_to_instance_tree = classtree.store_to_instance_tree
 val fetch_from_instance_tree = classtree.fetch_from_instance_tree
 val component_is_outer_alias = classtree.component_is_outer_alias
 val traverse_tree = classtree.traverse_tree
 val substitute_outer_reference = classtree.substitute_outer_reference
+val access_node = classtree.access_node
+
+val walk_in_class = walker.walk_in_class
+val walk_in_expression = walker.walk_in_expression
+val walk_in_equation = walker.walk_in_equation
+val walk_in_statement = walker.walk_in_statement
+val substitute_expression = walker.substitute_expression
 
 val find_class = finder.find_class
 
-val assemble_package = cooker.assemble_package
+val assemble_package = blender.assemble_package
 
 val make_reference = binder.make_reference
 (*val bind_in_class = binder.bind_in_class*)
@@ -45,13 +51,8 @@ val bind_in_expression = binder.bind_in_expression
 val discern_connector_component = binder.discern_connector_component
 val make_iterator_binder = binder.make_iterator_binder
 
-val walk_in_class = walker.walk_in_class
-val walk_in_expression = walker.walk_in_expression
-val walk_in_equation = walker.walk_in_equation
-val walk_in_statement = walker.walk_in_statement
-val substitute_expression = walker.substitute_expression
-
 val secure_reference = builder.secure_reference
+val resolve_function_components = function.resolve_function_components
 
 fun tr_bind (s : string) = if true then (print (s ^"\n")) else ()
 
@@ -65,17 +66,17 @@ fun tr_bind (s : string) = if true then (print (s ^"\n")) else ()
    the main or its bases. *)
 
 fun bind_in_class ctx binder k0 = (
-    if (class_is_simple_type k0) then
-	let
-	    val buildphase = false
-	    val k1 = (bind_in_simple_type buildphase binder k0)
-	    val _ = (assert_cook_step E5 k1)
-	in
-	    k1
-	end
-    else
-	case k0 of
-	    Def_Body (mk, j, cs, nm, cc0, ee0, aa, ww) => (
+    case k0 of
+	Def_Body (mk, j, cs, nm, cc0, ee0, aa, ww) => (
+	if (class_is_simple_type k0) then
+	    let
+		val buildphase = false
+		val k1 = (bind_in_simple_type buildphase binder k0)
+		val _ = (assert_cook_step E5 k1)
+	    in
+		k1
+	    end
+	else
 	    let
 		val _ = if (step_is_at_least E3 k0) then () else raise Match
 		(*val ctx = {k = kp}*)
@@ -90,17 +91,28 @@ fun bind_in_class ctx binder k0 = (
 	    in
 		k2
 	    end)
-	  | Def_Der _ => raise Match
-	  | Def_Primitive _ => raise Match
-	  | Def_Outer_Alias _ => raise Match
-	  | Def_Name _ => raise Match
-	  | Def_Scoped _ => raise Match
-	  | Def_Refine _ => raise Match
-	  | Def_Extending _ => raise Match
-	  | Def_Replaced _ => raise Match
-	  | Def_Displaced _ => raise Match
-	  | Def_In_File => raise Match
-	  | Def_Mock_Array _ => raise Match)
+      | Def_Der _ => raise Match
+      | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
+      | Def_Argument (x0, (ss0, mm0), aa, ww) => (
+	let
+	    val {k = kp} = ctx
+	    val walk_x = (bind_in_expression ctx false binder)
+	    val walk_m = (bind_in_modifier kp binder)
+	    val x1 = (bind_in_class ctx binder x0)
+	    val ss1 = (map walk_x ss0)
+	    val mm1 = (map walk_m mm0)
+	in
+	    Def_Argument (x1, (ss1, mm1), aa, ww)
+	end)
+      | Def_Named _ => raise Match
+      | Def_Scoped _ => raise Match
+      | Def_Refine _ => raise Match
+      | Def_Extending _ => raise Match
+      | Def_Replaced _ => raise Match
+      | Def_Displaced _ => raise Match
+      | Def_In_File => raise Match
+      | Def_Mock_Array _ => raise Match)
 
 and bind_in_class_element ctx binder e0 = (
     let
@@ -109,7 +121,7 @@ and bind_in_class_element ctx binder e0 = (
 	val walk_s = (bind_in_statement kp binder)
 	fun walk_pair (c, kx) = (c, (bind_in_class ctx binder kx))
 
-	val package = (class_is_package kp)
+	val package = (class_is_non_function_package kp)
     in
 	case e0 of
 	    Import_Clause _ => raise Match
@@ -185,19 +197,19 @@ and bind_in_modifier kp binder (m : modifier_t) = (
 	    end)
 	  | Mod_Redeclare (r, d0, h0) => (
 	    let
-		val Defvar (v, q, k0, c, aa, ww) = d0
+		val Defvar (v, k0) = d0
 		val k1 = (walk_k k0)
 		val h1 = (Option.map walk_h h0)
-		val d1 = Defvar (v, q, k1, c, aa, ww)
+		val d1 = Defvar (v, k1)
 	    in
 		Mod_Redeclare (r, d1, h1)
 	    end)
 	  | Mod_Elemental_Redeclare (z, r, d0, h0) => (
 	    let
-		val Defvar (v, q, k0, c, aa, ww) = d0
+		val Defvar (v, k0) = d0
 		val k1 = (walk_k k0)
 		val h1 = (Option.map walk_h h0)
-		val d1 = Defvar (v, q, k1, c, aa, ww)
+		val d1 = Defvar (v, k1)
 	    in
 		Mod_Elemental_Redeclare (z, r, d1, h1)
 	    end)
@@ -230,8 +242,9 @@ and bind_in_constraint kp binder (r : constraint_t) = (
 	  | Def_Der _ => raise Match
 	  | Def_Primitive _ => raise Match
 	  | Def_Outer_Alias _ => raise Match
-	  | Def_Name cn => (
-	    case (find_class cooker (subj, kp) cn) of
+	  | Def_Argument _ => raise Match
+	  | Def_Named cn => (
+	    case (find_class cooker kp cn) of
 		NONE => raise (error_class_not_found cn kp)
 	      | SOME k1 => (
 		let
@@ -341,7 +354,7 @@ and bind_in_statement kp binder s0 = (
 
 (* ================================================================ *)
 
-fun secure_references_in_class kp = (
+fun secure_reference_in_class kp = (
     let
 	val ctx = kp
 	val buildphase = false
@@ -355,36 +368,39 @@ fun secure_references_in_class kp = (
 	()
     end)
 
-(* Makes a record accessible as a package if it is instantiated.  It
-   is because a record itself may be accessed (not as an instance) in
-   such as instantiation. *)
+(* Makes a record class accessible when it is instantiated, because a
+   record definition is needed (unlike other instances). *)
 
 fun secure_record_class kp = (
-    if ((kind_is_record kp) andalso (class_is_instance kp)) then
-	let
-	    val record = (class_name_of_instance kp)
-	    val var = (subject_as_reference record)
-	    val ctx = kp
-	    val _ = (secure_reference ctx false var)
-	in
+    let
+	val kx = (body_of_argument kp)
+    in
+	if ((kind_is_record kx) andalso (class_is_instance kx)) then
+	    let
+		val record = (class_name_of_instance kx)
+		val w = (subject_as_reference record)
+		val ctx = kp
+		val _ = (secure_reference ctx false w)
+	    in
+		()
+	    end
+	else
 	    ()
-	end
-    else
-	())
+    end)
 
-(* Resolves variable references in a package/instance.  It returns
-   true if some instances are processed, so that it can repeat the
-   process until it stabilizes.  It, with scanning=true, processes all
-   instances, because the building routine may leave some instances in
-   a partially resolved state (such as simple-types, whose value
-   attribute is only resolved). *)
+(* Resolves variable references in an instance and a function.  It
+   returns true if some instances/functions are processed, so that it
+   can repeat the process until it stabilizes.  It, with
+   scanning=true, processes all instances, because the building phase
+   may leave some instances in a partially resolved state (such as
+   simple-types, whose value attribute is only resolved). *)
 
 fun bind_in_instance (scanning : bool) k0 = (
     if (class_is_outer_alias k0) then
 	false
-    else if (class_is_enumerator_definition k0) then
+    else if (class_is_enumerator k0) then
 	false
-    else if (class_is_package k0) then
+    else if (class_is_non_function_package k0) then
 	false
     else if ((not scanning) andalso (step_is_at_least E5 k0)) then
 	false
@@ -399,72 +415,53 @@ fun bind_in_instance (scanning : bool) k0 = (
 	    val k1 = (bind_in_class ctx binder k0)
 	    val _ = if ((cook_step k1) = E5) then () else raise Match
 	    val _ = (store_to_instance_tree subj k1)
-	    val _ = (secure_references_in_class k1)
+	    val _ = (secure_reference_in_class k1)
 	    val _ = (secure_record_class k1)
+	    val _ = (resolve_function_components k1)
 	in
-	    (*
-	    if ((kind_is_record k1) andalso (class_is_instance k1)) then
-		let
-		    val record = (class_name_of_instance k1)
-		    val var = (subject_as_reference record)
-		    val ctx = k1
-		    val _ = (secure_reference ctx false var)
-		in
-		    true
-		end
-	    else
-		true
-	    *)
 	    true
 	end)
 
 (* Calls the variable resolving procedure on packages/instances in the
-   trees.  It returns true if some instances are processed.  It skips
-   classes that are named but are not used as packages (which have the
-   step=E0).  It accesses the component slot after processing the
-   class. *)
+   trees.  It returns true if some are processed.  It skips classes
+   that are named but are not used as packages (which have step=E0).
+   It accesses the components after processing the class. *)
 
-fun bind_instances_loop (scanning : bool) node0 = (
+fun bind_in_instances_loop (scanning : bool) node0 = (
     let
-	val (subj, kx, cx) = node0
-	val kp = (! kx)
-
-	val _ = if ((cook_step kp) <> E0) then () else raise Match
-	val _ = if ((class_is_package kp) orelse (step_is_at_least E3 kp))
-		then () else raise Match
-
+	val (kp, _) = (access_node E3 true node0)
 	val changes0 = (bind_in_instance scanning kp)
-	(* KEEP ORDERING. *)
-	val c0 = (! cx)
-	val components = (List.filter (not o component_is_outer_alias) c0)
-
-	val _ = if (null components) then ()
-		else if (not (class_is_simple_type kp)) then ()
-		else if (class_is_enum kp) then ()
-		else raise error_attribute_access_to_simple_type
-
+	(* ACCESS AGAIN. *)
+	val (_, components) = (access_node E5 true node0)
 	val changes1
 	    = (List.concat
 		   (map (fn (Slot (v, dim, nodes, dummy)) =>
-			    (map (bind_instances_loop scanning) nodes))
+			    (map (bind_in_instances_loop scanning) nodes))
 			components))
     in
 	(List.exists (fn x => x) (changes0 :: changes1))
     end)
 
-(* Binds variables in the model.  Call it with true.  It repeatedly
-   calls the binding procedure until settled, because values and
-   equations in accessed instances introduce new references. *)
+(* Resolves variables in the model.  It repeatedly calls the binding
+   procedure until settled, because values and equations accessed may
+   introduce new references.  Although all variables has been created
+   in the building phase, constants may still be introduced and it is
+   necessary to scan the instance_tree. *)
 
-fun bind_model scanning = (
+fun bind_in_model () = (
     let
-	val changes0 = (bind_instances_loop scanning instance_tree)
-	val changes1 = (bind_instances_loop scanning class_tree)
+	fun loop scanning = (
+	    let
+		val changes0 = (bind_in_instances_loop scanning instance_tree)
+		val changes1 = (bind_in_instances_loop scanning class_tree)
+	    in
+		if (changes0 orelse changes1) then
+		    (loop false)
+		else
+		    ()
+	    end)
     in
-	if (changes0 orelse changes1) then
-	    (bind_model false)
-	else
-	    ()
+	(loop true)
     end)
 
 (* ================================================================ *)
@@ -472,6 +469,10 @@ fun bind_model scanning = (
 val substitute_outer_in_instance
     = (substitute_expression
 	   (fn _ => (fn (w, _) => ((substitute_outer_reference w), []))))
+
+(* Replaces outer references with inner references in the
+   instance_tree.  Outer references are kept until to judge the sides
+   of connectors properly. *)
 
 fun substitute_outer () = (
     ignore (traverse_tree substitute_outer_in_instance (instance_tree, [])))

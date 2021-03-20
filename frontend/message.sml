@@ -302,6 +302,8 @@ val error_subscripts_to_iterator = Match
 
 val error_components_to_iterator = Match
 
+val error_component_not_found = Match
+
 val error_subscripts_to_scalar = Match
 
 val error_split_array_dimension = Match
@@ -372,5 +374,9 @@ val error_missing_flow_variables = Match
 fun error_bad_intrinsic_call name = Match
 
 val error_conditional_is_not_determined = Match
+
+val error_model_is_array = Match
+
+val error_conditional_on_redeclared_state = Match
 
 end

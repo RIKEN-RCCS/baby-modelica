@@ -13,7 +13,7 @@ njrun::
 	sml @SMLload test-image.x86-solaris arg1 arg2
 
 readme:
-	sed -n '/# Baby-Modelica/,/Baby-Modelica is distributed under the BSD 2-Clause License./p' notes.tex > ../README.md
+	ksh -x ./make-readme.sh
 
 notes:
 	pdflatex notes.tex

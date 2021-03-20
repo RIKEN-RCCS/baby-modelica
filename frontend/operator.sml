@@ -5,8 +5,13 @@
 
 structure operator :
 sig
+    datatype operator_type_t
+	= ARITHMETIC_UOP | ARITHMETIC_BOP
+	  | BOOLEAN_UOP | BOOLEAN_BOP | STRING_CONCAT_OP | RELATIONAL_OP
+
     type definition_body_t
     type expression_t
+    type predefined_operator_t
 
     (*
     val unary_operator :
@@ -30,6 +35,8 @@ sig
 
     val bool_order : expression_t -> int
     val enumerator_order : expression_t -> int
+
+    val operator_type : predefined_operator_t -> operator_type_t
 end = struct
 
 open ast plain
@@ -38,6 +45,8 @@ open expression
 
 fun tr_expr (s : string) = if true then (print (s ^"\n")) else ()
 fun tr_expr_vvv (s : string) = if false then (print (s ^"\n")) else ()
+
+val fetch_from_instance_tree = classtree.fetch_from_instance_tree
 
 val take_enumarator_element = simpletype.take_enumarator_element
 
@@ -113,7 +122,7 @@ fun empty_global_function__ name = (
 		  subj,
 		  (Function false, no_class_prefixes,
 		   no_component_prefixes),
-		  (tag, the_root_subject, the_root_subject),
+		  (tag, the_package_root_subject, the_package_root_subject),
 		  NIL,
 		  [Base_List [], Base_Classes []],
 		  Annotation [], Comment [])
@@ -244,6 +253,7 @@ fun obtain_array_dimension w : int list * bool = (
       | Instances ([], _) => raise Match
       | Instances (dim, subjs) => (dim, true)
       | Iref v => raise NOTYET
+      | Lref _ => ([], false)
       | Cref _ => raise Match
       | Array_fill (e, n) => (
 	if (not (expression_is_literal n)) then
@@ -612,6 +622,7 @@ fun fold_pseudo_split w0 = (
 		(subarray_of_instances index (dim, array, NONE))
 	    end)
 	  | Iref v => raise error_split_to_scalar
+	  | Lref _ => raise Match
 	  | Cref _ => raise Match
 	  | Array_fill _ => w0
 	  | Array_diagonal _ => w0)

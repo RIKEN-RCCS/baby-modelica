@@ -36,11 +36,11 @@ datatype class_tag_t = Ctag of string list
 
 datatype subject_t = Subj of instantiation_t * (id_t * int list) list
 
-(* part_name_t names a main/base part of a class.  A subject specifies
-   a main class, and a tag specifies a base part of it.  A part_name
-   is often used as a scope. *)
+(* scope_t names a main/base part of a class.  It is a pair of a
+   subject and a class tag.  A subject specifies a main class, and a
+   tag specifies a base part of it.  A scope_t is often used as a
+   scope. *)
 
-type part_name_t = subject_t * class_tag_t
 type scope_t = subject_t * class_tag_t
 
 (* Real (R) or integer (Z). *)
@@ -98,11 +98,12 @@ datatype predefined_operator_t
    class copying.  It is with an array dimension which is null for a
    scalar component.  Instances refers to instances, and also it
    internally refers to a function.  Iref is an iterator variable
-   reference.  Cref is a connector reference with the side
-   information.  Connector references are introduced to the arguments
-   to connect-equations (and the cardinality-operator) during binding.
-   Others, Array_fill, Array_diagonal, etc. are predefined
-   functions. *)
+   reference.  Lref is a local (input/output) parameter reference in a
+   function.  It is introduced during binding.  Cref is a connector
+   reference with its side information.  Connector references are
+   introduced to the arguments to connect-equations (and the
+   cardinality-operator) during binding.  Others, Array_fill,
+   Array_diagonal, etc. are predefined functions. *)
 
 datatype expression_t
     = NIL
@@ -131,6 +132,7 @@ datatype expression_t
     | Component_Ref of expression_t * id_t
     | Instances of int list * subject_t list
     | Iref of id_t
+    | Lref of component_and_subscript_t list * subject_t
     | Cref of expression_t * (*outside*) bool
     | Array_fill of expression_t * expression_t
     | Array_diagonal of expression_t
@@ -141,17 +143,22 @@ and component_and_subscript_t = id_t * expression_t list
 
 datatype visibility_t = Protected | Public
 
-datatype analogical_t = Flow | Stream | Effort
+(* Effort is non-explicit in the language, and it is the default of
+   analogical modality. *)
+
+datatype analogical_modality_t = Flow | Stream | Effort
 
 (* Variability is related by inclusion.  Constant is the smallest.
    Continuous means unconstrained, and thus declaring continuous
-   integers is allowed. *)
+   integers is allowed.  Continuous is non-explicit in the language,
+   and it is the default of variability. *)
 
 datatype variability_t = Constant | Parameter | Discrete | Continuous
 
-(* (Modeless may better be Acausal). *)
+(* Acausal is non-explicit in the language, and it is the default of
+   causality. *)
 
-datatype input_or_output_t = Input | Output | Modeless
+datatype causality_t = Input | Output | Acausal
 
 type each_or_final_t = {Each : bool, Final : bool}
 
@@ -165,7 +172,7 @@ type class_prefixes_t
      = {Final : bool, Encapsulated : bool, Partial : bool}
 
 type component_prefixes_t
-     = (analogical_t * variability_t * input_or_output_t)
+     = (analogical_modality_t * variability_t * causality_t)
 
 type element_prefixes_t
      = {Final : bool, Replaceable : bool, Inner : bool, Outer : bool}
@@ -236,11 +243,10 @@ datatype cook_step_t = E0 | E1 | E2 | E3 | E4 | E5
 
 datatype redeclaration_source_t = In_Modifiers | In_Elements
 
-(* primitive_type_t is stored in Def_Primitive.  Each corresponds to a
-   simple-type.  Even the simple-types have structures, that is, they
-   have attributes.  The attributes of them are described by the
-   corresponding primitive types.  Note that the primitive types also
-   represent values in constant folding. *)
+(* primitive_type_t is a key stored in a Def_Primitive.  Each
+   primitive type corresponds to a simple-type.  Simple-types differ
+   from primitive types in that they have structures.  Primitive types
+   also represent values in constant folding. *)
 
 datatype primitive_type_t
     = P_Number of number_type_t
@@ -286,61 +292,67 @@ and statement_t
 		  * annotation_t * comment_t)
     (*| St_Comment of (annotation_t * comment_t)*)
 
-(* variable_declaration is a tuple of ID and a class definition.  An
-   optional expression exists for a condition declaration.  An
-   array-subscripts part in the declaration is moved in the class
-   definition.  The fields abbreviation is: Defvar(v,q,k,c,a,w). *)
+(* variable_declaration is a tuple of ID and a class definition.  Its
+   body is always a Def_Refine (or a Def_Primitive for the attributes
+   of simple-types).  Component prefixes, array-subscripts, and a
+   conditional in the declaration are moved in a Def_Refine. *)
 
+and variable_declaration_t
+    = Defvar of (id_t * definition_body_t)
+
+(*
 and variable_declaration_t
     = Defvar of (id_t * component_prefixes_t
 		 * definition_body_t
 		 * expression_t option
 		 * annotation_t * comment_t)
+*)
 
 (* class_definition is used to refer to a class.  A class-specifier in
    the syntax is a class-definition with a null class-prefixes.  The
    second name field is an enclosing class, which is added at a
-   supplementary step in parsing.  The fields abbreviation is:
-   Defclass((v,g),k). *)
+   supplementary step in parsing. *)
 
 and class_definition_t
     = Defclass of ((id_t * class_tag_t) * definition_body_t)
 
 and type_marker_t = ENUM | MAIN | BASE | SIMP
 
-(* Def_Body, Def_Der, and Def_Primitive are the only proper classes
-   that appear after syntactic processing.  Def_Body is a class
-   definition.  The subject slot is an identifier which is set when it
-   is associated to a package/instance (it is chiefly used for
-   information).  The name 3-tuple is name information.  The first
-   class-tag slot is an original name of a body.  The second slot is a
-   class name after potential renaming (for an instance).  The third
-   slot is an enclosing class (for a package).  Field abbreviation is:
-   Def_Body(mk,j,cs,nm,cc,ee,aa,ww).  Def_Der is a derivative
-   definition.  Def_Body and Def_Der represent the classes after
-   syntaxing.  Def_Primitive is primitive types.  Def_Outer_Alias is a
-   record left in the instance_tree to map an outer reference to an
-   inner.  Def_Name specifies a class name in the language.
-   Def_Scoped replaces Def_Name by attaching scope information.
-   Def_Refine represents class modifications, either from a short
-   class definition or from an extends-clause.  Def_Refine holds
-   component_prefixes but it usually only uses a type_prefix part.
-   The entire component_prefixes are needed at instantiation.  Its
-   field abbreviation is: Def_Refine(k,t,q,(ss,mm),cc,aa,ww).
+(* Def_Body, Def_Der, Def_Primitive, and Def_Argument are the only
+   classes that appear after syntactic processing.  Def_Body is a
+   class definition.  The subject slot is a unique name which is set
+   when it is associated to a package/instance.  The name 3-tuple is
+   name information.  The first class-tag slot is an original name of
+   a body.  The second slot is a class name after potential renaming.
+   The third slot is an enclosing class (of a package).  Field
+   abbreviation is: Def_Body(mk,j,cs,nm,cc,ee,aa,ww).  Def_Der is a
+   derivative definition.  Def_Body and Def_Der represent classes
+   after syntaxing.  Def_Primitive represents a primitive type.
+   Def_Outer_Alias is a record left in the instance_tree to map an
+   outer reference to an inner.  It is a pair of an outer reference
+   and a matching inner reference.  Def_Argument represents an
+   input/output/local variable in a function and wraps a Def_Body to
+   attach some information.  Def_Named specifies a class name in the
+   language.  Def_Scoped replaces a Def_Named by attaching scope
+   information.  Def_Refine represents modifications and subscripts to
+   a class and a variable.  Def_Refine holds component_prefixes but it
+   usually only uses a type_prefix part.  The entire
+   component_prefixes are needed at instantiation.  An optional
+   subject records a class name when it is given.  Its field
+   abbreviation is: Def_Refine(k,rn,q,(ss,mm),cc,aa,ww).
    Def_Extending represents an extends-redeclaration.  It is a pair of
    a base with modifiers and a body.  The boolean slot is an
-   extended-flag indicating a base class is set, and it is true when
-   it replaces a replaceable.  It is used only for checking purpose.
+   extended-marker indicating a base class is set, and it is true when
+   it replaces a replaceable.  It is used for checking purpose.
    Def_Replaced is introduced by a redeclaration, and holds an
    original definition for information.  The first slot is the new
-   definition.  Def_Primitive represents a value of a simple-type and
-   holds its value.  Def_Displaced is a tag left in place of a
-   definition body.  Its subject slot indicates an enclosing class, to
-   refer to an enclosing class that is modified.  Def_In_File
-   indicates that a class is yet to be loaded from a file.  It is only
-   placed in the loaded_classes table.  Such entries are created for
-   file/directory entries when a "package.mo" is loaded.  It is a pair
-   of an outer reference and a matching inner reference.
+   definition.  Def_Displaced is a tag left in place of a class
+   definition, where all class definitions are removed out of a class.
+   The subject slot indicates an enclosing class.  It is necessary
+   because an enclosing class changes when it is modified.
+   Def_In_File indicates that a class is yet to be loaded from a file.
+   It is only placed in the loaded_classes table.  Such entries are
+   created for file/directory entries when a "package.mo" is loaded.
    Def_Mock_Array is temporarily used to represent an array of
    instances, which is created on accessing the instance_tree. *)
 
@@ -355,9 +367,12 @@ and definition_body_t
       (class_tag_t * class_specifier_t
        * name_t * id_t list * annotation_t * comment_t)
     | Def_Primitive of
-      (primitive_type_t * (*value*) expression_t)
+      (primitive_type_t * (*value*) expression_t * variability_t)
     | Def_Outer_Alias of instantiation_t * subject_t * subject_t
-    | Def_Name of name_t
+    | Def_Argument of
+      (definition_body_t * (subscripts_t * modifier_t list)
+       * annotation_t * comment_t)
+    | Def_Named of name_t
     | Def_Scoped of (name_t * scope_t)
     | Def_Refine of
       (definition_body_t
@@ -473,8 +488,8 @@ and constraint_t = (definition_body_t * modifier_t list
 
 and enum_list_t = (id_t * annotation_t * comment_t) list
 
-type binding_element_t = (visibility_t * element_prefixes_t
-			  * element_sum_t * constraint_t option)
+type naming_element_t = (visibility_t * element_prefixes_t
+			 * element_sum_t * constraint_t option)
 
 (* An entry of an element list (definitions/declarations).  It is
    stored in the class_bindings table.  The identifier slot is a
@@ -484,7 +499,7 @@ type binding_element_t = (visibility_t * element_prefixes_t
 
 datatype naming_t
     = Naming of (id_t * subject_t * subject_t option * (*imported*) bool
-		 * binding_element_t)
+		 * naming_element_t)
 
 (* ================================================================ *)
 
@@ -539,8 +554,8 @@ datatype vs_t
     | VS_CONSTRAINT of constraint_no_comment_t
     | VS_COMPONENT_PREFIX of component_prefixes_t
     | VS_COMPONENT_TYPE_SPECIFIER of component_type_specifier_t
-    | VS_TYPE_FLOW_OR_STREAM of analogical_t
-    | VS_TYPE_INPUT_OR_OUTPUT of input_or_output_t
+    | VS_TYPE_FLOW_OR_STREAM of analogical_modality_t
+    | VS_TYPE_INPUT_OR_OUTPUT of causality_t
     | VS_TYPE_VARIABILITY of variability_t
     | VS_LANGUAGE of string
     | VS_STRING_LIST of string list
@@ -554,7 +569,7 @@ val no_element_prefixes : element_prefixes_t
     = {Final=false, Replaceable=false, Inner=false, Outer=false}
 
 val no_component_prefixes : component_prefixes_t
-    = (Effort, Continuous, Modeless)
+    = (Effort, Continuous, Acausal)
 
 val bad_tag = Ctag [""]
 val bad_subject = Subj (PKG, [(Id "", [])])
@@ -680,7 +695,8 @@ fun set_class_prefixes (t1, p1) (Defclass ((v, g), k0)) = (
 		end)
 	      | Def_Primitive _ => raise Match
 	      | Def_Outer_Alias _ => raise Match
-	      | Def_Name _ => raise Match
+	      | Def_Argument _ => raise Match
+	      | Def_Named _ => raise Match
 	      | Def_Scoped _ => raise Match
 	      | Def_Refine (kx, v, ts0, q, (ss, mm), cc, aa, ww) => (
 		let
@@ -713,7 +729,8 @@ fun set_class_final (Defclass ((v, g), k0)) = (
 		Def_Der (c, (t, (fix p), q), n, vv, aa, ww))
 	      | Def_Primitive _ => raise Match
 	      | Def_Outer_Alias _ => raise Match
-	      | Def_Name _ => raise Match
+	      | Def_Argument _ => raise Match
+	      | Def_Named _ => raise Match
 	      | Def_Scoped _ => raise Match
 	      | Def_Refine (kx, v, (t, p), q, (ss, mm), cc, aa, ww) => (
 		Def_Refine (kx, v, (t, (fix p)), q, (ss, mm), cc, aa, ww))
@@ -738,14 +755,11 @@ fun make_component_clause
 	((v, ss1, mm, cc, aa, ww) : declaration_with_subscripts_t) = (
     let
 	val ssx = (merge_subscripts ss0 ss1)
-	val k0 = if ((null ssx) andalso (null mm)) then
-		     Def_Name n
-		 else
-		     Def_Refine (Def_Name n, NONE, copy_type,
-				 no_component_prefixes,
-				 (ssx, mm), NIL, Annotation [], Comment [])
+	val ccx = (getOpt (cc, NIL))
+	val k0 = Def_Refine (Def_Named n, NONE, copy_type, q,
+			     (ssx, mm), ccx, aa, ww)
     in
-	Defvar (v, q, k0, cc, aa, ww)
+	Defvar (v, k0)
     end)
 
 fun attach_comment_to_equation q (aa, ww) = (

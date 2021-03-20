@@ -254,6 +254,7 @@ fun walk_in_expression (vamp_x : 'a x_vamper_t) (w0, acc0) = (
 	  (*| Instance _ => (vamp_x (w0, acc0))*)
 	  | Instances _ => (vamp_x (w0, acc0))
 	  | Iref _ => (vamp_x (w0, acc0))
+	  | Lref _ => (vamp_x (w0, acc0))
 	  | Cref _ => (vamp_x (w0, acc0))
 	  | Array_fill (x0, y0) => (
 	    let
@@ -272,7 +273,93 @@ fun walk_in_expression (vamp_x : 'a x_vamper_t) (w0, acc0) = (
 	    end)
     end)
 
+fun walk_in_modifier walk_x ((m0 : modifier_t), acc0) = (
+    let
+	val walk_m = (walk_in_modifier walk_x)
+	val walk_h = (walk_in_constraint walk_x)
+	fun walk_k (k, acc) = (k, acc)
+    in
+	case m0 of
+	    Mod_Redefine (r, d0, h0) => (
+	    let
+		val Defclass ((v, g), k0) = d0
+		val (k1, acc1) = (walk_k (k0, acc0))
+		val d1 = Defclass ((v, g), k1)
+		val (h1, acc2) = (walk_in_x_option walk_h (h0, acc1))
+		val m1 = Mod_Redefine (r, d1, h1)
+	    in
+		(m1, acc2)
+	    end)
+	  | Mod_Elemental_Redefine (z, r, d0, h0) => (
+	    let
+		val Defclass ((v, g), k0) = d0
+		val (k1, acc1) = (walk_k (k0, acc0))
+		val d1 = Defclass ((v, g), k1)
+		val (h1, acc2) = (walk_in_x_option walk_h (h0, acc1))
+		val m1 = Mod_Elemental_Redefine (z, r, d1, h1)
+	    in
+		(m1, acc2)
+	    end)
+	  | Mod_Redeclare (r, d0, h0) => (
+	    let
+		val Defvar (v, k0) = d0
+		val (k1, acc1) = (walk_k (k0, acc0))
+		val d1 = Defvar (v, k1)
+		val (h1, acc2) = (walk_in_x_option walk_h (h0, acc1))
+		val m1 = Mod_Redeclare (r, d1, h1)
+	    in
+		(m1, acc2)
+	    end)
+	  | Mod_Elemental_Redeclare (z, r, d0, h0) => (
+	    let
+		val Defvar (v, k0) = d0
+		val (k1, acc1) = (walk_k (k0, acc0))
+		val d1 = Defvar (v, k1)
+		val (h1, acc2) = (walk_in_x_option walk_h (h0, acc1))
+		val m1 = Mod_Elemental_Redeclare (z, r, d1, h1)
+	    in
+		(m1, acc2)
+	    end)
+	  | Mod_Entry (ef, n, mm0, w) => (
+	    let
+		val (mm1, acc1) = (map_along walk_m (mm0, acc0))
+		val m1 = Mod_Entry (ef, n, mm1, w)
+	    in
+		(m1, acc1)
+	    end)
+	  | Mod_Value x0 => (
+	    let
+		val (x1, acc1) = (walk_x (x0, acc0))
+		val m1 = Mod_Value x1
+	    in
+		(m1, acc1)
+	    end)
+    end)
+
+and walk_in_constraint walk_x ((h0 : constraint_t), acc0) = (
+    let
+	val walk_m = (walk_in_modifier walk_x)
+
+	val (k0, mm0, Annotation aa0, ww) = h0
+	val (mm1, acc1) = (map_along walk_m (mm0, acc0))
+	val (aa1, acc2) = (map_along walk_m (aa0, acc1))
+	val h1 = (k0, mm1, Annotation aa1, ww)
+    in
+	(h1, acc2)
+    end)
+
 (* ================================================================ *)
+
+fun walk_in_expression_by_vamper (vamp : 'a vamper_t) (x0, acc0) = (
+    let
+	val {vamp_q, vamp_s} = vamp
+	val d0 = Eq_Eq ((x0, NIL), Annotation [], Comment [])
+	val (d1, acc1) = (vamp_q (d0, acc0))
+    in
+	case d1 of
+	    Eq_Eq ((x1, _), _, _) => (x1, acc1)
+	  | _ => raise Match
+    end)
 
 (* Calls walkers in equations/statements in a class.  It works on a
    value expression in a simple type through a dummy equation. *)
@@ -294,7 +381,18 @@ fun walk_in_class (vamp : 'a vamper_t) (k0 : definition_body_t, acc0) = (
 	  | Def_Der _ => (k0, acc0)
 	  | Def_Primitive _ => (k0, acc0)
 	  | Def_Outer_Alias _ => raise Match
-	  | Def_Name _ => raise Match
+	  | Def_Argument (x0, (ss0, mm0), aa, ww) => (
+	    let
+		val walk_x = (walk_in_expression_by_vamper vamp)
+		val walk_m = (walk_in_modifier walk_x)
+		val (ss1, acc1) = (map_along walk_x (ss0, acc0))
+		val (mm1, acc2) = (map_along walk_m (mm0, acc1))
+		val (x1, acc3) = (walk_in_class vamp (x0, acc2))
+		val k1 = Def_Argument (x1, (ss1, mm1), aa, ww)
+	    in
+		(k1, acc3)
+	    end)
+	  | Def_Named _ => raise Match
 	  | Def_Scoped _ => raise Match
 	  | Def_Refine _ => raise Match
 	  | Def_Extending _ => raise Match
@@ -380,9 +478,19 @@ and walk_in_simple_type (vamp : 'a vamper_t) (k0, acc0) = (
 		val ee0 = (body_elements k0)
 		val (ee1, acc1) = (map_along walk_e (ee0, acc0))
 		val k1 = (replace_body_elements k0 ee1)
-		(*AHO*) (*val k2 = (set_cook_step E5 k1)*)
 	    in
 		(k1, acc1)
+	    end)
+	  | Def_Argument (x0, (ss0, mm0), aa, ww) => (
+	    let
+		val walk_x = (walk_in_expression_by_vamper vamp)
+		val walk_m = (walk_in_modifier walk_x)
+		val (ss1, acc1) = (map_along walk_x (ss0, acc0))
+		val (mm1, acc2) = (map_along walk_m (mm0, acc1))
+		val (x1, acc3) = (walk_in_simple_type vamp (x0, acc2))
+		val k1 = Def_Argument (x1, (ss1, mm1), aa, ww)
+	    in
+		(k1, acc3)
 	    end)
 	  | _ => raise Match)
 
@@ -393,10 +501,10 @@ and walk_in_simple_type_element (vamp : 'a vamper_t) (e0, acc0) = (
       | Element_Class _ => (e0, acc0)
       | Element_State (z, r, d0, h) => (
 	let
-	    val Defvar (v, q, k0, c, aa, ww) = d0
+	    val Defvar (v, k0) = d0
 	    val _ = if (class_is_primitive k0) then () else raise Match
 	    val (k1, acc1) = (walk_in_primitive_type vamp (k0, acc0))
-	    val d1 = Defvar (v, q, k1, c, aa, ww)
+	    val d1 = Defvar (v, k1)
 	    val e1 = Element_State (z, r, d1, h)
 	in
 	    (e1, acc1)
@@ -415,7 +523,18 @@ and walk_in_simple_type_element (vamp : 'a vamper_t) (e0, acc0) = (
 
 and walk_in_primitive_type (vamp : 'a vamper_t) (k0, acc0) = (
     case k0 of
-	Def_Primitive (ty, x0) => (
+	Def_Primitive (ty, x0, va) => (
+	let
+	    val walk_x = (walk_in_expression_by_vamper vamp)
+	    val (x1, acc1) = (walk_x (x0, acc0))
+	    val k1 = Def_Primitive (ty, x1, va)
+	in
+	    (k1, acc1)
+	end)
+      | _ => raise Match
+    (*
+    case k0 of
+	Def_Primitive (ty, x0, va) => (
 	let
 	    val {vamp_q, vamp_s} = vamp
 	    val dummy0 = Eq_Eq ((x0, NIL), Annotation [], Comment [])
@@ -424,89 +543,14 @@ and walk_in_primitive_type (vamp : 'a vamper_t) (k0, acc0) = (
 	    case dummy1 of
 		Eq_Eq ((x1, _), _, _) => (
 		let
-		    val k1 = Def_Primitive (ty, x1)
+		    val k1 = Def_Primitive (ty, x1, va)
 		in
 		    (k1, acc1)
 		end)
 	      | _ => raise Match
 	end)
-      | _ => raise Match)
-
-fun walk_in_modifier ewalk ((m0 : modifier_t), acc0) = (
-    let
-	val walk_x = ewalk
-	val walk_m = (walk_in_modifier walk_x)
-	val walk_h = (walk_in_constraint walk_x)
-	fun walk_k (k, acc) = (k, acc)
-    in
-	case m0 of
-	    Mod_Redefine (r, d0, h0) => (
-	    let
-		val Defclass ((v, g), k0) = d0
-		val (k1, acc1) = (walk_k (k0, acc0))
-		val d1 = Defclass ((v, g), k1)
-		val (h1, acc2) = (walk_in_x_option walk_h (h0, acc1))
-		val m1 = Mod_Redefine (r, d1, h1)
-	    in
-		(m1, acc2)
-	    end)
-	  | Mod_Elemental_Redefine (z, r, d0, h0) => (
-	    let
-		val Defclass ((v, g), k0) = d0
-		val (k1, acc1) = (walk_k (k0, acc0))
-		val d1 = Defclass ((v, g), k1)
-		val (h1, acc2) = (walk_in_x_option walk_h (h0, acc1))
-		val m1 = Mod_Elemental_Redefine (z, r, d1, h1)
-	    in
-		(m1, acc2)
-	    end)
-	  | Mod_Redeclare (r, d0, h0) => (
-	    let
-		val Defvar (v, q, k0, c, aa, ww) = d0
-		val (k1, acc1) = (walk_k (k0, acc0))
-		val d1 = Defvar (v, q, k1, c, aa, ww)
-		val (h1, acc2) = (walk_in_x_option walk_h (h0, acc1))
-		val m1 = Mod_Redeclare (r, d1, h1)
-	    in
-		(m1, acc2)
-	    end)
-	  | Mod_Elemental_Redeclare (z, r, d0, h0) => (
-	    let
-		val Defvar (v, q, k0, c, aa, ww) = d0
-		val (k1, acc1) = (walk_k (k0, acc0))
-		val d1 = Defvar (v, q, k1, c, aa, ww)
-		val (h1, acc2) = (walk_in_x_option walk_h (h0, acc1))
-		val m1 = Mod_Elemental_Redeclare (z, r, d1, h1)
-	    in
-		(m1, acc2)
-	    end)
-	  | Mod_Entry (ef, n, mm0, w) => (
-	    let
-		val (mm1, acc1) = (map_along walk_m (mm0, acc0))
-		val m1 = Mod_Entry (ef, n, mm1, w)
-	    in
-		(m1, acc1)
-	    end)
-	  | Mod_Value x0 => (
-	    let
-		val (x1, acc1) = (walk_x (x0, acc0))
-		val m1 = Mod_Value x1
-	    in
-		(m1, acc1)
-	    end)
-    end)
-
-and walk_in_constraint ewalk ((h0 : constraint_t), acc0) = (
-    let
-	val walk_m = (walk_in_modifier ewalk)
-
-	val (k0, mm0, Annotation aa0, ww) = h0
-	val (mm1, acc1) = (map_along walk_m (mm0, acc0))
-	val (aa1, acc2) = (map_along walk_m (aa0, acc1))
-	val h1 = (k0, mm1, Annotation aa1, ww)
-    in
-	(h1, acc2)
-    end)
+      | _ => raise Match
+    *))
 
 (* Applies a function to each equation in post-order as well as it
    applies a function to an expression when it encounters. *)
@@ -675,7 +719,7 @@ fun walk_in_statement vamp_s (vamp_x : 'a x_vamper_t) (s0, acc0) = (
 fun substitute_expression f (k0, acc0) = (
     if (class_is_outer_alias k0) then
 	acc0
-    else if (class_is_enumerator_definition k0) then
+    else if (class_is_enumerator k0) then
 	acc0
     else if (class_is_package k0) then
 	acc0
@@ -685,10 +729,10 @@ fun substitute_expression f (k0, acc0) = (
 
 	    val subj = (subject_of_class k0)
 	    val efix = (f k0)
-	    val ewalk = (walk_in_expression efix)
-	    val qwalk = (walk_in_equation (fn (q, a) => (q, a)) ewalk)
-	    val swalk = (walk_in_statement (fn (s, a) => (s, a)) ewalk)
-	    val walker = {vamp_q = qwalk, vamp_s = swalk}
+	    val walk_x = (walk_in_expression efix)
+	    val walk_q = (walk_in_equation (fn (q, a) => (q, a)) walk_x)
+	    val walk_s = (walk_in_statement (fn (s, a) => (s, a)) walk_x)
+	    val walker = {vamp_q = walk_q, vamp_s = walk_s}
 	    val (k1, acc1) = (walk_in_class walker (k0, acc0))
 	    val _ = (store_to_instance_tree subj k1)
 	in

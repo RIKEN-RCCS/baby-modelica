@@ -7,7 +7,7 @@
 
 \title{\bf{}Modelica: A Reference Manual\\
 \normalsize{}-- Or, Baby-Modelica Implementation Notes --}
-\author{Copyright (C) 2018-2021 RIKEN R-CCS}
+\author{Copyright (C) 2018-2021 Elica Modd}
 \date{Baby-Modelica 3.4.0, 2021-03-18}
 
 \usepackage[hidelinks]{hyperref}
@@ -105,15 +105,19 @@
 
 \subsection{Baby-Modelica}
 
+%%README1-BEGIN
+%%%%
 Baby-Modelica is a simple frontend (parser+flattener) for the Modelica
-language specification 3.4.  It parses the source code then performs
+language specification 3.4.  It parses a source code then performs
 simple syntactic transformations, and optionally dumps a flat model.
-Flattening a model is an essential part of Modelica, and it resolves
-all the features of an object-oriented language.  Flattening is
-indispensable even for simple tools, because parameter values in a
-model may be substituted multiple times by nested parameterization.  A
-generated flat model is hopefully to be re-readable by Modelica
-compilers.
+Flattening is indispensable even for simple tools, because taking
+parameter values is not direct as they may be substituted multiple
+times by nested parameterization.  Flattening is a major part of
+Modelica, and it resolves all the features as an object-oriented
+language.  A generated flat model is hopefully to be re-readable by
+Modelica compilers.
+%%%%
+%%README1-END
 
 Current status of Baby-Modelica is a pre-zero version, and we are
 working towards version zero.  The version number of Baby-Modelica is
@@ -174,11 +178,12 @@ packages or non-packages.  A constant refererence in a class is like
 $A.B.C.a[...].b[...].c[..]$, where all $a$, $b$, and $c$ are constants
 and subscripts are optional.
 
-A (non-constant) variable reference does not have any prefixes (none
-of a dot nor packages).  A class reference may be with a preceding
-dot, which refers to the unnamed root.  Or, a class reference may
-follow a variable reference, in that case classes are considered as
-packages.
+A non-constant variable (instance) reference does not have any
+prefixes of classes nor a preceding dot.
+
+A class reference may be with a preceding dot, which refers to the
+unnamed root.  Or, a class reference may follow a variable reference,
+in that case classes are considered as packages.
 
 \begin{QRULE}\label{mixed-class-instance-reference} There is a single
 namespace for classes and variables.  It is allowed to refer to a
@@ -186,8 +191,24 @@ constant in a package via a variable reference as $x.P.c$.  But, it is
 illegal to refer to a class via a variable reference in a declaration
 as (illegal) $x.C~v$.\end{QRULE}
 
-\begin{QRULE} A global variable reference cannot have a preceding dot.
-Note that $\mathit{time}$ is the only variable.\end{QRULE}
+\begin{QFACT} An enclosing class is considered as a package in the
+nesting of class definitions, and the scope of an enclosing class only
+includes the constants but variables are ignored.\end{QFACT}
+%%%%
+See Rule~\ref{model-nesting} for the binary roles of a class.
+
+\begin{QFACT} Array indexing is a part of a composite name.  Array
+indexing to general expressions is ungrammatical.\end{QFACT}
+%%%%
+For example, (illegal) $\{1,2,3\}[1]$ is not allowed.
+
+\subsubsection*{Predefined_variables}
+
+\begin{QRULE}\label{time-and-end} A variable $\mathit{time}$ is
+visible everywhere.  Variables $\mathit{end}$ are visible in array
+indexing.  These are the only predefined_variables.  $\mathit{time}$
+is a variable, and thus, not defined in the unnamed-enclosing-class
+(it is a package).\end{QRULE}
 %%%%
 \begin{quote}
 \begin{lstlisting}[aboveskip=-\baselineskip]
@@ -200,22 +221,14 @@ end M;
 \end{lstlisting}
 \end{quote}
 
-\begin{QFACT} An enclosing class is considered as a package in the
-nesting of class definitions, and the scope of an enclosing class only
-includes the constants but variables are ignored.\end{QFACT}
-%%%%
-See Rule~\ref{model-nesting} for the binary roles of a class.
-
-\if 0
-%%%% Rewrite then include to the body (AHO 2020-02-04)
-\fi
-
-\subsubsection*{Scopes}
+\subsubsection*{(?) Scopes}
 
 The scope is flat in most cases, spanning from the main (non-base)
-class to base classes where the class and variable names are distinct.
-But, class names and constants are visible via enclosing classes.  An
-enclosing class is defined to each (base) class.
+class to the base classes where the class and variable names are
+distinct.  However, class names and constants are visible via
+enclosing classes, and hiding some of the names in an enclosing class
+may happen.  An enclosing class is defined to each main and base
+class.
 
 %%%%%%%%%%%%%%%%
 
@@ -1731,13 +1744,12 @@ class/variable. \end{QRULE}
 An outer prefixes an identifier, and an inner prefixes a class
 definition or a variable declaration.
 
-\begin{QFACT} (?) An inner-outer relation on classes does not extend
-outward to lexically enclosing classes. \end{QFACT}
-
-In the following example, the model class is $M$.  The outer $P.X$
-is defined in a package $P$ and it cannot have an inner-outer
-relation.  Note the hierarchies are $M\owns{}P.B$ and $P>P.B$ ($\owns$
-for component embedding, $>$ for lexical enclosing).
+\begin{QFACT} An inner-outer relation on classes does not extend
+outward to lexically enclosing classes.\end{QFACT}
+%%%%
+In the following example, the model class is $M$.  The outer $P.X$ is
+defined in a package $P$ and it cannot have an inner-outer relation.
+In this case, a model $P$ works as a package to a model $P.B$.
 %%%%
 \begin{quote}
 \begin{lstlisting}[aboveskip=-\baselineskip]
@@ -2170,7 +2182,7 @@ stream_variable (which may be an array).
 
 A type/record defining $\mathrm{equalityConstraint}\,(x,y)$ is called
 overdetermined_type/record.  The {Connections} class defines some
-predefined functions to reduce overdetermined constraints.
+predefined_functions to reduce overdetermined constraints.
 
 \subsubsection*{(?) Operator_record components}
 
@@ -2494,6 +2506,7 @@ declarations (variables) of $\mathbf{type}$, $\mathbf{record}$,
 $\mathbf{operator~record}$, and $\mathbf{function}$.  Only functions
 can contain an external interface.  See (\specref{12.2}\/).  (?)
 Functions can contain only input/output variables.
+A function is described in Section~\ref{sec:functions}.
 
 \end{description}
 \end{quote}
@@ -2555,7 +2568,7 @@ and $\mathit{kind}_B<:_k\mathit{kind}_A$ (note it is swapped).
 \item $\mathbf{record}$ $<:_k$ $\mathbf{block}$
 %%%%
 \item $\mathbf{type}$ $<:_k$ $\mathbf{connector}$
-\item $\mathbf{record}$  $<:_k$ $\mathbf{connector}$
+\item $\mathbf{record}$ $<:_k$ $\mathbf{connector}$
 \item $\mathbf{operator~record}$ $<:_k$ $\mathbf{connector}$
 \item $\mathbf{expandable~connector}$ $<:_k$ $\mathbf{connector}$
 %%%%
@@ -2790,7 +2803,7 @@ $x[1].c$.
 
 \begin{QFACT} Multi-dimensional arrays are arrays of arrays.  The
 ordering of an array dimension is "row-major".\end{QFACT}
-
+%%%%
 See code examples in (\specref{10.1}\/):
 %%%%
 \begin{qquote} (\specref{10.1}\/) It is possible to mix the two
@@ -2799,7 +2812,7 @@ declaration forms although it might be confusing.
 Real[3,2] x[4,5]; // x has type Real[4,5,3,2];
 \end{lstlisting}
 \end{qquote}
-%%%%
+
 Note that accessing the example array by $x[\textrm{-},\textrm{-}]$
 returns an array of $[3,2]$, which means, partial indexing is applied
 from the left in the dimension.  This ordering is row-major, despite
@@ -2930,7 +2943,7 @@ constructor cannot be empty by the syntax definition, although an
 array can have zero in its dimension (it ensures the type an array
 constructor returns).
 
-\subsubsection*{Predefined functions on arrays}\label{sec:array-size}
+\subsubsection*{Predefined_functions on arrays}\label{sec:array-size}
 
 $\mathrm{ndims}\,(A)=0$ and $\mathrm{size}\,(A)=\{\}$ (an empty array)
 for a scalar $A$ (See \specref{10.3.1}\/).
@@ -3056,7 +3069,7 @@ operator record or an array of it.
 \begin{QFACT} Functions are not overloaded.  Functions are classes and
 having the same name is a duplication.\end{QFACT}
 
-Some predefined functions are overloaded.  They include simple_type
+Some predefined_functions are overloaded.  They include simple_type
 names of Integer, String, and $\mathit{enumeration}$ (see
 Fact~\ref{simple-type-conversions}).  They also include ones taking
 array arguments of varying dimensions, including ndims, size, and
@@ -3115,8 +3128,8 @@ in the operator_record $\tilde{A}$ with arrays stripped off from $A$.
 
 \begin{itemize}
 
-\item If $A$ is a simple_type or an array of it, apply a predefined
-operator.
+\item If $A$ is a simple_type or an array of it, apply a
+predefined_operator.
 
 \item Apply a function $f \in \tilde{A}.\oplus$, whose argument type
 is $A$.  If $f$ is not unique, it is illegal.
@@ -3132,7 +3145,7 @@ tried in the specified order.
 \begin{itemize}
 
 \item If $A$ and $B$ are simple_types or arrays of them, apply a
-predefined operator.
+predefined_operator.
 
 \item Apply a function $f \in \tilde{A}.\oplus$ or $f \in
 \tilde{B}.\oplus$, whose argument types are $A\times B$.  If $f$ is
@@ -3178,7 +3191,7 @@ default attributes...\end{qquote}
 
 %%%%%%%%%%%%%%%%
 
-\subsection{Predefined operators}\label{sec:predefined-operators}
+\subsection{Predefined_operators}\label{sec:predefined-operators}
 
 Operators are overloaded on the arguments of a simple_type or an array
 of it.  The set of operators is different from the one for operator
@@ -3319,7 +3332,7 @@ relational operator).
 
 \paragraph{Remark}
 
-The predefined operators are defined for the simple_types, although
+The predefined_operators are defined for the simple_types, although
 \specref{14.3}\/ and \specref{14.4}\/ refer to the predefined_types.
 The predefined_types excluding the simple_types cannot have operators,
 because they are not operator records.
@@ -3415,7 +3428,7 @@ allows calling impure functions in any pure context,\end{qquote}
 $\mathrm{pure}$ accepts only one argument, although it can accept a
 list of arguments by the syntax definition.
 
-\subsubsection*{Predefined operators}
+\subsubsection*{Predefined_operators}
 
 See Section~\ref{sec:predefined-operators}.
 
@@ -3426,14 +3439,49 @@ like C~Language.
 
 %%%%%%%%%%%%%%%%
 
-\subsection{Functions}
+\subsection{Functions}\label{sec:functions}
+
+A function is a function in a usual sense.  A function as a class_kind
+is described in Section~\ref{sec:class-kinds}.  A function is
+syntactically a package, and no instance is created.  It contains
+variables that are inputs and outputs, although it is a package.
 
 Arguments to a function are simple_types, records (including
 connectors, operator_records) and arrays of them, and functions.
 
-\begin{qquote} (\specref{12.2}\/) $\bullet$ A function may only
+\begin{qquote} (\specref{12.2}\/) $\bullet$\,A function may only
 contain components of the restricted classes type, record, operator
 record, and function; i.e. no model or block components.\end{qquote}
+
+\subsubsection*{(?) Array dimensions}
+
+A dimension of an array variable in a function can be a runtime value.
+A part of a dimension of a type defined elsewhere is a
+translation-time constant.
+
+\begin{qquote} (\specref{12.2}\/) $\bullet$\,The dimension sizes not
+declared with (:) of each array result or array local variable [i.e.,
+a non-input components] of a function must be either given by the
+input formal parameters, or given by constant or parameter
+expressions, or by expressions containing combinations of
+those...\end{qquote}
+
+\subsubsection*{Local variables}
+
+An input/output or local variable declaration accepts general form of
+modifiers as well as initializers by =-sign.
+
+\begin{qquote} (\specref{12.2}\/) $\bullet$\,A formal parameter or
+local variable may be initialized through a binding (=) of a default
+value in its declaration, ...\end{qquote}
+
+Local variables (non-input/output ones) need be declared in the
+protected section.
+
+\subsubsection*{(?) Restriction}
+
+\begin{qquote} (\specref{12.2}\/) $\bullet$\,A function may not be used
+in connections...\end{qquote}
 
 \subsubsection*{(?) No results}
 
@@ -3599,879 +3647,6 @@ Prefix Rules [4.4.2.2 Prefix Rules].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\section{Some noteworthy excerpts}
-
-%%%%%%%%%%%%%%%%
-
-\subsection{Terms with unnamed}
-
-There are many uses of {\it{}unnamed\/} in the_specification.
-
-\begin{quote}
-\begin{description}
-
-\item [unnamed enclosing class]
-in {5.2 Enclosing Classes}
-
-\item [unnamed root of the class tree]
-in \specref{5.6.1.1}
-
-\item [unnamed nodes in the instance tree]
-in \specref{5.6.1.2}
-(unnamed nodes are generated by extends clauses)
-
-\item [unnamed root of the instance tree]
-in \specref{5.6.2}
-
-\item [unnamed top-level package]
-in \specref{13.2.1.1}
-
-\item [unnamed top-level scope]
-in \specref{13.2.4.1}
-
-\item [unnamed element of a class definition]
-in \specrefx{}{Glossary}
-As "extends clause: an unnamed element of a class definition"
-
-\end{description}
-\end{quote}
-
-%%%%%%%%%%%%%%%%
-
-\subsection{Quotes about class name lookups}
-
-\def\partiallyflattenedclass{partially flattened class}
-\def\temporarilyflattenedclass{temporarily flattened class}
-
-\paragraph{Qualified package~names}
-
-\begin{qquote}\label{quo:lookup-importing} (\specref{13.2.1}\/) Here
-packagename is the fully qualified name of the imported package~...
-(\specref{13.2.1.1}\/) ...~Lookup of the name of an imported package
-or class, ..., deviates from the normal lexical lookup by starting the
-lexical lookup of the first part of the name at the
-top-level.\end{qquote}
-
-\paragraph{Remaining parts lookups}
-
-A lookup of the remaining parts of a name includes the elements from
-the base_classes.  It is because the lookup is in the
-\temporarilyflattenedclass.
-%%%%
-\begin{qquote}\label{quo:lookup-remaining} (\specref{5.3.2}, 4th-item) If
-the identifier denotes a class, that class is temporarily flattened
-...  The rest of the name ... is looked up among the declared named
-elements of the temporary flattened class.  If the class does not
-satisfy the requirements for a package, the lookup is restricted to
-encapsulated elements only.\end{qquote}
-%%%%
-And, ... becuase the \temporarilyflattenedclass is usual flattening
-with empty modifications.
-%%%%
-\begin{qquote} (\specref{5.3.2}, in the following comment) [The
-temporary class flattening performed for composite names follow the
-same rules ..., except that the environment is empty.~...]\end{qquote}
-%%%%
-And, the \partiallyflattenedclass includes the elements from the
-base_classes.
-%%%%
-\begin{qquote}\label{quo:partially-flattened-class} (\specref{5.2}\/)
-During flattening, the enclosing class of an element being flattened
-is a partially flattened class.  [For example, this means that a
-declaration can refer to a name inherited through an
-extends-clause.]\end{qquote}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\section{Supplemental glossary}
-
-%%%%%%%%%%%%%%%%
-
-\subsection{Words specific to the_implementation}
-
-Some words are coined for the_implementation or used with different
-meaning.  The marker {$\mbox{}^\top$} indicates the word is with
-stricter meaning.  The marker {$\mbox{}^\bot$} indicates the word with
-different meaning.
-
-\begin{description}
-
-\item [analogical] is used to refer to a set of flow, effort, and
-stream.
-
-\item [array, scalar, vector, matrix].  Scalars are arrays with no
-dimensions, vectors with one dimension, and matrices with two
-dimensions.  There are no separate vector nor matrix types.
-
-\item [component{$^\top$} {\rm{}and} element{$^\top$}] component
-{$\subseteq$} element as a set in a class definition.  Components are
-variable declarations.  Elements are both variable declarations and
-class definitions.
-
-\item [definition/declaration] are often distinguished to mean a class
-definition and a variable declaration.  It adheres to the uses in the
-syntax rules.  It is the same for redefinition/redeclaration.
-Declaration may be used to refer to both.
-
-\item [definition-body] is a set of elements of a definition that is
-not short-class-definition.
-
-\item [lexically enclosing class] is used as an enclosing class
-without modifications and $\mathbf{encapsulated}$ considered.
-
-\item [instance/state/variable] are used interchangeably.
-
-\item [internal_connection] is an aspect of a connector, which refers
-to a connection to an outside_connector.
-
-\item [main_class] refers to a class which is not a base class.
-
-\item [merging_modifiers] is to merge a part of prefixes and modifiers
-in a redeclaration.  It is called inheriting in the_specification.
-
-\item [predefined_type{$\mbox{}^\top$}] is simple_types and classes
-defined in \specref{4.8.8}.  "Built-in_type" is synonymous and
-avoided.
-
-\item [present_class] is a class at attention.  It is called a current
-class in the_specification.
-
-\item [refining] is a modifier application, including one by a
-short_class_definition.
-
-\item [resolve] is determining the class to which a class name refers.
-
-\item [simple_type{$\mbox{}^\top$}] is a set of {Real}, {Integer},
-{Boolean}, {String}, and $\mathit{enumeration}$.  The_implementation
-also includes types extending them.  (It does not includes der's).
-
-(* They are called in many ways.  A BASIC DATA TYPE is Real, Integer,
-Boolean and String.  A PREDEFINED VARIABLE TYPE is Real, Integer,
-Boolean, and String.  A SIMPLE TYPE is Real, Integer, Boolean, String
-and enumerations.  A TYPE is Real, Integer, Boolean, String,
-enumerations, arrays of a type, and ones extending a type.  *)
-
-\item [subject] is a name of a package or an instance.  It is used as
-a key to an associated class definition.  For example, "tank.level" is
-a subject of a state, ".Modelica.Fluid" is a subject of a package.
-
-\item [$\in$] indicates an element is in a class or in a class of a
-state variable.
-
-%%%%%%%%%%%%%%%%
-
-\item [attributes] are parameters defined in predefined_types (Real,
-Integer, Boolean, and String) and enumerations.
-
-\item [base-prefix] = input or output (see syntax rules).
-
-\item [elemental redeclaration] is a redeclaration that appears in
-class elements, in contrast to in modifiers.
-
-\item [environment] (in \specref{7.1}\/) = {modification environment}.
-
-\item [instance] (in \specref{5.4}\/) is a state, declared as a
-variable of a certain class.
-
-\item [instance~hierarchy] (in \specref{5.4}\/) is an embedding
-relation of instances.  (Related words: instance~hierarchy,
-instance~scope).  A hierarchy is created by an instance declaration in
-a class definition.  It is distinct from lexically enclosings.
-
-\item [instance~scope] (in~\specref{5.6.1.2}, \specref{5.3.1}\/)
-Instance~scope is a scope excluding enclosing classes.  It consists of
-declared elements, declared elements from base_classes, and
-imported_names.
-
-\item [instance~tree] = instance~hierarchy.
-
-\item [(instance) model hierarchy{$\mbox{}^\bot$}]
-(in~\specref{5.4}\/) = instance~hierarchy.
-
-\item [instantiation{$^\bot$}] (in \specref{5.6.1}\/) refers to
-applying modifications.  It makes a {partially instantiated} element
-be fully instantiated.
-
-\item [(instantiation) partial instantiation] (in \specref{5.6.1.4}\/)
-is an intermediate state of flattening a class where modifiers are
-associated (but not applied) to an element but redeclarations are
-applied.  This state is necessary to enable redeclarations to be
-applied before handling extends-clauses.
-
-\begin{qquote} (\specref{5.6.1.4}\/) 2.1. ...~(the partially
-instantiated elements have correct name allowing lookup)\end{qquote}
-
-\item [(instantiation) partial instantiation] (in \specref{5.6.1.4}\/)
-is to make a pair of a class element and a {modification environment},
-where redeclarations are applied.  A produced pair is called a
-{partially instantiated element}.
-
-\begin{qquote} (\specref{5.6.1.4}\/) ...~a partially instantiated
-element (...) is comprised of a reference to the original element
-(from the class tree) and the modifiers for that element.\end{qquote}
-
-\item [modification~environment{$^+$}] (or {\bf{}flattening
-environment}) is a set of modifiers attached to a {\it{}partially
-instantiated element}.
-
-\begin{qquote} (\specref{7.2.2}\/) The {modification environment}
-contains arguments which modify elements of the class.\end{qquote}
-
-\item [flattening~context] is a pair of a {modification environment}
-and a set of {enclosing classes} (\specref{5.1}\/).
-
-\item [(flattening) partial flattening{$^+$}] = {\it{}partial
-instantiation}, as instantiation is a part of flattening.
-
-\item [(flattening) partially flattened enclosing class] is simply
-{\it{}partially flattened\/} + {\it{}enclosing class\/} (See
-\specref{7.1}\/).
-
-\item [(flattening) partially flattened enclosing class]
-From the quote, it means the extends-clauses are resolved.  Thus, the
-names in the base_classes can be looked up.
-
-\begin{qquote} (\specref{5.2}\/) During flattening, the enclosing
-class of an element being flattened is a partially flattened
-class. [For example, this means that a declaration can refer to a name
-inherited through an extends-clause.]\end{qquote}
-
-\item [(flattening) temporary flattening] (in \specref{5.3.2}\/) is a
-flattening with an empty modification environmemnt.
-
-\item [(flattening) modification environmemnt] ?.
-
-\item [simple~name {\rm{}and} composite~name].
-
-\item [built-in~classes] = (Synonyms) predefined_classes.
-
-\item [import~name] (in \specref{5.3.1}\/) is an element imported by a
-qualified import.
-
-\begin{qquote} (\specref{5.1}\/) Flattening is made in a context which
-consists of a {modification environment} (Section 7.2.2) and an
-ordered set of enclosing classes.\end{qquote}
-
-\item [temporary flattened class] is a flattened class with an empty
-{modification environment}.  (* the following part is uncertain *) It
-includes the declared_elements, elements from the extends-clauses, and
-the elements from the import-clauses, but not the elements from the
-enclosing classes.
-
-\begin{qquote} (\specref{5.3.3}\/) ...~the class A is temporarily
-flattened with an empty environment (i.e. no modifiers, see Section
-7.2.2)~...\end{qquote}
-
-\item [class tree] (in \specref{5.6.1.1}\/) is class definitions,
-hierarchically organized.
-
-\item [local class/component] (in \specref{5.6.1.4}\/) It is a
-class/variable defined/declared in elements, not including inherited
-classes.  It, probably, excludes imported, base, and enclosing
-classes.
-
-\item [lookup of base name] for {extends}.
-
-\begin{qquote} (\specref{7.1}\/) The name of the base_class is looked up
-in the partially flattened enclosing class.\end{qquote}
-
-The sentence {\it{}The found base_class is flattened with~...\/} has
-the recurrence of the word flattened as {\it{}arguments of all
-enclosing class environments that match names in the flattened
-base_class\/} in the following itemization.
-
-\item [ordering of the merging rules]
-
-\item [redeclaration] A redeclaration apprears in three ways
-(\specref{7.3}\/): $\bullet$\,in modifiers; $\bullet$\,in class
-definition elements; $\bullet$\,in extends-redeclaration.
-
-For an element-redeclaration, a class/variable must be inherited.  The
-modifiers on the extends-clause of the base_class are ignored
-(\specref{7.3}\/).
-
-\item [simple~types{$^+$}] are boolean, integer, enumeration, real,
-string, Clock, and {\it{}externally defined object}.  (The definition
-in glossary lacks the last two).
-
-\item [specialized class] (\specref{4.6}\/) lists a list of classes
-with specific kinds (e.g, $\mathbf{model}$, $\mathbf{block}$).
-
-\item [unnamed top-level package] = ?
-
-\end{description}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\section{Issues need to be checked in MSL}
-
-\subsection{Missing each}
-
-An each seems missing for p, at line 850, Fluid/Interfaces.mo in
-MSL~3.2.3:
-%%%%
-\begin{quote}
-\begin{lstlisting}[aboveskip=-\baselineskip]
-partial model PartialDistributedVolume
-  ......
-  Medium.BaseProperties[n] mediums(
-    each preferredMediumStates=true,
-    p(start=ps_start),
-    each h(start=h_start),
-    each T(start=T_start),
-    each Xi(start=X_start[1:Medium.nXi]));
-\end{lstlisting}
-\end{quote}
-
-\subsection{Mismatch of final statuses}
-
-Final statuses do not match in a redeclaration in Fluid/Vessels:
-%%%%
-\begin{quote}
-\begin{lstlisting}[aboveskip=-\baselineskip]
-  package BaseClasses
-      partial model PartialLumpedVessel
-        replaceable model HeatTransfer =
-            Modelica.Fluid.Vessels.BaseClasses.HeatTransfer.IdealHeatTransfer
-          ...;
-
-        HeatTransfer heatTransfer(
-          redeclare final package Medium = Medium,
-          ...);
-
-    partial model PartialVesselHeatTransfer
-      extends Modelica.Fluid.Interfaces.PartialHeatTransfer;
-      ...
-
-    model IdealHeatTransfer
-      extends PartialVesselHeatTransfer;
-      ...
-\end{lstlisting}
-\end{quote}
-%%%%
-and in Fluid/Interfaces.mo:
-%%%%
-\begin{quote}
-\begin{lstlisting}[aboveskip=-\baselineskip]
-  partial model PartialHeatTransfer
-    replaceable package Medium=Modelica.Media.Interfaces.PartialMedium
-    ...
-\end{lstlisting}
-\end{quote}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\section{Baby-Modelica implementation notes}
-
-\subsection{Limitations and general remarks}
-
-%%%%%%%%%%%%%%%%
-
-\begin{itemize}
-
-\item The_implementation is written in SML~'97 (Standard ML).  The
-code is developed mainly with Poly/ML (on SunOS~5.11/amd64), but it
-may work with SML/NJ or MLton.  Sometimes the code is twisted because
-SML does not allow forward references of names.
-
-\item The_implementation uses a modified BYACC parser generator (not
-ml-yacc), which can be obtained separately.
-
-\item The file coding is ASCII, although it is defined as UTF-8 in
-\specref{13.2.2}.
-
-\item Error checking/reporting is none.  The parser records no source
-line number information.  No information is provided for errors in a
-model.
-
-\item Constant folding is very weak.  Folding constants at
-translation-time is mandatory for array dimensions.
-
-\item The_implementation may be confused by the uses of characters
-"{\tt{}.}" and "{\tt{}@}" in names in a model.  It internally uses
-them to separate identifiers.
-
-\item The_implementation treats $\mathbf{class}$ as a synonym of
-$\mathbf{model}$, that follows the old definition.
-
-\item The_implementation does not implement $\mathbf{pure}$
-expressions and errs on the uses of them.
-
-\item It does not parse the {\it{}Synchronous Language\/} and
-{\it{}State Machines}.
-
-\item Internal errors (assertions) raise the Match exception.  But,
-other errors are often synonyms of the Match exception.
-
-\item The_implementation does not check the representable values of
-{Integer}.  Escpecially, {Integer\_inf} may raise the Overflow
-exception.  The definition of {ModelicaServices.Integer\_inf} in
-MSL~3.2.3 is in 32~bits, and it is no problem for 64~bit SML
-implementations.
-
-\item (* Array subscripts ":" to connector references are not
-handled. *).
-
-\item (* The code for expanding for-equations and finding implicit
-iterator ranges is not tested at all. *).
-
-\item The package Connectors cannot be extended.  It is handled
-nominally.
-
-\item (?) Translation-time constants cannot depend on variables in
-expandable_connectors.
-
-\end{itemize}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\section{Baby-Modelica -- Parsing}
-
-{Parsing} is simply done by a BYACC generated parser.
-
-%%%%%%%%%%%%%%%%
-
-\subsection{Code tips}
-
-\begin{itemize}
-
-\item The rule set in {\it{}Modelica Concrete Syntax\/} defined in
-the_specification is used essentially verbatim.
-
-\item The keywords {\bf{}end} and {\bf{}initial} appearing in the
-{\it{}primary\/} expression of the syntax rules cause conflicts in
-BYACC\@.
-
-\end{itemize}
-
-%%%%%%%%%%%%%%%%
-
-\subsection{Parsing of {\bf{}end} and {\bf{}initial}}
-
-The keywords {\bf{}end} and {\bf{}initial} appearing in the
-{\it{}primary\/} expression of the syntax rules cause conflicts in
-BYACC\@.  {\bf{}end} may appear as a predefined variable as well as a
-keyword.  {\bf{}initial} may also appear as a predefined function as
-well as a keyword.  For {\bf{}end}, see \specref{10.5.2}.  For
-{\bf{}initial}, see \specref{8.6}.
-
-The token {\bf{}end} only appears as a variable in subscript
-expressions.  The lexer recognizes {\bf{}end} as an identifier in
-subscript expressions, or as a keyword elsewhere.  The parser tells
-the lexer to switch the token type of {\bf{}end} as a keyword or an
-identifier.  The switching code is placed at the safe points where a
-look-ahead of the parser never looks at {\bf{}end}.
-
-The token {\bf{}initial} only appears as a keyword either in
-{\bf{}initial equation} or {\bf{}initial algorithm}.  The lexer
-handles each sequence of {\bf{}initial~equation} and
-{\bf{}initial~algorithm} as a single token.  The lexer judges by a
-look-ahead of a token next to {\bf{}initial}.  Otherwise, the lexer
-returns an identifier for {\bf{}initial}.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\section{Baby-Modelica -- Resolving}
-
-{Resolving} handles modifier applications in a model for elaboration.
-
-%%%%%%%%%%%%%%%%
-
-\subsection{Code tips}
-
-\begin{itemize}
-
-\item The_implementation directly handles a short_class_definition as
-a class {\it{}refining\/} which represents modifier applications,
-although it is defined as an expansion to a class definition with an
-extends-clause in \specref{4.5.1}.
-
-\item Mutual extendings are ignored (not errors).
-
-\item The_implementation does not save modified classes (even though
-they are named), and repeats the same modifications each time a
-package/instance is processed.
-
-%% \item The_implementation refers to a toplevel model by the name
-%% "model" (it just looks better than an empty name).
-
-\end{itemize}
-
-%%%%%%%%%%%%%%%%
-
-\subsection{Internal class naming}
-
-Most of the classes do not have names, because a modifier application
-creates a new class but it may not have a name unless explicitly
-given.  Also, name association may be changed by inner-outer matching
-and redeclarations.
-
-Thus, the_implementation refers to a class by a package/instance name,
-supplementally paired with a class name.  A pair is used becuase only
-main (non-base) classes are named in this way, but names of base
-classes are needed to distinguish them.  For example, it may refer to
-one base class with a pair
-$\mathit{tank}|\mathit{PartialLumpedVessel}$, where $\mathit{tank}$ is
-an instance of $\mathit{OpenTank}$ and $\mathit{PartialLumpedVessel}$
-is a base of it.
-
-A class being named by a package/instance name is appropriate, because
-only classes used are need to be accessed.  Note that all class bodies
-(a list of elements) have names, with the exception of a body of an
-extends-redeclaration, for which the base class name is used as a name
-for it.
-
-%%%%%%%%%%%%%%%%
-
-\subsection{Rewriting import-clauses}
-
-The parser rewrites an import-clause to an explicitly named form to
-reduce the number of variations.  This rewriting is performed in the
-parser.  For example, it rewrites:
-%%%%
-\begin{quote}
-\begin{lstlisting}[aboveskip=-\baselineskip]
-import pkg.n;
-==>
-import n = pkg.n;
-
-import pkg.{n0,n1,n2};
-==>
-import n0 = pkg.n0;
-import n1 = pkg.n1;
-import n2 = pkg.n2;
-\end{lstlisting}
-\end{quote}
-
-%%%%%%%%%%%%%%%%
-
-\subsection{Handling of modifiers}
-
-\subsubsection*{Modifier applications}
-
-The_syntaxer associates an application of modifiers to a declaration
-which is converted to a modification.  Association to a class
-definition $C$ is by temporarily creating a syntax element
-$\mathit{refine}\,(C, ...)$ with modifiers.
-
-\subsubsection*{Redeclarations}
-
-The_syntaxer handles a redeclaration by replacing a replaceable.
-Similarly, it handles an extends-redeclaration by replacing a
-replaceable class and making it a base class.
-
-A class redefinition may need be applied to multiple occurrences of a
-replaceable in class elements, because the_syntaxer delays merging
-elements in a main and base classes.  See
-Rule~\ref{multiple-definitions}.
-
-\subsubsection*{Scoped modifiers}
-
-Names and expressions are attached with an environment which records
-the scope where they occur, especially for the RHS of modifiers.  This
-makes modifiers to be moved inside another class which are associated
-to.  The scope is represented by either an instance name or a class
-name.  This scoping is necessary to delay the name resolution of
-modifiers attached to extends-clauses.  Such modifiers have to be
-moved inside a base class before resolving the modifiers, because it
-lacks the information of the base classes at that time.
-
-\subsubsection*{A value attribute}
-
-An initializer_modifier to the simple_types and a modifier to the
-$\mathit{value}$ attribute are synonymous.  The_implementation handles
-them by converting an initializer_modifier to a $\mathit{value}$
-modfier.  See Fact~\ref{value-attribute} about a $\mathit{value}$
-attribute.
-
-\subsubsection*{Initializer_modifiers}
-
-An initializer_modifier like $x=e$ is converted to modifiers
-corresponding to components.  That is, $x=e$ is converted to
-$x\,(c_0=e.c_0,c_1=e.c_1,...)$ for each component $c_i$ of the class
-$x$.  It does not check $x$ and $e$ have the same set of components;
-$x$ can be of fewer components than $e$.  It will make many copy
-expressions of $e$.  (?) It will be problematic when the expression
-$e$ has effects.
-
-%%%%%%%%%%%%%%%%
-
-\subsection{Modifcations and lookups}
-
-Modifications are shallowly applied to the class, and then lookups of
-the class names are performed.  Here, shallow application means that
-each modifier is pushed inside the present class and it is attached as
-a modifier to a corresponding element.  The process does not
-immediately recurse.  Name lookups need to be performed after
-modification application, because redeclaration modifications affect
-lookups of names of bases classes.  Thus, modifications and lookups
-are performed alternatingly.
-
-%%%%%%%%%%%%%%%%
-
-\subsection{Lookups of base_classes}
-
-The resolving of a class of an extends-clause may involve resolving
-classes of the parts of a component name.  During the search, many new
-resolving processes may be started for intermediate packages.
-Resolving processes may interlace (which may visit a class being under
-resolving), and the search sees classes with unfinished resolving.
-The_implementation keeps track of a process by the three states of
-loaded, importing-resolved, and extending-resolved.
-
-The_implementation skips searching in the bases, when a lookup in the
-bases has a cycle of dependency.  See the
-section~\ref{sec:lookup-cycle}.
-
-%%%%%%%%%%%%%%%%
-
-\subsection{Other specific behabiors}
-
-\subsubsection*{Class prefixes}
-
-The_implementation accepts $\mathbf{encapsulated}$ only to a
-long-class-specifier but errs/ignores to a short-class-specifier and a
-der-class-specifier.  See Fact~\ref{encapsulated-class}.
-
-The_implementation ignores $\mathbf{final}$ to a class.  See
-Fact~\ref{final-class}.
-
-\subsubsection*{Folding constants}
-
-The_implementation uses int of SML for Integer values.  It may raises
-exceptions on overflows in folding constants.
-
-\subsubsection*{Constants and parameters}
-
-The_implementation does not distinguish constants and parameters.
-Both are treated as translation-time constants.  See
-Fact~\ref{parameters}.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\section{Baby-Modelica -- Instantiating}
-
-%%%%%%%%%%%%%%%%
-
-\subsection{Instantiating by one big pass}
-
-{Instantiating} is a bit complex procedure.  It works top down in
-order to handle modifiers and inner-outer matching, while it is
-usually natural to work bottom up because each submodel only knows and
-accesses their components but does not care its users.  In addition,
-chains of dependency in name resolutions and simultaneous constant
-folding complicate the procedure.  That is, determining array
-dimensions needs folding constants which extensively accesses
-constants in the components not yet instantiated.
-
-Processing packages also works top down, although processing is
-requested on demand at references.  It needs to work top down, because
-it is necessary first to process the enclosing package to obtain a
-class definition when the enclosing package has modifiers.  Here, the
-enclosing relation is considered as extended by importing and
-extending.
-
-Note that lexically enclosing classes cannot affect the enclosed class
-(See Fact~\ref{lexical-enclosing}).  Thus, it is safe to use the
-textual definition for such class references.  For example,
-Modelica.Fluid.Vessels.OpenTank is as textually defined, and it does
-not need to process Modelica.Fluid.Vessels first to take the
-definition.  Actually, the_implementation depends on this
-shortcutting, that is necessary to process ".Modelica", or it would
-make a cycle otherwise.
-
-\subsection{Name resolutions in steps}
-
-Name resolution needs be processed from the root for the hierarchies
-of both packages and instances.  The_implementation splits name
-resolution in two steps.  The first step resolves classes of
-importing/extending.  The second step resolves classes of components.
-
-(?) There is a simple dependency in processing the
-$\mathit{.Modelica}$ package.  $\mathit{.Modelica.Icons.Package}$ is a
-base of it.  Apparently, searching it needs to search $\mathit{Icons}$
-and $\mathit{.Modelica}$.  See Section~\ref{lookup-shortcutting}.
-Assume it would try continuing component processing.
-$\mathit{Complex}$ is used in $\mathit{.Modelica.Icons}$.  It results
-in searching $\mathit{Complex}$ in $\mathit{.Modelica}$, again.
-
-%%%%%%%%%%%%%%%%
-
-\subsection{Instances}
-
-The_syntaxer does not distinguish classes and instances, and a class
-is an instance when it is associated to a state variable.  It is like
-classless languages as Self.
-
-%%%%%%%%%%%%%%%%
-
-\subsection{Handling arrays with modifiers}
-
-The_implementation uses a pseudo function $\mathit{split}$ when a
-non-each modifier is moved in a class definition that is an array.
-For example, a modifier will be moved in the class definition in the
-example below.  The indexing $v[i]$ is represented by a
-$\mathit{split}$.  The index $i$ ranges in $\{1,\,...,\,10\}$.
-%%%%
-\begin{quote}
-\begin{lstlisting}[aboveskip=-\baselineskip]
-A a[10] (x=v)
-==>
-model A' = A (x=v[i])
-A'[10] a;
-\end{lstlisting}
-\end{quote}
-
-\begin{qquote} (\specref{7.2.5}\/) If the modified element is a vector
-and the modifier does not contain the each-prefix, the modification is
-split...\end{qquote}
-
-$\mathit{split}$ is semantically an array indexing by a constant
-index.  But, $\mathit{split}$ is not a proper syntax in Modelica,
-because it only defines an array indexing on identifers but not on
-expressions.
-
-%%%%%%%%%%%%%%%%
-
-\subsection{Handling inner/outer declarations}
-
-The_syntaxer performs an inner-outer matching when it makes a list of
-visible names in an instance.  It leaves an alias for an outer
-variable pointing to an inner variable.  An alias is necessary to
-retain the component relation for a connector (a place where a
-connector is declared) which determines the flow direction.  Outer
-aliases are replaced after handling connectors.  Replacing an outer
-alias is performed by ignoring subscripts of a variable reference
-because they are irrelevant.
-
-%%%%%%%%%%%%%%%%
-
-\subsection{Record class identity}
-
-A record class needs identity for the purposes such as passing
-arguments to functions.  The_implementation identifies a class by the
-definition that is (last) modified by redeclarations.  Redeclarations
-may change the components of a class, and the_implementation treats
-redeclarations create a separate class but non-redeclarations do not
-create a new one.  The_implementation creates an identity by
-concatenating an identity of a package and a name given after
-redeclarations.  See Fact~\ref{record-class-identity}.
-The_implementation does not identify functions this way, because
-modifications of values change the function.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\section{Baby-Modelica -- Syntaxing}
-
-{Syntaxing} performs simple semantic transformations to make a flat
-model.  It rewrites connect_equations to equations.  In that
-rewriting, it expands if-equations and for-equations that include
-connect_equations.
-
-%%%%%%%%%%%%%%%%
-
-\subsection{Implicit Iterator Ranges}
-
-A range of an implicit iterator is taken as a subscript part of an
-expression that includes an iterator.  It checks the occurrence only
-but ignores the surrounding expressions if any.  See
-Section~\ref{sec:implicit-iterator-ranges}.
-
-%%%%%%%%%%%%%%%%
-
-\subsection{Expandable_connectors}
-
-Instantiation of expandable_connectors is delayed, while other (usual)
-classes are instantiated by descending the model hierarchy.  Expanding
-expandable_connectors is performed in steps starting from a connector
-at the shallowest position.
-
-%%%%%%%%%%%%%%%%
-
-\subsection{Connector operators}
-
-Operator applications on or related to connectors,
-$\mathrm{inStream}\,(v)$, $\mathrm{actualStream}\,(v)$, and
-$\mathrm{cardinality}\,(c)$ are replaced by new variables with some
-associated equations.  See a $\mathit{mix}$ variable in \specref{15}.
-Variables are suffixed by \verb|_mix_in_| for
-$\mathrm{inStream}\,(v)$, \verb|_actual_in_| for
-$\mathrm{actualStream}\,(v)$, and \verb|_cardinality_| for
-$\mathrm{cardinality}\,(c)$.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\section{Baby-Modelica -- Miscellaneous tips}
-
-\subsection{Odd facts}
-
-\begin{itemize}
-
-\item It is said that the RML compiler of OpenModelica is written in
-SML~'97 (Standard ML).  RML is Relational Meta-Language.  Refer to
-OpenModelica for MetaModelica and RML.
-
-\end{itemize}
-
-\subsection{Code indentation (emacs setting)}
-
-Code is indented by emacs sml-mode.el (6.9).  It is with minor
-modifications to adjust spacing in the first mrule after
-{\tt{}"case~x~of~pat~=>~({\char`\\}n} to align with other mrules.  And
-similarly after {\tt{}"fun~f~=~({\char`\\}n"}.
-
-%%%%
-\begin{quote}
-\small
-\begin{lstlisting}[aboveskip=-\baselineskip]
---- sml-mode.el.org
-+++ sml-mode.el
-@@ -530,14 +530,20 @@
-     (`(:after . "struct") 0)
-     (`(:after . "=>") (if (smie-rule-hanging-p) 0 2))
-     (`(:after . "in") (if (smie-rule-parent-p "local") 0))
--    (`(:after . "of") 3)
-+    (`(:after . "of") 2)
--    (`(:after . ,(or `"(" `"{" `"[")) (if (not (smie-rule-hanging-p)) 2))
-+    (`(:after . ,(or `"(" `"{" `"["))
-+     (if (not (smie-rule-hanging-p))
-+        2
-+        (if (or (smie-rule-parent-p "|") (smie-rule-parent-p "of"))
-+            (+ sml-indent-level -2)
-+            (+ sml-indent-level 0))))
-     (`(:after . "else") (if (smie-rule-hanging-p) 0)) ;; (:next "if" 0)
-     (`(:after . ,(or `"|" `"d|" `";" `",")) (smie-rule-separator kind))
-     (`(:after . "d=")
--     (if (and (smie-rule-parent-p "val") (smie-rule-next-p "fn")) -3))
-+     (if (and (smie-rule-parent-p "val") (smie-rule-next-p "fn")) -3 2))
-     (`(:before . "=>") (if (smie-rule-parent-p "fn") 3))
--    (`(:before . "of") 1)
-+    (`(:before . "of") 2)
-     ;; FIXME: pcase in Emacs<24.4 bumps into a bug if we do this:
-     ;;(`(:before . ,(and `"|" (guard (smie-rule-prev-p "of")))) 1)
-     (`(:before . "|") (if (smie-rule-prev-p "of") 1 (smie-rule-separator kind)))
-\end{lstlisting}
-\end{quote}
-%%%%
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\bibliographystyle{plain}
-\bibliography{notes}
-
-\stepcounter{section}
-\addcontentsline{toc}{section}{\numberline{\arabic{section}}References}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\appendix
-%%\appendices
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%%%%%%%%%%%%%%%%
-
 \section{List of keywords and predefined names}
 
 %% KEYWORDS AND BUILTINS
@@ -4597,7 +3772,7 @@ Connections
 \end{quote}
 
 \noindent $\mathit{enumeration}$ means names of any enumeration.  All
-enumerations are members of simle_types.  It may be referred to as
+enumerations are members of simple_types.  It may be referred to as
 {\it{}EnumTypeName\/} in the_specification.
 
 \subsubsection*{Attributes}
@@ -4613,17 +3788,26 @@ unbounded
 
 %%%%%%%%%%%%%%%%
 
-\subsection{Predefined variable}
+\subsection{Predefined_variables}
 
-\subsubsection*{Time}
+\subsubsection*{time}
 
 (\specref{3.6.7}\/)
 
 \begin{quote}\widespacing
 time
 \end{quote}
+%%%%
 
-\noindent $\mathit{time}$ is defined in the unnamed root.
+$\mathit{time}$ has a special scoping rule.
+
+\subsubsection*{end}
+
+\begin{quote}\widespacing
+end
+\end{quote}
+
+Variables $\mathit{end}$ have a special scoping rule.
 
 %%%%%%%%%%%%%%%%
 
@@ -4777,10 +3961,10 @@ values.
 
 %%%%%%%%%%%%%%%%
 
-\subsection{Predefined functions}
+\subsection{Predefined_functions}
 (\specref{3.7}\/)
 
-Predefined functions are defined in the unnamed root, and it can be
+Predefined_functions are defined in the unnamed root, and it can be
 accessed with a preceding dot $.\mathit{abs}\,(v)$ for
 $\mathit{abs}\,(v)$.  Array constructor admits an iterator syntax
 ($\mathrm{array}$).  Reductions admit a reduction syntax in addition
@@ -4788,6 +3972,10 @@ to a function call syntax ($\mathrm{min}$, $\mathrm{max}$,
 $\mathrm{sum}$, and $\mathrm{product}$).  $\mathrm{der}$ and
 $\mathrm{pure}$ are keywords but they can also be used by a function
 call syntax.
+
+(* It could be complete if array indexing existed, although it is easy
+to define it as a function.  Note that a $v[i]$ form only works on
+variables. *)
 
 \subsubsection*{Numeric functions and conversion functions}
 (\specref{3.7.1}\/)
@@ -5202,28 +4390,907 @@ uses
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\section{Some noteworthy excerpts}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Terms with unnamed}
+
+There are many uses of {\it{}unnamed\/} in the_specification.
+
+\begin{quote}
+\begin{description}
+
+\item [unnamed enclosing class]
+in {5.2 Enclosing Classes}
+
+\item [unnamed root of the class tree]
+in \specref{5.6.1.1}
+
+\item [unnamed nodes in the instance tree]
+in \specref{5.6.1.2}
+(unnamed nodes are generated by extends clauses)
+
+\item [unnamed root of the instance tree]
+in \specref{5.6.2}
+
+\item [unnamed top-level package]
+in \specref{13.2.1.1}
+
+\item [unnamed top-level scope]
+in \specref{13.2.4.1}
+
+\item [unnamed element of a class definition]
+in \specrefx{}{Glossary}
+As "extends clause: an unnamed element of a class definition"
+
+\end{description}
+\end{quote}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Quotes about class name lookups}
+
+\def\partiallyflattenedclass{partially flattened class}
+\def\temporarilyflattenedclass{temporarily flattened class}
+
+\paragraph{Qualified package~names}
+
+\begin{qquote}\label{quo:lookup-importing} (\specref{13.2.1}\/) Here
+packagename is the fully qualified name of the imported package~...
+(\specref{13.2.1.1}\/) ...~Lookup of the name of an imported package
+or class, ..., deviates from the normal lexical lookup by starting the
+lexical lookup of the first part of the name at the
+top-level.\end{qquote}
+
+\paragraph{Remaining parts lookups}
+
+A lookup of the remaining parts of a name includes the elements from
+the base_classes.  It is because the lookup is in the
+\temporarilyflattenedclass.
+%%%%
+\begin{qquote}\label{quo:lookup-remaining} (\specref{5.3.2}, 4th-item) If
+the identifier denotes a class, that class is temporarily flattened
+...  The rest of the name ... is looked up among the declared named
+elements of the temporary flattened class.  If the class does not
+satisfy the requirements for a package, the lookup is restricted to
+encapsulated elements only.\end{qquote}
+%%%%
+And, ... becuase the \temporarilyflattenedclass is usual flattening
+with empty modifications.
+%%%%
+\begin{qquote} (\specref{5.3.2}, in the following comment) [The
+temporary class flattening performed for composite names follow the
+same rules ..., except that the environment is empty.~...]\end{qquote}
+%%%%
+And, the \partiallyflattenedclass includes the elements from the
+base_classes.
+%%%%
+\begin{qquote}\label{quo:partially-flattened-class} (\specref{5.2}\/)
+During flattening, the enclosing class of an element being flattened
+is a partially flattened class.  [For example, this means that a
+declaration can refer to a name inherited through an
+extends-clause.]\end{qquote}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Supplemental glossary}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Words specific to the_implementation}
+
+Some words are coined for the_implementation or used with different
+meaning.  The marker {$\mbox{}^\top$} indicates the word is with
+stricter meaning.  The marker {$\mbox{}^\bot$} indicates the word with
+different meaning.
+
+\begin{description}
+
+\item [analogical] is used to refer to a set of flow, effort, and
+stream.
+
+\item [array, scalar, vector, matrix].  Scalars are arrays with no
+dimensions, vectors with one dimension, and matrices with two
+dimensions.  There are no separate vector nor matrix types.
+
+\item [component{$^\top$} {\rm{}and} element{$^\top$}] component
+{$\subseteq$} element as a set in a class definition.  Components are
+variable declarations.  Elements are both variable declarations and
+class definitions.
+
+\item [definition/declaration] are often distinguished to mean a class
+definition and a variable declaration.  It adheres to the uses in the
+syntax rules.  It is the same for redefinition/redeclaration.
+Declaration may be used to refer to both.
+
+\item [definition-body] is a set of elements of a definition that is
+not short-class-definition.
+
+\item [lexically enclosing class] is used as an enclosing class
+without modifications and $\mathbf{encapsulated}$ considered.
+
+\item [instance/state/variable] are used interchangeably.
+
+\item [internal_connection] is an aspect of a connector, which refers
+to a connection to an outside_connector.
+
+\item [main_class] refers to a class which is not a base class.
+
+\item [merging_modifiers] is to merge a part of prefixes and modifiers
+in a redeclaration.  It is called inheriting in the_specification.
+
+\item [predefined_type{$\mbox{}^\top$}] is simple_types and classes
+defined in \specref{4.8.8}.  "Built-in_type" is synonymous and
+avoided.
+
+\item [present_class] is a class at attention.  It is called a current
+class in the_specification.
+
+\item [refining] is a modifier application, including one by a
+short_class_definition.
+
+\item [resolve] is determining the class to which a class name refers.
+
+\item [simple_type{$\mbox{}^\top$}] is a set of {Real}, {Integer},
+{Boolean}, {String}, and $\mathit{enumeration}$.  The_implementation
+also includes types extending them.  (It does not includes der's).
+
+(* They are called in many ways.  A BASIC DATA TYPE is Real, Integer,
+Boolean and String.  A PREDEFINED VARIABLE TYPE is Real, Integer,
+Boolean, and String.  A SIMPLE TYPE is Real, Integer, Boolean, String
+and enumerations.  A TYPE is Real, Integer, Boolean, String,
+enumerations, arrays of a type, and ones extending a type.  *)
+
+\item [subject] is a name of a package or an instance.  It is used as
+a key to an associated class definition.  For example, "tank.level" is
+a subject of a state, ".Modelica.Fluid" is a subject of a package.
+
+\item [$\in$] indicates an element is in a class or in a class of a
+state variable.
+
+%%%%%%%%%%%%%%%%
+
+\item [attributes] are parameters defined in predefined_types (Real,
+Integer, Boolean, and String) and enumerations.
+
+\item [base-prefix] = input or output (see syntax rules).
+
+\item [elemental redeclaration] is a redeclaration that appears in
+class elements, in contrast to in modifiers.
+
+\item [environment] (in \specref{7.1}\/) = {modification environment}.
+
+\item [instance] (in \specref{5.4}\/) is a state, declared as a
+variable of a certain class.
+
+\item [instance~hierarchy] (in \specref{5.4}\/) is an embedding
+relation of instances.  (Related words: instance~hierarchy,
+instance~scope).  A hierarchy is created by an instance declaration in
+a class definition.  It is distinct from lexically enclosings.
+
+\item [instance~scope] (in~\specref{5.6.1.2}, \specref{5.3.1}\/)
+Instance~scope is a scope excluding enclosing classes.  It consists of
+declared elements, declared elements from base_classes, and
+imported_names.
+
+\item [instance~tree] = instance~hierarchy.
+
+\item [(instance) model hierarchy{$\mbox{}^\bot$}]
+(in~\specref{5.4}\/) = instance~hierarchy.
+
+\item [instantiation{$^\bot$}] (in \specref{5.6.1}\/) refers to
+applying modifications.  It makes a {partially instantiated} element
+be fully instantiated.
+
+\item [(instantiation) partial instantiation] (in \specref{5.6.1.4}\/)
+is an intermediate state of flattening a class where modifiers are
+associated (but not applied) to an element but redeclarations are
+applied.  This state is necessary to enable redeclarations to be
+applied before handling extends-clauses.
+
+\begin{qquote} (\specref{5.6.1.4}\/) 2.1. ...~(the partially
+instantiated elements have correct name allowing lookup)\end{qquote}
+
+\item [(instantiation) partial instantiation] (in \specref{5.6.1.4}\/)
+is to make a pair of a class element and a {modification environment},
+where redeclarations are applied.  A produced pair is called a
+{partially instantiated element}.
+
+\begin{qquote} (\specref{5.6.1.4}\/) ...~a partially instantiated
+element (...) is comprised of a reference to the original element
+(from the class tree) and the modifiers for that element.\end{qquote}
+
+\item [modification~environment{$^+$}] (or {\bf{}flattening
+environment}) is a set of modifiers attached to a {\it{}partially
+instantiated element}.
+
+\begin{qquote} (\specref{7.2.2}\/) The {modification environment}
+contains arguments which modify elements of the class.\end{qquote}
+
+\item [flattening~context] is a pair of a {modification environment}
+and a set of {enclosing classes} (\specref{5.1}\/).
+
+\item [(flattening) partial flattening{$^+$}] = {\it{}partial
+instantiation}, as instantiation is a part of flattening.
+
+\item [(flattening) partially flattened enclosing class] is simply
+{\it{}partially flattened\/} + {\it{}enclosing class\/} (See
+\specref{7.1}\/).
+
+\item [(flattening) partially flattened enclosing class]
+From the quote, it means the extends-clauses are resolved.  Thus, the
+names in the base_classes can be looked up.
+
+\begin{qquote} (\specref{5.2}\/) During flattening, the enclosing
+class of an element being flattened is a partially flattened
+class. [For example, this means that a declaration can refer to a name
+inherited through an extends-clause.]\end{qquote}
+
+\item [(flattening) temporary flattening] (in \specref{5.3.2}\/) is a
+flattening with an empty modification environmemnt.
+
+\item [(flattening) modification environmemnt] ?.
+
+\item [simple~name {\rm{}and} composite~name].
+
+\item [built-in~classes] = (Synonyms) predefined_classes.
+
+\item [import~name] (in \specref{5.3.1}\/) is an element imported by a
+qualified import.
+
+\begin{qquote} (\specref{5.1}\/) Flattening is made in a context which
+consists of a {modification environment} (Section 7.2.2) and an
+ordered set of enclosing classes.\end{qquote}
+
+\item [temporary flattened class] is a flattened class with an empty
+{modification environment}.  (* the following part is uncertain *) It
+includes the declared_elements, elements from the extends-clauses, and
+the elements from the import-clauses, but not the elements from the
+enclosing classes.
+
+\begin{qquote} (\specref{5.3.3}\/) ...~the class A is temporarily
+flattened with an empty environment (i.e. no modifiers, see Section
+7.2.2)~...\end{qquote}
+
+\item [class tree] (in \specref{5.6.1.1}\/) is class definitions,
+hierarchically organized.
+
+\item [local class/component] (in \specref{5.6.1.4}\/) It is a
+class/variable defined/declared in elements, not including inherited
+classes.  It, probably, excludes imported, base, and enclosing
+classes.
+
+\item [lookup of base name] for {extends}.
+
+\begin{qquote} (\specref{7.1}\/) The name of the base_class is looked up
+in the partially flattened enclosing class.\end{qquote}
+
+The sentence {\it{}The found base_class is flattened with~...\/} has
+the recurrence of the word flattened as {\it{}arguments of all
+enclosing class environments that match names in the flattened
+base_class\/} in the following itemization.
+
+\item [ordering of the merging rules]
+
+\item [redeclaration] A redeclaration apprears in three ways
+(\specref{7.3}\/): $\bullet$\,in modifiers; $\bullet$\,in class
+definition elements; $\bullet$\,in extends-redeclaration.
+
+For an element-redeclaration, a class/variable must be inherited.  The
+modifiers on the extends-clause of the base_class are ignored
+(\specref{7.3}\/).
+
+\item [simple~types{$^+$}] are boolean, integer, enumeration, real,
+string, Clock, and {\it{}externally defined object}.  (The definition
+in glossary lacks the last two).
+
+\item [specialized class] (\specref{4.6}\/) lists a list of classes
+with specific kinds (e.g, $\mathbf{model}$, $\mathbf{block}$).
+
+\item [unnamed top-level package] = ?
+
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Issues need to be checked in MSL}
+
+\subsection{Missing each}
+
+An each seems missing for p, at line 850, Fluid/Interfaces.mo in
+MSL~3.2.3:
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+partial model PartialDistributedVolume
+  ......
+  Medium.BaseProperties[n] mediums(
+    each preferredMediumStates=true,
+    p(start=ps_start),
+    each h(start=h_start),
+    each T(start=T_start),
+    each Xi(start=X_start[1:Medium.nXi]));
+\end{lstlisting}
+\end{quote}
+
+\subsection{Mismatch of final statuses}
+
+Final statuses do not match in a redeclaration in Fluid/Vessels:
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+  package BaseClasses
+      partial model PartialLumpedVessel
+        replaceable model HeatTransfer =
+            Modelica.Fluid.Vessels.BaseClasses.HeatTransfer.IdealHeatTransfer
+          ...;
+
+        HeatTransfer heatTransfer(
+          redeclare final package Medium = Medium,
+          ...);
+
+    partial model PartialVesselHeatTransfer
+      extends Modelica.Fluid.Interfaces.PartialHeatTransfer;
+      ...
+
+    model IdealHeatTransfer
+      extends PartialVesselHeatTransfer;
+      ...
+\end{lstlisting}
+\end{quote}
+%%%%
+and in Fluid/Interfaces.mo:
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+  partial model PartialHeatTransfer
+    replaceable package Medium=Modelica.Media.Interfaces.PartialMedium
+    ...
+\end{lstlisting}
+\end{quote}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Baby-Modelica implementation notes}
+
+\subsection{Limitations and general remarks}
+
+\begin{itemize}
+
+\item The_frontend is written in SML~'97 (Standard ML).  The code is
+developed mainly with Poly/ML (on SunOS~5.11/amd64), but it may work
+with SML/NJ or MLton.  Sometimes the code is twisted because SML does
+not allow forward references of names.
+
+\item The_frontend uses a modified BYACC parser generator (not
+ml-yacc), which can be obtained separately.
+
+\item The file coding is ASCII, although it is defined as UTF-8 in
+\specref{13.2.2}.
+
+\item Error checking/reporting is none.  The parser does not record
+source line number information.  No information is provided for errors
+in a model.
+
+\item Constant folding is very weak.  Folding constants at
+translation-time is mandatory for array dimensions.
+
+\item The_frontend may be confused by the uses of characters
+"{\tt{}.}" and "{\tt{}@}" in names in a model.  It internally uses
+them to separate identifiers.
+
+\item The_frontend treats $\mathbf{class}$ as a synonym of
+$\mathbf{model}$, that follows the old definition.
+
+\item The_frontend does not implement $\mathbf{pure}$ expressions and
+errs on uses of them.
+
+\item It does not parse the {\it{}Synchronous Language\/} and
+{\it{}State Machines}.
+
+\item It does not handle overdetermined connectors with
+{\it{}equalityConstraint}.
+
+\item Internal errors (assertions) raise the Match exception.  But,
+other errors are often synonyms of the Match exception.
+
+\item The_frontend does not check the representable values of
+{Integer}.  Escpecially, {Integer\_inf} may raise the Overflow
+exception.  The definition of {ModelicaServices.Integer\_inf} in
+MSL~3.2.3 is in 32~bits, and it is no problem for 64~bit SML
+implementations.
+
+\item (* Array subscripts ":" to connector references are not
+handled. *).
+
+\item (* The code for expanding for-equations and finding implicit
+iterator ranges is not tested at all. *).
+
+\item The package Connectors cannot be extended.  It is handled
+nominally.
+
+\item (?) Translation-time constants cannot depend on variables in
+expandable_connectors.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Baby-Modelica -- Parsing}
+
+{Parsing} is simply done by a BYACC generated parser.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Code tips}
+
+\begin{itemize}
+
+\item The rule set in {\it{}Modelica Concrete Syntax\/} defined in
+the_specification is used essentially verbatim.
+
+\item The keywords {\bf{}end} and {\bf{}initial} appearing in the
+{\it{}primary\/} expression of the syntax rules cause conflicts in
+BYACC\@.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Parsing of {\bf{}end} and {\bf{}initial}}
+
+The keywords {\bf{}end} and {\bf{}initial} appearing in the
+{\it{}primary\/} expression of the syntax rules cause conflicts in
+BYACC\@.  {\bf{}end} may appear as a predefined_variable as well as a
+keyword.  {\bf{}initial} may also appear as a predefined_function as
+well as a keyword.  For {\bf{}end}, see \specref{10.5.2}.  For
+{\bf{}initial}, see \specref{8.6}.
+
+The token {\bf{}end} only appears as a variable in subscript
+expressions.  The lexer recognizes {\bf{}end} as an identifier in
+subscript expressions, or as a keyword elsewhere.  The parser tells
+the lexer to switch the token type of {\bf{}end} as a keyword or an
+identifier.  The switching code is placed at the safe points where a
+look-ahead of the parser never looks at {\bf{}end}.
+
+The token {\bf{}initial} only appears as a keyword either in
+{\bf{}initial equation} or {\bf{}initial algorithm}.  The lexer
+handles each sequence of {\bf{}initial~equation} and
+{\bf{}initial~algorithm} as a single token.  The lexer judges by a
+look-ahead of a token next to {\bf{}initial}.  Otherwise, the lexer
+returns an identifier for {\bf{}initial}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Baby-Modelica -- Resolving}
+
+{Resolving} handles modifier applications in a model for elaboration.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Code tips}
+
+\begin{itemize}
+
+\item The_implementation directly handles a short_class_definition as
+a class {\it{}refining\/} which represents modifier applications,
+although it is defined as an expansion to a class definition with an
+extends-clause in \specref{4.5.1}.
+
+\item Mutual extendings are ignored (not errors).
+
+\item The_implementation does not save modified classes (even though
+they are named), and repeats the same modifications each time a
+package/instance is processed.
+
+%% \item The_implementation refers to a toplevel model by the name
+%% "model" (it just looks better than an empty name).
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Internal class naming}
+
+Most of the classes do not have names, because a modifier application
+creates a new class but it may not have a name unless explicitly
+given.  Also, name association may be changed by inner-outer matching
+and redeclarations.
+
+Thus, the_implementation refers to a class by a package/instance name,
+supplementally paired with a class name.  A pair is used becuase only
+main (non-base) classes are named in this way, but names of base
+classes are needed to distinguish them.  For example, it may refer to
+one base class with a pair
+$\mathit{tank}|\mathit{PartialLumpedVessel}$, where $\mathit{tank}$ is
+an instance of $\mathit{OpenTank}$ and $\mathit{PartialLumpedVessel}$
+is a base of it.
+
+A class being named by a package/instance name is appropriate, because
+only classes used are need to be accessed.  Note that all class bodies
+(a list of elements) have names, with the exception of a body of an
+extends-redeclaration, for which the base class name is used as a name
+for it.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Rewriting import-clauses}
+
+The parser rewrites an import-clause to an explicitly named form to
+reduce the number of variations.  This rewriting is performed in the
+parser.  For example, it rewrites:
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+import pkg.n;
+==>
+import n = pkg.n;
+
+import pkg.{n0,n1,n2};
+==>
+import n0 = pkg.n0;
+import n1 = pkg.n1;
+import n2 = pkg.n2;
+\end{lstlisting}
+\end{quote}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Handling of modifiers}
+
+\subsubsection*{Modifier applications}
+
+The_syntaxer associates an application of modifiers to a declaration
+which is converted to a modification.  Association to a class
+definition $C$ is by temporarily creating a syntax element
+$\mathit{refine}\,(C, ...)$ with modifiers.
+
+\subsubsection*{Redeclarations}
+
+The_syntaxer handles a redeclaration by replacing a replaceable.
+Similarly, it handles an extends-redeclaration by replacing a
+replaceable class and making it a base class.
+
+A class redefinition may need be applied to multiple occurrences of a
+replaceable in class elements, because the_syntaxer delays merging
+elements in a main and base classes.  See
+Rule~\ref{multiple-definitions}.
+
+\subsubsection*{Scoped modifiers}
+
+Names and expressions are attached with an environment which records
+the scope where they occur, especially for the RHS of modifiers.  This
+makes modifiers to be moved inside another class which are associated
+to.  The scope is represented by either an instance name or a class
+name.  This scoping is necessary to delay the name resolution of
+modifiers attached to extends-clauses.  Such modifiers have to be
+moved inside a base class before resolving the modifiers, because it
+lacks the information of the base classes at that time.
+
+\subsubsection*{A value attribute}
+
+An initializer_modifier to the simple_types and a modifier to the
+$\mathit{value}$ attribute are synonymous.  The_implementation handles
+them by converting an initializer_modifier to a $\mathit{value}$
+modfier.  See Fact~\ref{value-attribute} about a $\mathit{value}$
+attribute.
+
+\subsubsection*{Initializer_modifiers}
+
+An initializer_modifier like $x=e$ is converted to modifiers
+corresponding to components.  That is, $x=e$ is converted to
+$x\,(c_0=e.c_0,c_1=e.c_1,...)$ for each component $c_i$ of the class
+$x$.  It does not check $x$ and $e$ have the same set of components;
+$x$ can be of fewer components than $e$.  It will make many copy
+expressions of $e$.  (?) It will be problematic when the expression
+$e$ has effects.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Modifcations and lookups}
+
+Modifications are shallowly applied to the class, and then lookups of
+the class names are performed.  Here, shallow application means that
+each modifier is pushed inside the present class and it is attached as
+a modifier to a corresponding element.  The process does not
+immediately recurse.  Name lookups need to be performed after
+modification application, because redeclaration modifications affect
+lookups of names of bases classes.  Thus, modifications and lookups
+are performed alternatingly.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Lookups of base_classes}
+
+The resolving of a class of an extends-clause may involve resolving
+classes of the parts of a component name.  During the search, many new
+resolving processes may be started for intermediate packages.
+Resolving processes may interlace (which may visit a class being under
+resolving), and the search sees classes with unfinished resolving.
+The_implementation keeps track of a process by the three states of
+loaded, importing-resolved, and extending-resolved.
+
+The_implementation skips searching in the bases, when a lookup in the
+bases has a cycle of dependency.  See the
+section~\ref{sec:lookup-cycle}.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Other specific behabiors}
+
+\subsubsection*{Class prefixes}
+
+The_implementation accepts $\mathbf{encapsulated}$ only to a
+long-class-specifier but errs/ignores to a short-class-specifier and a
+der-class-specifier.  See Fact~\ref{encapsulated-class}.
+
+The_implementation ignores $\mathbf{final}$ to a class.  See
+Fact~\ref{final-class}.
+
+\subsubsection*{Folding constants}
+
+The_implementation uses int of SML for Integer values.  It may raises
+exceptions on overflows in folding constants.
+
+\subsubsection*{Constants and parameters}
+
+The_implementation does not distinguish constants and parameters.
+Both are treated as translation-time constants.  See
+Fact~\ref{parameters}.
+
+\subsubsection*{Variables {time} and {end}}
+
+The_implementation treats {time} and {end} as if they were defined in
+the unnamed-enclosing-class, because a look up of a name ends there.
+It violates the Rule~\ref{time-and-end}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Baby-Modelica -- Instantiating}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Instantiating by one big pass}
+
+{Instantiating} is a bit complex procedure.  It works top down in
+order to handle modifiers and inner-outer matching, while it is
+usually natural to work bottom up because each submodel only knows and
+accesses their components but does not care its users.  In addition,
+chains of dependency in name resolutions and simultaneous constant
+folding complicate the procedure.  That is, determining array
+dimensions needs folding constants which extensively accesses
+constants in the components not yet instantiated.
+
+Processing packages also works top down, although processing is
+requested on demand at references.  It needs to work top down, because
+it is necessary first to process the enclosing package to obtain a
+class definition when the enclosing package has modifiers.  Here, the
+enclosing relation is considered as extended by importing and
+extending.
+
+Note that lexically enclosing classes cannot affect the enclosed class
+(See Fact~\ref{lexical-enclosing}).  Thus, it is safe to use the
+textual definition for such class references.  For example,
+Modelica.Fluid.Vessels.OpenTank is as textually defined, and it does
+not need to process Modelica.Fluid.Vessels first to take the
+definition.  Actually, the_implementation depends on this
+shortcutting, that is necessary to process ".Modelica", or it would
+make a cycle otherwise.
+
+\subsection{Name resolutions in steps}
+
+Name resolution needs be processed from the root for the hierarchies
+of both packages and instances.  The_implementation splits name
+resolution in two steps.  The first step resolves classes of
+importing/extending.  The second step resolves classes of components.
+
+(?) There is a simple dependency in processing the
+$\mathit{.Modelica}$ package.  $\mathit{.Modelica.Icons.Package}$ is a
+base of it.  Apparently, searching it needs to search $\mathit{Icons}$
+and $\mathit{.Modelica}$.  See Section~\ref{lookup-shortcutting}.
+Assume it would try continuing component processing.
+$\mathit{Complex}$ is used in $\mathit{.Modelica.Icons}$.  It results
+in searching $\mathit{Complex}$ in $\mathit{.Modelica}$, again.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Instances}
+
+The_syntaxer does not distinguish classes and instances, and a class
+is an instance when it is associated to a state variable.  It is like
+classless languages as Self.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Handling arrays with modifiers}
+
+The_implementation uses a pseudo function $\mathit{split}$ when a
+non-each modifier is moved in a class definition that is an array.
+For example, a modifier will be moved in the class definition in the
+example below.  The indexing $v[i]$ is represented by a
+$\mathit{split}$.  The index $i$ ranges in $\{1,\,...,\,10\}$.
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+A a[10] (x=v)
+==>
+model A' = A (x=v[i])
+A'[10] a;
+\end{lstlisting}
+\end{quote}
+
+\begin{qquote} (\specref{7.2.5}\/) If the modified element is a vector
+and the modifier does not contain the each-prefix, the modification is
+split...\end{qquote}
+
+$\mathit{split}$ is semantically an array indexing by a constant
+index.  But, $\mathit{split}$ is not a proper syntax in Modelica,
+because it only defines an array indexing on identifers but not on
+expressions.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Handling inner/outer declarations}
+
+The_syntaxer performs an inner-outer matching when it makes a list of
+visible names in an instance.  It leaves an alias for an outer
+variable pointing to an inner variable.  An alias is necessary to
+retain the component relation for a connector (a place where a
+connector is declared) which determines the flow direction.  Outer
+aliases are replaced after handling connectors.  Replacing an outer
+alias is performed by ignoring subscripts of a variable reference
+because they are irrelevant.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Record class identity}
+
+A record class needs identity for the purposes such as passing
+arguments to functions.  The_implementation identifies a class by the
+definition that is (last) modified by redeclarations.  Redeclarations
+may change the components of a class, and the_implementation treats
+redeclarations create a separate class but non-redeclarations do not
+create a new one.  The_implementation creates an identity by
+concatenating an identity of a package and a name given after
+redeclarations.  See Fact~\ref{record-class-identity}.
+The_implementation does not identify functions this way, because
+modifications of values change the function.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Baby-Modelica -- Syntaxing}
+
+{Syntaxing} performs simple semantic transformations to make a flat
+model.  It rewrites connect_equations to equations.  In that
+rewriting, it expands if-equations and for-equations that include
+connect_equations.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Implicit Iterator Ranges}
+
+A range of an implicit iterator is taken as a subscript part of an
+expression that includes an iterator.  It checks the occurrence only
+but ignores the surrounding expressions if any.  See
+Section~\ref{sec:implicit-iterator-ranges}.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Expandable_connectors}
+
+Instantiation of expandable_connectors is delayed, while other (usual)
+classes are instantiated by descending the model hierarchy.  Expanding
+expandable_connectors is performed in steps starting from a connector
+at the shallowest position.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Connector operators}
+
+Operator applications on or related to connectors,
+$\mathrm{inStream}\,(v)$, $\mathrm{actualStream}\,(v)$, and
+$\mathrm{cardinality}\,(c)$ are replaced by new variables with some
+associated equations.  See a $\mathit{mix}$ variable in \specref{15}.
+Variables are suffixed by \verb|_mix_in_| for
+$\mathrm{inStream}\,(v)$, \verb|_actual_in_| for
+$\mathrm{actualStream}\,(v)$, and \verb|_cardinality_| for
+$\mathrm{cardinality}\,(c)$.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Baby-Modelica -- Flattening}
+
+\subsection{Variable references}
+
+A flattener moves array dimensions to the last part.  It prints
+$a[i].b[j].c[k]$ as something like $a\_b\_c[i,j,k]$.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Baby-Modelica -- Miscellaneous tips}
+
+\subsection{Odd facts}
+
+\begin{itemize}
+
+\item It is said that the RML compiler of OpenModelica is written in
+SML~'97 (Standard ML).  RML is Relational Meta-Language.  Refer to
+OpenModelica for MetaModelica and RML.
+
+\end{itemize}
+
+\subsection{Code indentation (emacs setting)}
+
+Code is indented by emacs sml-mode.el (6.9).  It is with minor
+modifications to adjust spacing in the first mrule after
+{\tt{}"case~x~of~pat~=>~({\char`\\}n} to align with other mrules.  And
+similarly after {\tt{}"fun~f~=~({\char`\\}n"}.
+
+%%%%
+\begin{quote}
+\small
+\begin{lstlisting}[aboveskip=-\baselineskip]
+--- sml-mode.el.org
++++ sml-mode.el
+@@ -530,14 +530,20 @@
+     (`(:after . "struct") 0)
+     (`(:after . "=>") (if (smie-rule-hanging-p) 0 2))
+     (`(:after . "in") (if (smie-rule-parent-p "local") 0))
+-    (`(:after . "of") 3)
++    (`(:after . "of") 2)
+-    (`(:after . ,(or `"(" `"{" `"[")) (if (not (smie-rule-hanging-p)) 2))
++    (`(:after . ,(or `"(" `"{" `"["))
++     (if (not (smie-rule-hanging-p))
++        2
++        (if (or (smie-rule-parent-p "|") (smie-rule-parent-p "of"))
++            (+ sml-indent-level -2)
++            (+ sml-indent-level 0))))
+     (`(:after . "else") (if (smie-rule-hanging-p) 0)) ;; (:next "if" 0)
+     (`(:after . ,(or `"|" `"d|" `";" `",")) (smie-rule-separator kind))
+     (`(:after . "d=")
+-     (if (and (smie-rule-parent-p "val") (smie-rule-next-p "fn")) -3))
++     (if (and (smie-rule-parent-p "val") (smie-rule-next-p "fn")) -3 2))
+     (`(:before . "=>") (if (smie-rule-parent-p "fn") 3))
+-    (`(:before . "of") 1)
++    (`(:before . "of") 2)
+     ;; FIXME: pcase in Emacs<24.4 bumps into a bug if we do this:
+     ;;(`(:before . ,(and `"|" (guard (smie-rule-prev-p "of")))) 1)
+     (`(:before . "|") (if (smie-rule-prev-p "of") 1 (smie-rule-separator kind)))
+\end{lstlisting}
+\end{quote}
+%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\bibliographystyle{plain}
+\bibliography{notes}
+
+\stepcounter{section}
+\addcontentsline{toc}{section}{\numberline{\arabic{section}}References}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\appendix
+%%\appendices
+
 \end{document}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-================================================================
-
 %% README.md Section
 
-# Baby-Modelica 3.4.0 (2020-01-29)
+%%README0-BEGIN
+# Baby-Modelica 3.4.0 (2021-03-18)
 
 Copyright (C) 2018-2021 RIKEN R-CCS
 
 __Baby-Modelica comes with ABSOLUTELY NO WARRANTY.__
 
-Baby-Modelica is a simple frontend (parser+flattener) for the Modelica
-language specification 3.4.  It parses the source code then performs
-simple syntactic transformations, and optionally dumps a flat model.
-Flattening a model is an essential part of Modelica, and it resolves
-all the features as an object-oriented language.  Flattening is
-indispensable even for simple tools, because parameters in a model are
-substituted multiple times by nested parameterization.  A generated
-flat model is hopefully to be re-readable by Modelica compilers.
+%%README0-END
+
+%%README1-BEGIN
 
 Current status is a pre-zero version, and we are working towards
 version zero.  The version number of Baby-Modelica is the last digits,
@@ -5245,16 +5312,21 @@ If someone might be unfamiliar with SML, see
 
 ----
 
-## Source code files and directories
+## Implementation notes
 
-See frontend/notes.pdf first, then start with frontend/bbm.sml.
-* [frontend/notes.pdf](frontend/notes.pdf): random implementation notes
-* frontend/bbm.sml: a list of the source code files
+* [frontend/notes.pdf](frontend/notes.pdf) is implementation notes and
+is a kind of a "Modelica reference manual" to supplement the
+specification.
+
+## Source code directories
 
 The toplevel directories are as follows.
 * [frontend](frontend): the source code
 * [silly-models](silly-models): trivial code to check the specification
 * [code-examples](code-examples): code snippets from the specification
+
+See [frontend/bbm.sml](frontend/bbm.sml) first as it contains a list
+of the source code files.
 
 ----
 
@@ -5280,7 +5352,6 @@ valOf (classtree.xfetch1 "tank") ;
 valOf (classtree.xfetch1 "wall.G") ;
 valOf (classtree.xfetch1 "") ;
 valOf (classtree.xfetch1 ".Modelica") ;
-......
 ```
 
 ## Verbosity settings in PolyML
@@ -5318,8 +5389,7 @@ SMLofNJ.Internals.TDP.mode := true ;
 ----
 
 Baby-Modelica is distributed under the BSD 2-Clause License.
-
-================================================================
+%%README1-END
 
 %% Local Variables:
 %% indent-tabs-mode: nil

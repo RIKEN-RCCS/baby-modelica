@@ -47,7 +47,6 @@ val instance_tree = classtree.instance_tree
 val fetch_from_loaded_classes = classtree.fetch_from_loaded_classes
 val fetch_from_instance_tree = classtree.fetch_from_instance_tree
 val store_to_instance_tree = classtree.store_to_instance_tree
-val fetch_class_by_scope = classtree.fetch_class_by_scope
 val list_base_names = classtree.list_base_names
 val extract_base_classes = classtree.extract_base_classes
 val extract_base_elements = classtree.extract_base_elements
@@ -60,7 +59,7 @@ val insert_attributes_to_enumeration = simpletype.insert_attributes_to_enumerati
 val unify_value_and_initializer = simpletype.unify_value_and_initializer
 val register_enumerators_for_enumeration = simpletype.register_enumerators_for_enumeration
 
-val list_elements = finder.list_elements
+val list_component_names = finder.list_component_names
 
 (* Prints a trace message. *)
 
@@ -120,8 +119,8 @@ fun similar_modifiers (m0, m1) = (
 	end)
       | (Mod_Redeclare (r0_, d0, h0_), Mod_Redeclare (r1_, d1, h1_)) => (
 	let
-	    val Defvar (v0, q0, t0, c0, a0, w0) = d0
-	    val Defvar (v1, q1, t1, c1, a1, w1) = d1
+	    val Defvar (v0, k0) = d0
+	    val Defvar (v1, k1) = d1
 	in
 	    (v0 = v1)
 	end)
@@ -258,7 +257,7 @@ fun merge_type_prefixes (t0, p0) (t1, p1) = (
 
 (* Merges input/output to component_prefixes.  It only merges when
    nothing is specified already.  Note that Effort, Continuous, and
-   Modeless are used as unspecified. *)
+   Acausal are used as unspecified. *)
 
 fun merge_component_prefixes (a0, v0, y0) (a1, v1, y1) = (
     let
@@ -282,12 +281,12 @@ fun merge_component_prefixes (a0, v0, y0) (a1, v1, y1) = (
 		raise error_incompatible_variability)
 
 	fun merge_modality y0 y1 = (
-	    if (y1 = Modeless) then
+	    if (y1 = Acausal) then
 		y0
 	    else
 		case (y0, y1) of
-		    (_, Modeless) => y0
-		  | (Modeless, _) => y1
+		    (_, Acausal) => y0
+		  | (Acausal, _) => y1
 		  | (Input, Input) => Input
 		  | (Output, Output) => Output
 		  | _ => raise error_incompatible_mode)
@@ -299,11 +298,12 @@ fun merge_component_prefixes (a0, v0, y0) (a1, v1, y1) = (
 
 (* ================================================================ *)
 
-(* Makes a refining of a class with given modifiers.  It lowers the
-   priority of the passed modifiers (by reversing the ordering), when
-   the modifiers were ones attached to a replaced class. *)
+(* Makes a refining of a class with given modifiers.  replacing=true
+   indicates the passed modifiers are from a replaced class.  It
+   lowers the priority of the modifiers (by reversing the ordering),
+   when they are from a replaced class. *)
 
-fun make_refining_class_choose_order reverse k0 mm1 cc1 aa1 ww1 = (
+fun make_refining_class_choose_order replacing k0 mm1 cc1 aa1 ww1 = (
     if ((null mm1) andalso (aa1 = Annotation [])
 	andalso (ww1 = Comment [])) then
 	k0
@@ -317,14 +317,17 @@ fun make_refining_class_choose_order reverse k0 mm1 cc1 aa1 ww1 = (
 	      | Def_Der _ => raise (error_modifiers_to_der mm1)
 	      | Def_Primitive _ => raise Match
 	      | Def_Outer_Alias _ => raise Match
-	      | Def_Name _ => raise Match
+	      | Def_Argument _ => raise Match
+	      | Def_Named _ => raise Match
 	      | Def_Scoped _ => kx
 	      | Def_Refine (x0, v, ts, q, (ss0, mm0), cc0, aa0, ww0) => (
 		let
 		    val _ = if (not (class_is_refining x0)) then ()
 			    else raise Match
+		    val _ = if (cc0 = NIL orelse replacing = false) then ()
+			    else raise error_conditional_on_redeclared_state
 		    val ctx = k0
-		    val mmx = if (reverse) then
+		    val mmx = if (replacing) then
 				  (merge_modifiers ctx mm1 mm0)
 			      else
 				  (merge_modifiers ctx mm0 mm1)
@@ -339,7 +342,7 @@ fun make_refining_class_choose_order reverse k0 mm1 cc1 aa1 ww1 = (
 	      | Def_Replaced (x0, kold) => (
 		let
 		    val x1 = (make_refining_class_choose_order
-				  reverse x0 mm1 cc1 aa1 ww1)
+				  replacing x0 mm1 cc1 aa1 ww1)
 		in
 		    Def_Replaced (x1, kold)
 		end)
@@ -351,9 +354,9 @@ fun make_refining_class_choose_order reverse k0 mm1 cc1 aa1 ww1 = (
 fun make_modified_class k0 mm1 aa1 ww1 = (
     (make_refining_class_choose_order false k0 mm1 NIL aa1 ww1))
 
-fun make_modified_class_for_replacing k0 mm1 cc1 = (
+fun make_modified_class_for_replacing k1 mm0 cc0 = (
     (make_refining_class_choose_order
-	 true k0 mm1 cc1 (Annotation []) (Comment [])))
+	 true k1 mm0 cc0 (Annotation []) (Comment [])))
 
 (* Checks if a class is proper to replace a replaceable. *)
 
@@ -363,7 +366,8 @@ fun assert_class_is_good_to_dispatch k = (
       | Def_Der _ => ()
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => raise Match
+      | Def_Argument _ => raise Match
+      | Def_Named _ => raise Match
       | Def_Scoped _ => ()
       | Def_Refine _ => ()
       | Def_Extending _ => ()
@@ -378,7 +382,8 @@ fun assert_class_is_good_to_modify k = (
       | Def_Der _ => ()
       | Def_Primitive _ => ()
       | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => raise Match
+      | Def_Argument _ => raise Match
+      | Def_Named _ => raise Match
       | Def_Scoped _ => ()
       | Def_Refine _ => ()
       | Def_Extending _ => ()
@@ -407,7 +412,7 @@ fun extract_redeclares (subj, kp) = (
 		end)
 	      | Redeclare_State (z, r, d, h) => (
 		let
-		    val Defvar (v, q, k, c, a, w) = d
+		    val Defvar (v, k) = d
 		    val _ = (assert_class_is_good_to_dispatch k)
 		in
 		    SOME (Mod_Elemental_Redeclare (z, r, d, h))
@@ -457,7 +462,8 @@ fun switch_class_for_redeclaration state ctx k0 k1 = (
       | Def_Der _ => k1
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => raise Match
+      | Def_Argument _ => raise Match
+      | Def_Named _ => raise Match
       | Def_Scoped _ => k1
       | Def_Refine (kx, v, ts, q, (ss, mm), cc, aa, ww) => (
 	let
@@ -521,7 +527,7 @@ fun attach_modifiers_to_body ctx k0 mm1 = (
     case k0 of
 	Def_Body _ => raise Match
       | Def_Der _ => raise Match
-      | Def_Primitive (p, v) => (
+      | Def_Primitive (ty, v, va) => (
 	case mm1 of
 	    [m] => (
 	    case m of
@@ -531,10 +537,11 @@ fun attach_modifiers_to_body ctx k0 mm1 = (
 	      | Mod_Elemental_Redeclare _ => raise Match
 	      | Mod_Entry _ => raise Match
 	      | Mod_Value e => (
-		Def_Primitive (p, e)))
+		Def_Primitive (ty, e, va)))
 	  | _ => raise Match)
       | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => (
+      | Def_Argument _ => raise Match
+      | Def_Named _ => (
 	Def_Refine (k0, NONE, copy_type, no_component_prefixes, ([], mm1),
 		    NIL, Annotation [], Comment []))
       | Def_Scoped _ => (
@@ -607,14 +614,16 @@ fun replace_class_by_modifiers ctx (z0, r0, d0, h0) (p1, d1, h1) = (
 fun replace_class_by_elements ctx (z0, r0, d0, h0) (z1, r1, d1, h1) = (
     (replace_class In_Elements ctx (z0, r0, d0, h0) (z1, r1, d1, h1)))
 
-(* Redeclares a state by a redeclarations in modifiers or in elements.
-   The source (in-modifiers/in-elements) is indicated by source. *)
+(* Redeclares a state by a redeclaration in modifiers or in elements.
+   A "0"-suffixed entry is an old one, and a "1"-suffixed is a new
+   one.  The modification source (in-modifiers/in-elements) is
+   indicated by source. *)
 
 fun redeclare_state source ctx (z0, r0, d0, h0) (z1, r1, d1, h1) = (
     let
 	val oldx = (z0, r0, EL_State d0, h0)
-	val Defvar (v0, q0, k0, c0, aa0, ww0) = d0
-	val Defvar (v1, q1, k1, c1, aa1, ww1) = d1
+	val Defvar (v0, k0) = d0
+	val Defvar (v1, k1) = d1
 	val _ = (assert_class_is_good_to_dispatch k1)
 
 	val _ = tr_cook_vvv (";; - Replace state ("^
@@ -623,9 +632,7 @@ fun redeclare_state source ctx (z0, r0, d0, h0) (z1, r1, d1, h1) = (
 			     (class_print_name ctx) ^")")
 
 	val x1 = (switch_class_for_redeclaration true ctx k0 k1)
-	val aax = (merge_annotations ctx aa0 aa1)
-	val wwx = (merge_comments ctx ww0 ww1)
-	val dx = Defvar (v0, q1, Def_Replaced (x1, oldx), c1, aax, wwx)
+	val dx = Defvar (v0, Def_Replaced (x1, oldx))
 	val rx = (merge_element_prefixes r0 r1)
 	val _ = raise Match
     in
@@ -645,43 +652,20 @@ fun redeclare_state_by_modifiers ctx (z0, r0, d0, h0) (r1, d1, h1) = (
 fun redeclare_state_by_elements ctx (z0, r0, d0, h0) (z1, r1, d1, h1) = (
     (redeclare_state In_Elements ctx (z0, r0, d0, h0) (z1, r1, d1, h1)))
 
-(* Lists names of components in the class. *)
+(* Associates an initializer value w to the components of a class, and
+   returns a list of modifiers.  For a declaration C~x=w, it makes a
+   modifier x.s=w.s for each component of a class.  (It be better not
+   to decompose a class in the case of a record). *)
 
-fun list_components kp = (
-    let
-	val _ = if (step_is_at_least E3 kp) then () else raise Match
-
-	fun name (Naming (id, _, _, _, (z, r, d, h))) = (
-	    case d of
-		EL_Class _ => raise Match
-	      | EL_State (Defvar (_, q, k, c, a, w)) => [id])
-
-	fun faulting_cooker wantedstep (subj, kx) = raise Match
-	val bindings = (list_elements faulting_cooker false kp)
-	val (classes, states) = (List.partition binding_is_class bindings)
-	val cc = (List.concat (map name states))
-    in
-	cc
-    end)
-
-(* Associates an initializer value v to an instance k0.  It returns
-   modifiers for each component of a class.  (It is for a declaration
-   C~x=v for some variable x of a class k0). *)
-
-fun associate_initializer kp e = (
-    case e of
+fun associate_initializer cc w = (
+    case w of
 	NIL => []
       | _ => (
-	let
-	    val cc = (list_components kp)
-	    val mm = (map (fn Id s =>
-			      Mod_Entry (no_each_or_final, Name [s],
-					 [Mod_Value (Component_Ref (e, Id s))],
-					 Comment []))
-			  cc)
-	in
-	    mm
-	end))
+	(map (fn Id s =>
+		 Mod_Entry (no_each_or_final, Name [s],
+			    [Mod_Value (Component_Ref (w, Id s))],
+			    Comment []))
+	     cc)))
 
 (* Tries to associate a modifier to a class definition.  It creates a
    new class refining or attaches to an existing one.  Note that an
@@ -726,7 +710,7 @@ fun associate_to_definition ctx (z0, r0, d0, h0) m = (
 
 	  | Mod_Redeclare (p1, d1, h1) => (
 	    let
-		val Defvar (v1, _, _, _, _, _) = d1
+		val Defvar (v1, _) = d1
 	    in
 		if (v0 <> v1) then
 		    NONE
@@ -736,7 +720,7 @@ fun associate_to_definition ctx (z0, r0, d0, h0) m = (
 
 	  | Mod_Elemental_Redeclare (z1, r1, d1, h1) => (
 	    let
-		val Defvar (v1, _, _, _, _, _) = d1
+		val Defvar (v1, _) = d1
 	    in
 		if (v0 <> v1) then
 		    NONE
@@ -782,7 +766,7 @@ fun associate_to_definition ctx (z0, r0, d0, h0) m = (
 fun associate_to_declaration ctx (z0, r0, d0, h0) m = (
     let
 	val oldx = (z0, r0, d0, h0)
-	val Defvar (v0, q0, k0, c0, a0, w0) = d0
+	val Defvar (v0, k0) = d0
 	val _ = (assert_class_is_good_to_modify k0)
 	val _ = if (body_is_declaration_form k0) then () else raise Match
     in
@@ -809,8 +793,7 @@ fun associate_to_declaration ctx (z0, r0, d0, h0) m = (
 
 	  | Mod_Redeclare (r1, d1, h1) => (
 	    let
-		val Defvar (v1, q1, k1, c1, a1, w1) = d1
-		val _ = if (c1 = NONE) then () else raise Match
+		val Defvar (v1, k1) = d1
 	    in
 		if (v0 <> v1) then
 		    NONE
@@ -825,7 +808,7 @@ fun associate_to_declaration ctx (z0, r0, d0, h0) m = (
 
 	  | Mod_Elemental_Redeclare (z1, r1, d1, h1) => (
 	    let
-		val Defvar (v1, q1, k1, c1, a1, w1) = d1
+		val Defvar (v1, k1) = d1
 	    in
 		if (v0 <> v1) then
 		    NONE
@@ -838,7 +821,7 @@ fun associate_to_declaration ctx (z0, r0, d0, h0) m = (
 		    end
 	    end)
 
-	  | Mod_Entry (ef, (Name nn), mm1, w1) => (
+	  | Mod_Entry (ef, (Name nn), mm1, ww1) => (
 	    case nn of
 		[] => raise Match
 	      | p :: tl => (
@@ -847,19 +830,21 @@ fun associate_to_declaration ctx (z0, r0, d0, h0) m = (
 		else
 		    if (null tl) then
 			let
+			    val _ = if (ww1 = Comment []) then ()
+				    else (warn_drop_comments ())
 			    val k1 = (attach_modifiers_to_body ctx k0 mm1)
-			    val ww = (merge_comments ctx w0 w1)
-			    val dx = Defvar (v0, q0, k1, c0, a0, ww)
+			    val dx = Defvar (v0, k1)
 			    val ec = (z0, r0, dx, h0)
 			in
 			    SOME ec
 			end
 		    else
 			let
-			    val mmx = [Mod_Entry (ef, (Name tl), mm1, w1)]
+			    val _ = if (ww1 = Comment []) then ()
+				    else (warn_drop_comments ())
+			    val mmx = [Mod_Entry (ef, (Name tl), mm1, ww1)]
 			    val k1 = (attach_modifiers_to_body ctx k0 mmx)
-			    val ww = (merge_comments ctx w0 w1)
-			    val dx = Defvar (v0, q0, k1, c0, a0, ww)
+			    val dx = Defvar (v0, k1)
 			    val ec = (z0, r0, dx, h0)
 			in
 			    SOME ec
@@ -868,10 +853,13 @@ fun associate_to_declaration ctx (z0, r0, d0, h0) m = (
 	  | Mod_Value _ => raise Match
     end)
 
-fun dispatch_modifiers_to_class skipmain (subj, kp) mm0 = (
+fun dispatch_modifiers skipmain (subj, kp) mm0 = (
     let
 	val _ = if (class_is_body kp) then () else raise Match
-	val _ = if (step_is_at_least E3 kp) then () else raise Match
+	val _ = if ((cook_step kp) = E2) then () else raise Match
+
+	val _ = tr_cook_vvv (";; dispatch_modifiers ("^ (class_print_name kp)
+			     ^") modifiers="^ (modifier_list_to_string mm0))
 
 	fun dispatch m (e, used) = (
 	    case e of
@@ -929,7 +917,8 @@ fun dispatch_modifiers_to_class skipmain (subj, kp) mm0 = (
 		  else
 		      mm0
 	val (i, mm2) = (split_initializer_value mm1)
-	val mm3 = (associate_initializer kp i)
+	val cc = (list_component_names kp)
+	val mm3 = (associate_initializer cc i)
 	val mm4 = (merge_modifiers ctx mm2 mm3)
 	val k1 = kp
 
@@ -954,15 +943,15 @@ fun associate_modifiers k0 mm0 = (
 	val _ = tr_cook_vvv (";; associate_modifiers ("^ (class_print_name k0)
 			     ^") modifiers="^ (modifier_list_to_string mm0))
 
-	val _ = if ((cook_step k0) = E3) then () else raise Match
+	val _ = if ((cook_step k0) = E2) then () else raise Match
 	val subj = (subject_of_class k0)
 	val k1 = k0
 
 	val (rr0, _) = (extract_redeclares (subj, k1))
-	val (k3, rr1) = (dispatch_modifiers_to_class true (subj, k1) rr0)
+	val (k3, rr1) = (dispatch_modifiers true (subj, k1) rr0)
 	val _ = if (null rr1) then () else raise error_modifiers_remain
 
-	val (k4, mm1) = (dispatch_modifiers_to_class false (subj, k3) mm0)
+	val (k4, mm1) = (dispatch_modifiers false (subj, k3) mm0)
 	val _ = if (null mm1) then () else raise error_modifiers_remain
     in
 	k4
@@ -986,7 +975,8 @@ fun record_class_renaming k0 = (
 	      | Def_Der _ => (renaming subsubj k0)
 	      | Def_Primitive _ => raise Match
 	      | Def_Outer_Alias _ => raise Match
-	      | Def_Name _ => raise Match
+	      | Def_Argument _ => raise Match
+	      | Def_Named _ => raise Match
 	      | Def_Scoped _ => raise Match
 	      | Def_Refine (x0, v_, ts, q, (ss, mm), cc, aa, ww) => (
 		let
@@ -1071,7 +1061,8 @@ fun rectify_modified_class (k0, q1) (t1, p1) aa1 = (
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => raise Match
+      | Def_Argument _ => raise Match
+      | Def_Named _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
       | Def_Extending _ => raise Match

@@ -1,8 +1,8 @@
 (* builder.sml -*-Coding: us-ascii-unix;-*- *)
 (* Copyright (C) 2018-2021 RIKEN R-CCS *)
 
-(* MODEL BUILDER.  Builder instantiates a model by traversaling the
-   state variables. *)
+(* MODEL BUILDER.  The builder instantiates a model by traversaling
+   the state variables. *)
 
 structure builder :
 sig
@@ -12,11 +12,11 @@ sig
     type subject_t
     type ctx_t
 
-    val secure_reference :
-	definition_body_t -> bool -> expression_t -> expression_t
     val instantiate_class :
 	subject_t * definition_body_t -> int list * definition_body_t list
-    val traverse_with_instantiation : definition_body_t -> unit
+    val secure_reference :
+	definition_body_t -> bool -> expression_t -> expression_t
+    val instantiate_components : definition_body_t -> unit
 
     val xreset : unit -> unit
     val xload : string -> class_definition_t
@@ -33,7 +33,7 @@ type binder_t = expression_t -> expression_t
 
 val class_tree = classtree.class_tree
 val instance_tree = classtree.instance_tree
-val fetch_class_by_scope = classtree.fetch_class_by_scope
+val fetch_from_instance_tree = classtree.fetch_from_instance_tree
 val store_to_instance_tree = classtree.store_to_instance_tree
 val assert_stored_in_instance_tree = classtree.assert_stored_in_instance_tree
 val unwrap_array_of_instances = classtree.unwrap_array_of_instances
@@ -41,13 +41,16 @@ val subject_to_instance_tree_path = classtree.subject_to_instance_tree_path
 val component_is_outer_alias = classtree.component_is_outer_alias
 val component_is_expandable = classtree.component_is_expandable
 val dereference_outer_alias = classtree.dereference_outer_alias
-val instantiate_outer_alias = classtree.instantiate_outer_alias
+val insert_outer_alias = classtree.insert_outer_alias
+val access_node = classtree.access_node
+val find_in_components = classtree.find_in_components
 
-val find_name_initial_part = finder.find_name_initial_part
+val find_element = finder.find_element
 val list_elements = finder.list_elements
 
-val assemble_instance = cooker.assemble_instance
-val assemble_package = cooker.assemble_package
+val assemble_instance = blender.assemble_instance
+val assemble_package = blender.assemble_package
+
 val commute_modifier_over_subscript = refiner.commute_modifier_over_subscript
 
 val walk_in_expression = walker.walk_in_expression
@@ -123,12 +126,18 @@ fun assert_inner_outer_condition binding = (
 	()
     end)
 
+fun assemble_package_if_package (subj, k0) = (
+    if (class_is_package k0) then
+	(assemble_package E3 (subj, k0))
+    else
+	k0)
+
 (* ================================================================ *)
 
 (* Instantiates a class.  It repeatedly calls assemble_instance until
    an array dimension is settled.  Repeated calls are needed because
    assemble_instance may return a half-modified class when it has an
-   array dimension, because assemble_instance cannot fold constants by
+   array dimension, as assemble_instance cannot fold constants by
    itself. *)
 
 fun instantiate_class (subj, k0) = (
@@ -172,9 +181,8 @@ and instantiate_with_dimension (subj, k0) = (
 		val k2 = Def_Refine (x0, v, ts0, q0, ([], []), cc0, aa0, ww0)
 		val f = (instantiate_at_index (subj, k2) mm0)
 		val dimarraylist = (fill_dimension f [] dim1)
-		val arraylist = (map #2 dimarraylist)
+		val (dimlist, arraylist) = (ListPair.unzip dimarraylist)
 		val array = (List.concat arraylist)
-		val dimlist = (map #1 dimarraylist)
 		val size = (array_size dim1)
 		val dummy = if (size <> 0) then NONE else SOME x0
 	    in
@@ -226,11 +234,11 @@ and settle_dimension kp ss mm = (
 		    raise error_non_constant_array_dimension
 	end)
 
-(* Tries to fold constants to a literal value.  Folding constants
+(* Tries to fold a constant to a literal value.  Folding constants
    needs to be step-by-step, because resolving new variables is
    necessary at each step. *)
 
-and simplify_expression ctx buildphase w0 = (
+and simplify_expression ctx buildphase_ w0 = (
     let
 	val buildphase = true
 	val w1 = (bind_in_scoped_expression buildphase ctx w0)
@@ -243,19 +251,20 @@ and simplify_expression ctx buildphase w0 = (
 	    (simplify_expression ctx buildphase w3)
     end)
 
-and secure_reference_in_expression ctx buildphase w0 = (
+and secure_reference_in_expression ctx buildphase_ w0 = (
     let
+	val buildphase = true
 	val efix = (fn (x, _) => ((secure_reference ctx buildphase x), ()))
 	val (w1, _) = (walk_in_expression efix (w0, ()))
     in
 	w1
     end)
 
-(* Makes each package/instance in a composite variable reference be
-   accessible in the class_tree/instance_tree.  It secures all array
-   elements and thus ignores array subscripts (and it can be done
+(* Makes each package/instance in a composite name be accessible in
+   the class_tree/instance_tree.  It makes all array elements
+   accessible and thus ignores array subscripts (and it can be done
    without folding constants).  It does not secure inside an
-   expandable connector (because it can contain undeclared elements).
+   expandable connector because it can contain undeclared elements.
    At each step, it descends a part of a reference in the tree.  The
    next part can be a package, a constant, or an instance, where it is
    an instance only when the current node is an instance. *)
@@ -265,13 +274,16 @@ and secure_reference ctx buildphase_ w0 = (
 	Vref (_, []) => raise Match
       | Vref (NONE, _) => raise Match
       | Vref (SOME ns, rr0) => (
-	let
-	    val root = if (ns = PKG) then class_tree else instance_tree
-	    val path = (pseudo_reference_path rr0)
-	    val nodes = (secure_reference_loop ctx false path root)
-	in
+	if (reference_is_predefined_variable w0) then
 	    w0
-	end)
+	else
+	    let
+		val root = if (ns = PKG) then class_tree else instance_tree
+		val path = (pseudo_reference_path rr0)
+		val nodes = (secure_reference_loop ctx false path root)
+	    in
+		w0
+	    end)
       | Iref _ => w0
       | _ => w0)
 
@@ -282,91 +294,38 @@ and secure_reference_loop ctx (retrying : bool) path0 node0 = (
 	let
 	    val (subj, kx, cx) = node0
 	    val k0 = (! kx)
-	    val components = (! cx)
-
-	    val kp = if (class_is_instance k0) then
-			 k0
-		     else
-			 (assemble_package E3 (subj, k0))
-
+	    val kp = (assemble_package_if_package (subj, k0))
 	    val _ = if (kp = (! kx)) then () else raise Match
-	    val _ = if (step_is_at_least E3 kp) then () else raise Match
-	    val _ = if (not (class_is_simple_type kp)) then ()
-		    else if (class_is_enum kp) then ()
-		    else raise error_attribute_access_to_simple_type
+	    val (_, components) = (access_node E3 false node0)
 	in
-	    case (List.find (fn (Slot (x, _, _, _)) => (x = id)) components) of
+	    case (find_in_components id components) of
 		NONE => (
-		let
-		    val _ = if (not retrying) then () else raise Match
-		    val (dim, array) = (instantiate_class_in_class kp id)
-		in
-		    (secure_reference_loop
-			 ctx true path0 node0)
-		end)
+		if (retrying) then
+		    raise error_component_not_found
+		else
+		    case (find_element true kp id) of
+			NONE => raise (error_name_not_found id kp)
+		      | SOME binding => (
+			let
+			    val (dim, array) = (instantiate_element kp binding)
+			in
+			    (secure_reference_loop ctx true path0 node0)
+			end))
 	      | SOME (slot as Slot (_, dim, nodes, dummy)) => (
 		if (component_is_outer_alias slot) then
 		    let
 			val node1 = (dereference_outer_alias slot)
 		    in
-			(secure_reference_loop
-			     ctx true path0 node1)
+			(secure_reference_loop ctx true path0 node1)
 		    end
 		else if (component_is_expandable slot) then
 		    nodes
 		else
 		    (List.concat
-			 (map (secure_reference_loop
-				   ctx false path1) nodes)))
-	end))
-
-(* Checks an access is proper about scalar or array.  It is an error
-   an access to a scalar instance has subscripts. *)
-
-and check_reference_subscripts__ (Slot (v, dim, nodes, dummy)) ss = (
-    case (dim, nodes) of
-	([], []) => raise Match
-      | ([], [(_, kx, _)]) => (
-	let
-	    val kp = (! kx)
-	    val package = (class_is_package kp)
-	in
-	    if (null ss) then
-		()
-	    else if (package) then
-		raise error_subscripts_to_package
-	    else
-		raise error_subscripts_to_scalar
-	end)
-      | ([], _) => raise Match
-      | (_, []) => (
-	if (null ss) then () else raise error_access_to_empty_array)
-      | (_, (_, kx, _) :: _) => (
-	let
-	    val kp = (! kx)
-	    val package = (class_is_package kp)
-	    val _ = if (not package) then () else raise Match
-	in
-	    ()
+			 (map (secure_reference_loop ctx false path1) nodes)))
 	end))
 
 (* Instantiates a named entry (package/instance) in a class. *)
-
-and instantiate_class_in_class kp id = (
-    let
-	val cooker = assemble_package
-	val subj = (subject_of_class kp)
-	val package = (class_is_package kp)
-    in
-	case (find_name_initial_part cooker E3 (subj, kp) id) of
-	    NONE => raise (error_name_not_found id kp)
-	  | SOME binding => (
-	    let
-		val (dim, array) = (instantiate_element kp binding)
-	    in
-		(dim, array)
-	    end)
-    end)
 
 and instantiate_element kp binding = (
     let
@@ -385,7 +344,7 @@ and instantiate_element kp binding = (
 		let
 		    val kx = surely (fetch_from_instance_tree truesubj)
 		    val var = if (class_is_package kx) then PKG else VAR
-		    val k0 = (instantiate_outer_alias var subj truesubj)
+		    val k0 = (insert_outer_alias var subj truesubj)
 		in
 		    ([], [k0])
 		end)
@@ -408,15 +367,11 @@ and instantiate_named_element kp binding = (
 	end)
       | Naming (id, subj, NONE, _, (z, r, EL_State dx, h)) => (
 	let
-	    val package = (class_is_package kp)
+	    val package = (class_is_non_function_package kp)
 	    val _ = if ((not package) orelse (declaration_is_constant dx))
 		    then () else raise error_non_constant_in_package
-	    val Defvar (_, q, k0, c, aa, ww) = dx
-	    val cc = (getOpt (c, NIL))
-	    val k1 = Def_Refine (k0, NONE, copy_type, q,
-				 ([], []), cc, aa, ww)
-	    (*val _ = print "(AHO) DROP CONDITIONAL\n"*)
-	    val (dim, array) = (instantiate_class (subj, k1))
+	    val Defvar (_, k0) = dx
+	    val (dim, array) = (instantiate_class (subj, k0))
 	in
 	    (dim, array)
 	end)
@@ -424,63 +379,11 @@ and instantiate_named_element kp binding = (
 
 (* ================================================================ *)
 
-(* Secures a class referenced by a subject.  This is used to assemble
-   a referenced package.  It returns a single class because it is a
-   package. *)
-
-fun secure_package_subject__ ctx subj = (
-    let
-	val Subj (tree, cc) = subj
-	val root = if (tree = PKG) then class_tree else instance_tree
-	(*val path = (map (fn (id, ss) => (id, [])) cc)*)
-	val path = (pseudo_reference_path cc)
-	val buildphase = false
-	val nodes = (secure_reference_loop ctx false path root)
-    in
-	case nodes of
-	    [node] => (
-	    let
-		val (subj_, kx, cx) = node
-		val k0 = (! kx)
-	    in
-		k0
-	    end)
-	  | _ => raise Match
-    end)
-
-(* ================================================================ *)
-
-(* Calls a function on a binding when it is a component.  It skips a
-   binding of a variable which has inner-outer matching, because it is
-   usually already processed.  It is used to traverse the component
-   variables. *)
-
-fun call_if_component__ kp f (Naming (v, subsubj, _, _, (z, r, dd, h))) = (
-    case dd of
-	EL_Class dx => ()
-      | EL_State dx => (
-	let
-	    (*val Defvar (v, q, kx, c, a, w) = dx*)
-	    val subj0 = (subject_of_class kp)
-	    val subcomponent = (test_subcomponent subsubj (subj0, v))
-
-	    val _ = if ((not ((#Outer r) andalso (not (#Inner r))))
-			orelse (not subcomponent)) then () else raise Match
-
-	    val _ = tr_tree_vvv (";; component-variable ("^
-				 (subject_print_string subsubj) ^")")
-	in
-	    if (subcomponent) then
-		ignore (f (subsubj, dx))
-	    else
-		()
-	end))
-
 (* Instantiates the components of a class, then repeats instantiating
    in the components.  It skips ones already created, which are
    possibly created during determination of array dimensions. *)
 
-fun traverse_with_instantiation k0 = (
+fun instantiate_components kp = (
     let
 	fun instantiate kp binding = (
 	    case binding of
@@ -491,29 +394,22 @@ fun traverse_with_instantiation k0 = (
 		in
 		    array
 		end))
-
-	and traverse kx = (
-	    if (class_is_outer_alias kx) then
-		()
-	    else if (class_is_simple_type kx) then
-		()
-	    else
-		let
-		    (*val _ = (assert_match_subject_sans_subscript subj kx)*)
-		    val cooker = assemble_package
-		    val bindings = (list_elements cooker true kx)
-		    val (classes, states) =
-			  (List.partition binding_is_class bindings)
-		    val _ = (app assert_inner_outer_condition states)
-		    val instances = (List.concat (map (instantiate kx) states))
-		    val _ = (app traverse instances)
-		in
-		    ()
-		end)
-
-	(*val _ = (assert_subject_is_not_array subj0)*)
     in
-	(traverse k0)
+	if (class_is_outer_alias kp) then
+	    ()
+	else if (class_is_simple_type kp) then
+	    ()
+	else
+	    let
+		val _ = (assert_cooked_at_least E3 kp)
+		val bindings = (list_elements true kp)
+		val (classes, states) =
+		      (List.partition binding_is_class bindings)
+		val _ = (app assert_inner_outer_condition states)
+		val instances = (List.concat (map (instantiate kp) states))
+	    in
+		(app instantiate_components instances)
+	    end
     end)
 
 (* ================================================================ *)
@@ -555,9 +451,8 @@ fun xfind (s : string) = (
 		   | ("" :: t) => t
 		   | x => x
 	val name = (Name nn1)
-	val root = (the_root_subject, the_root_class)
     in
-	case (find_class cooker root name) of
+	case (find_class cooker the_package_root name) of
 	    NONE => raise Fail ("Class ("^ s ^") not found")
 	  | SOME kx => kx
     end)
@@ -567,14 +462,13 @@ fun xbuild s = (
 	val subj = the_model_subject
 	val k0 = (xfind s)
 	val (dim, array) = (instantiate_class (subj, k0))
-	val _ = if (null dim) then () else raise Match
-	val _ = if ((length array) = 1) then () else raise Match
+	val _ = if (null dim) then () else raise error_model_is_array
+	val _ = if ((length array) = 1) then () else raise error_model_is_array
 	val k3 = (hd array)
-	val v = Id ""
-	val q = no_component_prefixes
-	val var = Defvar (v, q, k3, NONE, Annotation [], Comment [])
-	val _ = (assert_subject_is_not_array subj)
-	val _ = (traverse_with_instantiation k3)
+	(*val v = Id ""*)
+	(*val q = no_component_prefixes*)
+	(*val var = Defvar (v, q, k3, NONE, Annotation [], Comment [])*)
+	val _ = (instantiate_components k3)
     in
 	()
     end)

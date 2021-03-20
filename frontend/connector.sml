@@ -20,7 +20,7 @@ open small1
 fun tr_conn (s : string) = if true then (print (s ^"\n")) else ()
 fun tr_conn_vvv (s : string) = if false then (print (s ^"\n")) else ()
 
-val list_elements = finder.list_elements
+val find_element = finder.find_element
 
 val instance_tree = classtree.instance_tree
 val traverse_tree = classtree.traverse_tree
@@ -50,7 +50,7 @@ val explicitize_range = folder.explicitize_range
 val bind_in_scoped_expression = binder.bind_in_scoped_expression
 
 val instantiate_class = builder.instantiate_class
-val traverse_with_instantiation = builder.traverse_with_instantiation
+val instantiate_components = builder.instantiate_components
 
 val bind_in_instance = postbinder.bind_in_instance
 
@@ -67,15 +67,6 @@ datatype edge_marker_t__ = Edge of bool
 datatype root_marker_t__ = Root of bool
 
 (* ================================================================ *)
-
-fun class_is_ordinary_instance k = (
-    let
-	val _ = if (not (class_is_primitive k)) then () else raise Match
-    in
-	(not ((class_is_outer_alias k)
-	      orelse (class_is_enumerator_definition k)
-	      orelse (class_is_package k)))
-    end)
 
 fun is_inside side = (side = false)
 
@@ -153,7 +144,8 @@ fun record_of_connect k = (
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => raise Match
+      | Def_Argument _ => raise Match
+      | Def_Named _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
       | Def_Extending _ => raise Match
@@ -170,7 +162,8 @@ fun unmark_expandable_connector k = (
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => raise Match
+      | Def_Argument _ => raise Match
+      | Def_Named _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
       | Def_Extending _ => raise Match
@@ -179,18 +172,19 @@ fun unmark_expandable_connector k = (
       | Def_In_File => raise Match
       | Def_Mock_Array _ => raise Match)
 
-fun connect_rule_marker k = (
+fun connect_mode_marker k = (
     case k of
-	Def_Body (mk, j, (t, p, (efs, _, _)), nm, cc, ee, aa, ww) => efs
+	Def_Body (mk, j, (t, p, (mode, _, _)), nm, cc, ee, aa, ww) => mode
+      | Def_Argument (kx, sm, aa, ww) => (connect_mode_marker kx)
       | _ => raise error_connector_is_not_record)
 
-fun marked_as_effort k = ((connect_rule_marker k) = Effort)
+fun marked_as_effort k = ((connect_mode_marker k) = Effort)
 
-fun marked_as_flow k = ((connect_rule_marker k) = Flow)
+fun marked_as_flow k = ((connect_mode_marker k) = Flow)
 
-fun marked_as_stream k = ((connect_rule_marker k) = Stream)
+fun marked_as_stream k = ((connect_mode_marker k) = Stream)
 
-fun rule_of_variable k = (connect_rule_marker k)
+fun rule_of_variable k = (connect_mode_marker k)
 
 (* Lists component names of a record.  It errs if a record is an array
    of records. *)
@@ -236,14 +230,14 @@ fun find_flow_variable (subj, side) = (
 
 	fun find_in_slot (Slot (id, dim, nodes, _)) = (
 	    ((map getclass (List.filter test_node nodes))
-	     @ (List.concat (map find_in_components nodes))))
+	     @ (List.concat (map find_flows_in_components nodes))))
 
-	and find_in_components (subj, kx, cx) = (
+	and find_flows_in_components (subj, kx, cx) = (
 	    (List.concat (map find_in_slot (! cx))))
 
 	val node = surely (fetch_instance_tree_node subj)
     in
-	case (find_in_components node) of
+	case (find_flows_in_components node) of
 	    [] => NONE
 	  | [k] => SOME (subject_of_class k)
 	  | _ => raise error_multiple_flow_variables
@@ -255,11 +249,9 @@ fun find_flow_variable (subj, side) = (
 fun connector_is_overdetermined subj = (
     let
 	val kp = surely (fetch_from_instance_tree subj)
-	fun cooker u_ (subj_, k_) = raise Match
-	val bindings = (list_elements cooker true kp)
 	val id = Id "equalityConstraint"
     in
-	case (find_in_bindings id bindings) of
+	case (find_element true kp id) of
 	    NONE => false
 	  | SOME (Naming (_, _, _, _, (z, r, EL_Class dx, h))) => true
 	  | SOME (Naming (_, _, _, _, (z, r, EL_State dx, h))) => false
@@ -286,7 +278,8 @@ fun instance_is_enabled k = (
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => raise Match
+      | Def_Argument _ => raise Match
+      | Def_Named _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
       | Def_Extending _ => raise Match
@@ -332,7 +325,8 @@ fun enable_instance enable0 k0 = (
 	      | Def_Der _ => raise Match
 	      | Def_Primitive _ => raise Match
 	      | Def_Outer_Alias _ => raise Match
-	      | Def_Name _ => raise Match
+	      | Def_Argument _ => true
+	      | Def_Named _ => raise Match
 	      | Def_Scoped _ => raise Match
 	      | Def_Refine _ => raise Match
 	      | Def_Extending _ => raise Match
@@ -348,7 +342,7 @@ fun enable_instance enable0 k0 = (
 
 fun enable_component_node enable0 node = (
     let
-	val (kp, components) = (access_node node)
+	val (kp, components) = (access_node E5 true node)
 	val enable1 = (enable_instance enable0 kp)
 	val _ = (app (fn (Slot (v, dim, nodes, _)) =>
 			 (app (enable_component_node enable1) nodes))
@@ -471,9 +465,8 @@ fun insert_cardinality_variable (subj, nn) = (
 	val values = (initializer nn)
 	val dimension = (map (scoped o z_literal) dim0)
 
-	val k0 = Def_Displaced (Ctag ["Integer"], the_root_subject)
-	val k1 = (fetch_displaced_class E0 k0)
-	val q = (Effort, Constant, Modeless)
+	val k1 = (fetch_displaced_class E0 the_integer_class)
+	val q = (Effort, Constant, Acausal)
 	val k2 = Def_Refine (k1, NONE, copy_type, q, (dimension, values),
 			     NIL, Annotation [], Comment [])
 	val (dim1, array1) = (instantiate_class (variable, k2))
@@ -628,7 +621,7 @@ fun select_record_class sidex classes = (
 fun make_record_instances subj dim0 k0 = (
     let
 	val dim1 = (map z_literal dim0)
-	val q = (Effort, Continuous, Modeless)
+	val q = (Effort, Continuous, Acausal)
 	val k1 = Def_Refine (k0, NONE, copy_type, q,
 			     (dim1, []), NIL, Annotation [], Comment [])
 	val (dim, array) = (instantiate_class (subj, k1))
@@ -650,7 +643,7 @@ fun expand_connector pairs = (
 	val k0 = (select_record_class sidex classes)
 	val subsubj = (compose_subject subj id [])
 	val (dim, array) = (make_record_instances subsubj dim k0)
-	val _ = (app traverse_with_instantiation array)
+	val _ = (app instantiate_components array)
     in
 	(dim, array)
     end)
@@ -774,7 +767,8 @@ fun stream_equation iqconnector otherconnectors = (
 
 	fun denominator iqconnector otherconnectors = (
 	    App ((global_function "sum"),
-		 (map denominator_term otherconnectors)))
+		 [Array_Constructor
+		      (map denominator_term otherconnectors)]))
 
 	fun numerator_term (flow, stream, side) = (
 	    if (is_inside side) then
@@ -788,7 +782,8 @@ fun stream_equation iqconnector otherconnectors = (
 
 	fun numerator iqconnector otherconnectors = (
 	    App ((global_function "sum"),
-		 (map numerator_term otherconnectors)))
+		 [Array_Constructor
+		      (map numerator_term otherconnectors)]))
 
 	val (_, stream, side) = iqconnector
 	val lhs = if (is_inside side) then (mixin stream) else (term stream)
@@ -937,7 +932,7 @@ fun collect_unconnected_flow_components connected = (
 	fun collect (node, acc0) = (
 	    let
 		val (subj, _, _) = node
-		val (kp, components) = (access_node node)
+		val (kp, components) = (access_node E5 true node)
 	    in
 		if (List.exists (subject_is_component subj) connected) then
 		    acc0
@@ -1050,8 +1045,7 @@ fun insert_equations_section eqns = (
 fun insert_mixin_variable mixin = (
     let
 	val _ = if (is_mixin mixin) then () else raise Match
-	val x0 = Def_Displaced (Ctag ["Real"], the_root_subject)
-	val k0 = (fetch_displaced_class E0 x0)
+	val k0 = (fetch_displaced_class E0 the_real_class)
 	val (dim, array) = (instantiate_class (mixin, k0))
 	val _ = if (null dim) then () else raise Match
 	val k1 = (hd array)
@@ -1090,12 +1084,12 @@ fun connect_connectors (instream, actualstream, cardinality) = (
 
 (* ================================================================ *)
 
-val bind_model = postbinder.bind_model
+val bind_in_model = postbinder.bind_in_model
 val substitute_outer = postbinder.substitute_outer
 
 fun xbind () = (
     let
-	val _ = (bind_model true)
+	val _ = (bind_in_model ())
 	val _ = (substitute_outer ())
     in
 	()

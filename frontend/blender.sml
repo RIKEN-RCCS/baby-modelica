@@ -1,10 +1,10 @@
 (* blender.sml -*-Coding: us-ascii-unix;-*- *)
 (* Copyright (C) 2018-2021 RIKEN R-CCS *)
 
-(* CLASS BUILDER.  This collects base classes and applies
+(* BASE CLASS COLLECTOR.  This collects base classes and applies
    modifiers. *)
 
-structure cooker :
+structure blender :
 sig
     type subject_t
     type cook_step_t
@@ -25,7 +25,7 @@ val instance_tree = classtree.instance_tree
 val fetch_from_loaded_classes = classtree.fetch_from_loaded_classes
 val fetch_from_instance_tree = classtree.fetch_from_instance_tree
 val store_to_instance_tree = classtree.store_to_instance_tree
-val fetch_class_by_scope = classtree.fetch_class_by_scope
+val fetch_class_by_part = classtree.fetch_class_by_part
 val list_base_names = classtree.list_base_names
 val extract_base_classes = classtree.extract_base_classes
 val extract_base_elements = classtree.extract_base_elements
@@ -33,6 +33,8 @@ val ensure_in_instance_tree = classtree.ensure_in_instance_tree
 val assert_stored_in_instance_tree = classtree.assert_stored_in_instance_tree
 val assert_package_constraints = classtree.assert_package_constraints
 val assert_enclosings_are_cooked = classtree.assert_enclosings_are_cooked
+val assemble_package_if_fresh = classtree.assemble_package_if_fresh
+val list_base_classes = classtree.list_base_classes
 
 val simplify_simple_type = simpletype.simplify_simple_type
 val insert_attributes_to_enumeration = simpletype.insert_attributes_to_enumeration
@@ -42,7 +44,7 @@ val register_enumerators_for_enumeration = simpletype.register_enumerators_for_e
 val fetch_displaced_class = loader.fetch_displaced_class
 
 val find_class = finder.find_class
-val list_elements = finder.list_elements
+val find_element = finder.find_element
 
 val find_import_class = seeker.find_import_class
 val find_base_class = seeker.find_base_class
@@ -72,12 +74,11 @@ fun make_base_list subj bases = (
     (map (fn (tag, k) => (subj, tag)) bases))
 
 (* Fetches a definition from a defining class.  It shortcuts a search,
-   when fetching a lexically visible class.  It can shortcut when a
-   class is in the lexical hierarchy because it cannot be modified.
-   Actually, this shortcutting is sometimes necessary to avoid a
-   potential cycle. *)
+   when fetching a lexically visible class.  It can shortcut because
+   such a class cannot be modified.  Actually, this shortcutting is
+   sometimes necessary to avoid a potential cycle. *)
 
-fun fetch_element_class cooker (defining, id) : definition_body_t = (
+fun fetch_element_class cooker_ (defining, id) : definition_body_t = (
     let
 	val subj = (compose_subject defining id [])
 	val tagopt = (subject_to_tag subj)
@@ -94,10 +95,8 @@ fun fetch_element_class cooker (defining, id) : definition_body_t = (
 	    let
 		val kp = surely (fetch_from_instance_tree defining)
 		val _ = if (step_is_at_least E3 kp) then () else raise Match
-		(*val (id, pkg) = (tag_prefix tag)*)
-		val bindings = (list_elements cooker false kp)
 	    in
-		case (find_in_bindings id bindings) of
+		case (find_element false kp id) of
 		    NONE => raise (error_name_not_found id kp)
 		  | SOME (Naming (_, _, _, _, (z, r, EL_Class dx, h))) => (
 		    let
@@ -174,9 +173,10 @@ fun assert_modifiers_are_scoped mm = (
 	      | Def_Der _ => raise Match
 	      | Def_Primitive _ => raise Match
 	      | Def_Outer_Alias _ => raise Match
-	      | Def_Name _ => raise Match
+	      | Def_Argument _ => raise Match
+	      | Def_Named _ => raise Match
 	      | Def_Scoped _ => true
-	      | Def_Refine (kx, v, ts, q, (ssx, mmx), cc, aa, ww) => (
+	      | Def_Refine (kx, v_, ts_, q_, (ssx, mmx), cc, aa, ww) => (
 		let
 		    val c0 = (List.all test_expression_is_scoped ssx)
 		    val c1 = (List.all test_modifier_is_scoped mmx)
@@ -191,11 +191,9 @@ fun assert_modifiers_are_scoped mm = (
 	      | Def_In_File => raise Match
 	      | Def_Mock_Array _ => raise Match)
 
-	and test_redeclare_is_scoped (Defvar (v, q, d, c, a, w)) = (
+	and test_redeclare_is_scoped (Defvar (v, kx)) = (
 	    let
-		val _ = if (c = NONE) then ()
-			else raise error_condition_in_modifiers
-		val c0 = (test_body_is_scoped d)
+		val c0 = (test_body_is_scoped kx)
 	    in
 		c0
 	    end)
@@ -288,7 +286,8 @@ fun record_defining_class (subj, k0) = (
 	      | Def_Der _ => k0
 	      | Def_Primitive _ => raise Match
 	      | Def_Outer_Alias _ => raise Match
-	      | Def_Name _ => k0
+	      | Def_Argument _ => raise Match
+	      | Def_Named _ => k0
 	      | Def_Scoped _ => k0
 	      | Def_Refine (x0, v, ts, q, (ss, mm), cc, aa, ww) => (
 		let
@@ -377,15 +376,12 @@ and closure_definition (scope : scope_t) (kp as Defclass ((v, g), k0)) = (
 	Defclass ((v, g), k1)
     end)
 
-and closure_declaration modifier (scope : scope_t) (Defvar (v, q, k0, c0, a0, w)) = (
+and closure_declaration modifier (scope : scope_t) dx = (
     let
-	val _ = if (not modifier orelse c0 = NONE)
-		then () else raise error_condition_in_modifiers
+	val Defvar (v, k0) = dx
 	val k1 = (closure_class scope k0)
-	val c1 = (Option.map (closure_expression scope) c0)
-	val a1 = (closure_annotation scope a0)
     in
-	Defvar (v, q, k1, c1, a1, w)
+	Defvar (v, k1)
     end)
 
 and closure_constraint (scope : scope_t) (k0, mm0, a0, w) = (
@@ -416,14 +412,16 @@ and closure_class (scope : scope_t) k0 = (
       | Def_Der _ => k0
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
-      | Def_Name n => Def_Scoped (n, scope)
+      | Def_Argument _ => raise Match
+      | Def_Named n => Def_Scoped (n, scope)
       | Def_Scoped _ => raise Match
-      | Def_Refine (x0, v, ts, q, (ss0, mm0), cc, aa, ww) => (
+      | Def_Refine (x0, v, ts, q, (ss0, mm0), cc0, aa, ww) => (
 	let
 	    val x1 = (closure_class scope x0)
 	    val ss1 = (map (closure_expression scope) ss0)
 	    val mm1 = (map (closure_modifier scope) mm0)
-	    val k1 = Def_Refine (x1, v, ts, q, (ss1, mm1), cc, aa, ww)
+	    val cc1 = (closure_expression scope cc0)
+	    val k1 = Def_Refine (x1, v, ts, q, (ss1, mm1), cc1, aa, ww)
 	in
 	    k1
 	end)
@@ -551,7 +549,8 @@ fun prepare_for_modification main pkg (subj, k0) = (
 	  | Def_Der _ => raise Match
 	  | Def_Primitive _ => raise Match
 	  | Def_Outer_Alias _ => raise Match
-	  | Def_Name _ => raise Match
+	  | Def_Argument _ => raise Match
+	  | Def_Named _ => raise Match
 	  | Def_Scoped _ => raise Match
 	  | Def_Refine _ => raise Match
 	  | Def_Extending _ => raise Match
@@ -609,10 +608,10 @@ fun identify_class_name subj = (
 
 (* Processes a class as a package (non-instance).  It is frequently
    used as a callback "cooker" during lookups, and it is called via
-   assemble_package_if_fresh.  It is called with wantedstep with E0
-   for a class searched in for an imported class, E2 for a class
-   searched in for a base class, and E3 for usual processing.  It
-   ensures a class is stored in the instance_tree. *)
+   assemble_package_if_fresh.  It stores a package in the
+   class_tree/instance_tree and reveals intermediate steps.  It is
+   called with wantedstep=E0 for a class in which an imported class is
+   searched for, E2 for a base class, and E3 for an element class. *)
 
 fun assemble_package wantedstep (subj, k0) = (
     let
@@ -624,7 +623,7 @@ fun assemble_package wantedstep (subj, k0) = (
 
 	val k2 = (getOpt ((fetch_from_instance_tree subj), k0))
     in
-	if (class_is_root_body k2) then
+	if (class_is_root k2) then
 	    k2
 	else if (body_is_unmodifiable k2) then
 	    (ensure_in_instance_tree (subj, k2))
@@ -638,8 +637,6 @@ fun assemble_package wantedstep (subj, k0) = (
 	    case (cook_step k2) of
 		E0 => (
 		let
-		    (*val (enclosing, _) = (subject_prefix subj)*)
-		    (*val k3 = (assign_enclosing k2 enclosing)*)
 		    val k4 = (cook_class_binary PKG (subj, k2))
 		in
 		    k4
@@ -663,8 +660,10 @@ fun assemble_package wantedstep (subj, k0) = (
 	      | E5 => raise Match
     end)
 
-(* Processes a class as an instance.  A class is wrapped by a
-   Def_Refine to pass component-prefixes to the instance. *)
+(* Processes a class as an instance.  It does not store an instance in
+   the instance_tree.  A returned class is a Def_Body or a Def_Refine
+   when it is an array.  In the case of a Def_Refine, some modifiers
+   remain not applied. *)
 
 and assemble_instance (subj, k0) = (
     let
@@ -705,7 +704,7 @@ and cook_class_refining main pkg (subj, k0) siblings = (
 	k1
     end)
 
-(* Gathers modifiers of the class until a definition body is found.
+(* Gathers modifiers to the class until a definition body is found.
    It is called with empty modifiers at the start.  Note the ordering
    of merging modifiers, because the passed modifiers are more recent
    and appended to the tail. *)
@@ -718,7 +717,7 @@ and collect_refining main pkg (subj, k0) (name1, (t1, p1, q1), mm1, cc1, aa1) si
 				 (if main then ":main" else ":base") ^" ("^
 				 (subject_body_to_string (subj, k0)) ^")")
 
-	    val _ = if (not (class_is_root_body k0)) then () else raise Match
+	    val _ = if (not (class_is_root k0)) then () else raise Match
 	    val _ = if (not (body_is_unmodifiable k0)) then () else raise Match
 
 	    val ctx = k0
@@ -749,21 +748,23 @@ and collect_refining main pkg (subj, k0) (name1, (t1, p1, q1), mm1, cc1, aa1) si
 	end)
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => raise Match
+      | Def_Argument _ => raise Match
+      | Def_Named _ => raise Match
       | Def_Scoped (name, scope) => (
 	let
 	    val cooker = assemble_package
-	    val (subj1, k1) = (fetch_class_by_scope scope)
-	    val _ = (assert_match_subject subj1 k1)
+	    val (subj1, k1) = (fetch_class_by_part scope)
+	    val k2 = (body_of_argument k1)
+	    val _ = (assert_match_subject subj1 k2)
 	in
-	    case (find_class cooker (subj1, k1) name) of
-		NONE => raise (error_class_not_found name k1)
+	    case (find_class cooker k2 name) of
+		NONE => raise (error_class_not_found name k2)
 	      | SOME x0 => (
 		let
 		    val _ = tr_cook_vvv (";; collect_refining find ("^
 					 (class_print_name x0)
 					 ^") in ("^
-					 (subject_body_to_string (subj1, k1))
+					 (subject_body_to_string (subj1, k2))
 					 ^")")
 		in
 		    (collect_refining
@@ -853,7 +854,8 @@ and cook_class_body main pkg (subj, k0) siblings = (
 	end)
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => raise Match
+      | Def_Argument _ => raise Match
+      | Def_Named _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine (k1, v, ts, q, (ss, mm), cc, aa, ww) => (
 	if (not (null ss)) then
@@ -873,20 +875,19 @@ and cook_class_body main pkg (subj, k0) siblings = (
       | Def_In_File => raise Match
       | Def_Mock_Array _ => raise Match)
 
-(* Transforms a class at the loaded-state (step=E0) be ready for
-   finding class/variable names (step=E3), by applying modifiers after
-   resolving the classes of importing and extending (it accepts a
-   class at step=E3 or higher).  The class is given a name by a
-   subject.  A class is processed as a main/base specified by
-   main=true/false, and as a package/instance specified by pkg=PKG/VAR
-   (there are only small differences in processing).  Note that an
-   array dimension is empty, because it is processed at instantiation
-   for instances, or arrays are illegal for packages.  (*AHO*)
-   (Subscripts will be removed from here).  It reveals an intemediate
-   state (step=E1,E2) of a package so that name resolution started by
-   other classes can look in this class.  A list siblings0 holds a
-   chain of an extends-relation to check a cycle in the base class
-   hierarchy.  The passed modifiers are scoped in the environment. *)
+(* Transforms a class at the loaded-state (step=E0) to be ready for
+   finding class/variable names (step=E3).  It applies modifiers after
+   resolving the classes of importing and extending.  The class is
+   assigned a name as a given subject.  The class is processed as a
+   main/base specified by main=true/false, and as a package/instance
+   specified by pkg=PKG/VAR.  Note that an array dimension is not
+   passed, because an array dimension is processed at instantiation
+   for instances, or arrays are illegal for packages.  It reveals an
+   intemediate state (step=E1,E2) of a package so that a name
+   resolution started by other classes can search in this class.  A
+   list siblings0 holds a chain of an extends-relation to check a
+   cycle in the base class hierarchy.  The passed modifiers are scoped
+   in the environment.  *)
 
 and cook_class_with_modifiers main pkg (subj, k0) mm cc aa siblings0 = (
     let
@@ -917,21 +918,17 @@ and cook_class_with_modifiers main pkg (subj, k0) mm cc aa siblings0 = (
 
 	val k1 = (prepare_for_modification main pkg (subj, k0))
 	val _ = (store_to_instance_tree_if packagemain subj k1)
-	val k2 = (cook_imports k1)
+	val k2 = (resolve_imports k1)
 	val k3 = (insert_attributes_to_enumeration k2)
 	val _ = (store_to_instance_tree_if packagemain subj k3)
 	val k4 = (gather_bases main pkg k3 siblings1)
+	val _ = (build_imported_packages k4)
 	val k5 = (associate_modifiers k4 mm)
-	val k8 = (rectify_modified_class (k5, q) (t, p) aa)
-	val k9 = (simplify_simple_type k8)
+	val k6 = (rectify_modified_class (k5, q) (t, p) aa)
+	val k8 = (simplify_simple_type k6)
+	val k9 = (set_cook_step E3 k8)
 	val _ = (store_to_instance_tree_if packagemain subj k9)
 	val _ = (register_enumerators_for_enumeration k9)
-
-	(*AHOAHO*)
-	(*
-	val _ = if (not (kind_is_record k0)) then ()
-		else raise Match
-	*)
 
 	val _ = tr_cook_vvv (";; cook_body:"^
 			     (if main then "main" else "base")
@@ -946,12 +943,12 @@ and cook_class_with_modifiers main pkg (subj, k0) mm cc aa siblings0 = (
 	k9
     end)
 
-(* Assembles classes of import-clauses.  It takes a class at
-   step=E1 and moves it to step=E2.  Note that Base_List and
-   Base_Classes may appear in elements due to early processing of an
-   extends-redeclaration which adds a base class. *)
+(* Resolves imported classes.  It takes a class at step=E1 and moves
+   it to step=E2.  Note that Base_List and Base_Classes may appear in
+   the elements due to early processing of an extends-redeclaration
+   which has added a base class. *)
 
-and cook_imports (kp : definition_body_t) = (
+and resolve_imports (kp : definition_body_t) = (
     let
 	val cooker = assemble_package
 
@@ -998,12 +995,51 @@ and cook_imports (kp : definition_body_t) = (
 	val _ = if (class_is_body kp) then () else raise Match
 	val _ = if ((cook_step kp) = E1) then () else raise Match
     in
-	if (body_is_root kp) then
+	if (body_is_package_root kp) then
 	    kp
 	else if (class_is_enum kp) then
 	    kp
 	else
 	    (set_cook_step E2 (subst_body_element resolve kp))
+    end)
+
+and build_imported_packages kp = (
+    let
+	fun build_imported kp e = (
+	    case e of
+		Import_Clause _ => raise Match
+	      | Extends_Clause _ => raise Match
+	      | Element_Class _ => ()
+	      | Element_State _ => ()
+	      | Redefine_Class _ => ()
+	      | Redeclare_State _ => ()
+	      | Element_Enumerators _ => ()
+	      | Element_Equations _ => ()
+	      | Element_Algorithms _ => ()
+	      | Element_External _ => ()
+	      | Element_Annotation _ => ()
+	      | Element_Import (z, tag, idxid, a, w) => (
+		let
+		    val subj = (tag_to_subject tag)
+		    val cooker = assemble_package
+		    val x0 = surely (fetch_from_instance_tree subj)
+		    val x1 = (assemble_package_if_fresh cooker E3 (subj, x0))
+		in
+		    ()
+		end)
+	      | Element_Base _ => ()
+	      | Base_List _ => ()
+	      | Base_Classes _ => ())
+
+	fun build_imported_in_class k = (
+	    (app (build_imported k) (body_elements k)))
+
+	(*val _ = (list_component_names cooker kp)*)
+	val bases = (list_base_classes kp)
+	val classes = [kp] @ bases
+	val _ = (map build_imported_in_class classes)
+    in
+	()
     end)
 
 (* Assembles a class of an extends-clause.  It takes a class at
@@ -1064,7 +1100,7 @@ and cook_base pkg kp siblings (e, acc) = (
 and gather_bases main pkg kp siblings = (
     let
 	val _ = if (class_is_body kp) then () else raise Match
-	val _ = if (not (body_is_root kp)) then () else raise Match
+	val _ = if (not (body_is_package_root kp)) then () else raise Match
 	val _ = if (step_is_less E3 kp) then () else raise Match
 
 	val cooker = assemble_package
@@ -1081,7 +1117,8 @@ and gather_bases main pkg kp siblings = (
 	val _ = (assert_no_base_list ee1)
 	val ee2 = ee1 @ [Base_List baselist] @ [Base_Classes bases1]
 	val k3 = (replace_body_elements k1 ee2)
-	val k4 = (set_cook_step E3 k3)
+	(*val k4 = (set_cook_step E3 k3)*)
+	val k4 = k3
 
 	val _ = tr_cook_vvv (";; gather_bases ("^ (class_print_name kp)
 			     ^") bases={"^
