@@ -9,9 +9,10 @@ language specification 3.4.  It parses the source code then performs
 simple syntactic transformations, and optionally dumps a flat model.
 Flattening is an essential part of Modelica, and it resolves all the
 features as an object-oriented language.  Flattening is indispensable
-even for simple tools, because parameter values in a model may be
-substituted multiple times by nested parameterization.  A generated
-flat model is hopefully to be re-readable by Modelica compilers.
+even for simple tools, because taking parameter values is not direct
+as they may be substituted multiple times by nested parameterization.
+A generated flat model is hopefully to be re-readable by Modelica
+compilers.
 
 Current status is a pre-zero version, and we are working towards
 version zero.  The version number of Baby-Modelica is the last digits,
