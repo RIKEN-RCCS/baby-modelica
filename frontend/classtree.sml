@@ -1079,8 +1079,11 @@ fun name_to_subject (Name (nn : string list)) = (
    package-root is inaccessible. *)
 
 fun xfetch1 (s : string) = (
+    (fetch_from_instance_tree (scan_string_as_subject s)))
+
+fun xfetch1__ (s : string) = (
     (fetch_from_instance_tree
-	 (name_to_subject (Name (String.fields (fn c => (c = #".")) s)))))
+	 ))
 
 fun xfetch2 (subjtag : string) = (
     let

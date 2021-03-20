@@ -1123,4 +1123,77 @@ fun choose_non_nil x0 x1 = (
 	if (x1 <> NIL) then x1 else x0
     end)
 
+(* ================================================================ *)
+
+(*fun scan_as_subject0 (s : string) : subject_t = (
+    (name_to_subject (Name (String.fields (fn c => (c = #".")) s))))*)
+
+(* Scans a string as a subject.  This is an utitily for interactive
+   use. *)
+
+fun scan_string_as_subject (s : string) : subject_t = (
+    let
+	val error_bad_literal_subject = Match
+
+	fun id0 c = (Char.isAlpha c) orelse (c = #"_")
+	fun idn c = (Char.isAlphaNum c) orelse (c = #"_")
+	fun skip_ws ss0 = (#2 (Substring.splitl Char.isSpace ss0))
+
+	fun scan_id ss0 = (
+	    let
+		val ss1 = (skip_ws ss0)
+		val (pp0, ss2) = (Substring.splitl id0 ss1)
+		val (pp1, ss3) = (Substring.splitl idn ss2)
+	    in
+		((Substring.span (pp0, pp1)), ss3)
+	    end)
+
+	fun scan_index ii0 ss0 = (
+	    let
+		val ss1 = (skip_ws ss0)
+		val (pp0, ss2) = (Substring.splitl Char.isDigit ss1)
+		val dd0 = valOf (Int.fromString (Substring.string pp0))
+		val ss2 = (skip_ws ss2)
+	    in
+		case (Substring.getc ss2) of
+		    NONE => raise error_bad_literal_subject
+		  | SOME (#",", ss3) => (scan_index (ii0 @ [dd0]) ss3)
+		  | SOME (#"]", ss3) => ((ii0 @ [dd0]), ss3)
+		  | SOME _ => raise error_bad_literal_subject
+	    end)
+
+	fun scan_optional_index ss0 = (
+	    let
+		val ss1 = (skip_ws ss0)
+	    in
+		case (Substring.getc ss1) of
+		    NONE => ([], ss1)
+		  | SOME (#".", ss2) => ([], ss1)
+		  | SOME (#"[", ss3) => (scan_index [] ss3)
+		  | SOME _ => raise error_bad_literal_subject
+	    end)
+
+	fun scan_path path0 ss0 = (
+	    let
+		val (pp0, ss1) = (scan_id ss0)
+		val id = Id (Substring.string pp0)
+		val (index, ss2) = (scan_optional_index ss1)
+		val path1 = (path0 @ [(id, index)])
+		val ss3 = (skip_ws ss2)
+	    in
+		case (Substring.getc ss3) of
+		    NONE => path1
+		  | SOME (#".", ss2) => (scan_path path1 ss2)
+		  | SOME _ => raise error_bad_literal_subject
+	    end)
+
+	val ss0 = (Substring.full s)
+	val ss1 = (skip_ws ss0)
+    in
+	case (Substring.getc ss1) of
+	    NONE => Subj (VAR, [])
+	  | SOME (#".", ss2) => Subj (PKG, (scan_path [] ss2))
+	  | SOME (_, _) => Subj (VAR, (scan_path [] ss1))
+    end)
+
 end
