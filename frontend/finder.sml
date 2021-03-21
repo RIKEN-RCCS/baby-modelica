@@ -21,6 +21,7 @@ sig
     val find_name_initial_part :
 	cooker_t -> cook_step_t -> (subject_t * definition_body_t) -> id_t
 	-> naming_t option
+    val list_component_names : definition_body_t -> id_t list
 end = struct
 
 open ast
@@ -321,6 +322,27 @@ and look_for_inner_in_class (cooker : cooker_t) cv0 subj0 = (
 		raise (error_incompatible_outers cv0 cv1)
 	    else
 		SOME subj1)
+    end)
+
+(* ================================================================ *)
+
+(* Lists names of components in the class. *)
+
+fun list_component_names kp = (
+    let
+	val _ = if ((cook_step kp) = E2) then () else raise Match
+
+	fun name (Naming (id, _, _, _, (z, r, d, h))) = (
+	    case d of
+		EL_Class _ => raise Match
+	      | EL_State (Defvar (_, q, k, c, a, w)) => [id])
+
+	fun faulting_cooker wantedstep (subj, kx) = raise Match
+	val bindings = (list_elements faulting_cooker false kp)
+	val (classes, states) = (List.partition binding_is_class bindings)
+	val cc = (List.concat (map name states))
+    in
+	cc
     end)
 
 (* ================================================================ *)

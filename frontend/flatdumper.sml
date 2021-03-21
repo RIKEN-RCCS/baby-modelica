@@ -1,7 +1,7 @@
 (* flatdumper.sml -*-Coding: us-ascii-unix;-*- *)
 (* Copyright (C) 2018-2021 RIKEN R-CCS *)
 
-(* DUMPER OF A FLAT MODEL. *)
+(* A DUMPER IN A SUBSET OF MODELICA. *)
 
 (* The dumper does not dump empty arrays (dimension-size=0), so it is
    needed to remove the references to them. *)

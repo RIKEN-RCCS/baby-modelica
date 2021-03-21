@@ -60,7 +60,7 @@ val insert_attributes_to_enumeration = simpletype.insert_attributes_to_enumerati
 val unify_value_and_initializer = simpletype.unify_value_and_initializer
 val register_enumerators_for_enumeration = simpletype.register_enumerators_for_enumeration
 
-val list_elements = finder.list_elements
+val list_component_names = finder.list_component_names
 
 (* Prints a trace message. *)
 
@@ -645,38 +645,20 @@ fun redeclare_state_by_modifiers ctx (z0, r0, d0, h0) (r1, d1, h1) = (
 fun redeclare_state_by_elements ctx (z0, r0, d0, h0) (z1, r1, d1, h1) = (
     (redeclare_state In_Elements ctx (z0, r0, d0, h0) (z1, r1, d1, h1)))
 
-(* Lists names of components in the class. *)
+(* Associates an initializer value w to an instance k0, and returns a
+   list of modifiers.  For a declaration C~x=w, it makes a modifier
+   x.s=w.s for each component of a class.  (It be better not to
+   decompose a class in the case of a record). *)
 
-fun list_components kp = (
-    let
-	val _ = if ((cook_step kp) = E2) then () else raise Match
-
-	fun name (Naming (id, _, _, _, (z, r, d, h))) = (
-	    case d of
-		EL_Class _ => raise Match
-	      | EL_State (Defvar (_, q, k, c, a, w)) => [id])
-
-	fun faulting_cooker wantedstep (subj, kx) = raise Match
-	val bindings = (list_elements faulting_cooker false kp)
-	val (classes, states) = (List.partition binding_is_class bindings)
-	val cc = (List.concat (map name states))
-    in
-	cc
-    end)
-
-(* Associates an initializer value v to an instance k0.  It returns
-   modifiers for each component of a class.  (It is for a declaration
-   C~x=v for some variable x of a class k0). *)
-
-fun associate_initializer kp e = (
-    case e of
+fun associate_initializer kp w = (
+    case w of
 	NIL => []
       | _ => (
 	let
-	    val cc = (list_components kp)
+	    val cc = (list_component_names kp)
 	    val mm = (map (fn Id s =>
 			      Mod_Entry (no_each_or_final, Name [s],
-					 [Mod_Value (Component_Ref (e, Id s))],
+					 [Mod_Value (Component_Ref (w, Id s))],
 					 Comment []))
 			  cc)
 	in
