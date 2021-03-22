@@ -108,7 +108,7 @@
 %%README1-BEGIN
 %%%%
 Baby-Modelica is a simple frontend (parser+flattener) for the Modelica
-language specification 3.4.  It parses source code then performs
+language specification 3.4.  It parses a source code then performs
 simple syntactic transformations, and optionally dumps a flat model.
 Flattening is indispensable even for simple tools, because taking
 parameter values is not direct as they may be substituted multiple
@@ -2559,7 +2559,7 @@ and $\mathit{kind}_B<:_k\mathit{kind}_A$ (note it is swapped).
 \item $\mathbf{record}$ $<:_k$ $\mathbf{block}$
 %%%%
 \item $\mathbf{type}$ $<:_k$ $\mathbf{connector}$
-\item $\mathbf{record}$  $<:_k$ $\mathbf{connector}$
+\item $\mathbf{record}$ $<:_k$ $\mathbf{connector}$
 \item $\mathbf{operator~record}$ $<:_k$ $\mathbf{connector}$
 \item $\mathbf{expandable~connector}$ $<:_k$ $\mathbf{connector}$
 %%%%
@@ -3728,7 +3728,7 @@ Connections
 \end{quote}
 
 \noindent $\mathit{enumeration}$ means names of any enumeration.  All
-enumerations are members of simle_types.  It may be referred to as
+enumerations are members of simple_types.  It may be referred to as
 {\it{}EnumTypeName\/} in the_specification.
 
 \subsubsection*{Attributes}
@@ -3744,7 +3744,7 @@ unbounded
 
 %%%%%%%%%%%%%%%%
 
-\subsection{Predefined variable}
+\subsection{A predefined variable}
 
 \subsubsection*{Time}
 
@@ -3753,8 +3753,8 @@ unbounded
 \begin{quote}\widespacing
 time
 \end{quote}
-
-\noindent $\mathit{time}$ is defined in the unnamed root.
+%%%%
+($\mathit{time}$ looks like being defined in the model's root).
 
 %%%%%%%%%%%%%%%%
 
@@ -5132,6 +5132,15 @@ Variables are suffixed by \verb|_mix_in_| for
 $\mathrm{inStream}\,(v)$, \verb|_actual_in_| for
 $\mathrm{actualStream}\,(v)$, and \verb|_cardinality_| for
 $\mathrm{cardinality}\,(c)$.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Baby-Modelica -- Flattening}
+
+\subsection{Variable references}
+
+A flattener moves array dimensions to the last part.  It prints
+$a[i].b[j].c[k]$ as something like $a\_b\_c[i,j,k]$.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
