@@ -146,50 +146,44 @@ fun expression_to_string assoc w = (
 	    let
 		val assoc1 = (predefined_operator_associativity p)
 		val weaker = (assoc1 < assoc)
-		val so = (expression_to_string 0 (Opr p))
+		val nn = (expression_to_string 0 (Opr p))
 		val s0 = (expression_to_string assoc1 a0)
+		val ss = case (operator_type p) of
+			     ARITHMETIC_UOP => (nn ^" "^ s0)
+			   | ARITHMETIC_BOP => raise Match
+			   | BOOLEAN_UOP => (nn ^" "^ s0)
+			   | BOOLEAN_BOP => raise Match
+			   | STRING_CONCAT_OP => raise Match
+			   | RELATIONAL_OP => raise Match
 	    in
-		case ((operator_type p), weaker) of
-		    (ARITHMETIC_UOP, _) => (so ^" "^ s0)
-		  | (ARITHMETIC_BOP, _) => raise Match
-		  | (BOOLEAN_UOP, _) => (so ^" "^ s0)
-		  | (BOOLEAN_BOP, _) => raise Match
-		  | (STRING_CONCAT_OP, _) => raise Match
-		  | (RELATIONAL_OP, _) => raise Match
+		ss
 	    end)
 	  | App (Opr p, [a0, a1]) => (
 	    let
 		val assoc1 = (predefined_operator_associativity p)
 		val weaker = (assoc1 < assoc)
-		val so = (expression_to_string 0 (Opr p))
+		val nn = (expression_to_string 0 (Opr p))
 		val s0 = (expression_to_string assoc1 a0)
 		val s1 = (expression_to_string (assoc1 + 1) a1)
+		val ss0 = case (operator_type p) of
+			      ARITHMETIC_UOP => raise Match
+			    | ARITHMETIC_BOP => (s0 ^" "^ nn ^" "^ s1)
+			    | BOOLEAN_UOP => raise Match
+			    | BOOLEAN_BOP => (s0 ^" "^ nn ^" "^ s1)
+			    | STRING_CONCAT_OP => raise Match
+			    | RELATIONAL_OP => (s0 ^" "^ nn ^" "^ s1)
+		val ss1 = if weaker then ("("^ ss0 ^")") else ss0
 	    in
-		case ((operator_type p), weaker) of
-		    (ARITHMETIC_UOP, _) => raise Match
-		  | (ARITHMETIC_BOP, true) => (
-		    ("("^ (s0 ^" "^ so ^" "^ s1) ^")"))
-		  | (ARITHMETIC_BOP, false) => (
-		    (s0 ^" "^ so ^" "^ s1))
-		  | (BOOLEAN_UOP, _) => raise Match
-		  | (BOOLEAN_BOP, true) => (
-		    ("("^ (s0 ^" "^ so ^" "^ s1) ^")"))
-		  | (BOOLEAN_BOP, false) => (
-		    (s0 ^" "^ so ^" "^ s1))
-		  | (STRING_CONCAT_OP, _) => raise Match
-		  | (RELATIONAL_OP, true) => (
-		    ("("^ (s0 ^" "^ so ^" "^ s1) ^")"))
-		  | (RELATIONAL_OP, false) => (
-		    (s0 ^" "^ so ^" "^ s1))
+		ss1
 	    end)
 	  | App (Opr p, _) => raise Match
 	  | App (f as Vref _, aa) => (
 	    let
-		val n = (expression_to_string 0 f)
+		val nn = (expression_to_string 0 f)
 		val ss = ((String.concatWith ", ")
 			      (map (expression_to_string 0) aa))
 	    in
-		(n ^"("^ ss ^")")
+		(nn ^"("^ ss ^")")
 	    end)
 	  | App (f, aa) => (
 	    let
@@ -310,7 +304,7 @@ fun expression_to_string assoc w = (
 	  | Pseudo_Split (x, ss) => (
 	    let
 		val s0 = (expression_to_string assoc x)
-		val s1 = ((String.concatWith ",")
+		val s1 = ((String.concatWith ", ")
 			      (map Int.toString ss))
 	    in
 		("(Pseudo_Split "^ s0 ^"["^ s1 ^"])")
@@ -363,7 +357,7 @@ fun expression_to_string assoc w = (
 		val se = (expression_to_string assoc e)
 		val sn = (expression_to_string assoc n)
 	    in
-		("(fill ("^ se ^","^ sn ^")")
+		("(fill ("^ se ^", "^ sn ^")")
 	    end)
 	  | Array_diagonal v => (
 	    let
@@ -844,28 +838,19 @@ fun dump_equation s q = (
 	fun dump_conditional key s ((e, qq), start) = (
 	    case e of
 		Otherwise => (
-		if (start) then
-		    let
-			val _ = (app (dump_equation s) qq)
-		    in
-			false
-		    end
-		else
-		    let
-			val _ = (TextIO.output (s, "else\n"))
-			val _ = (app (dump_equation s) qq)
-		    in
-			false
-		    end)
+		let
+		    val cc0 = if (start) then "" else ("else")
+		    val cc1 = if (cc0 = "") then "" else (cc0 ^"\n")
+		    val _ = (TextIO.output (s, cc1))
+		    val _ = (app (dump_equation s) qq)
+		in
+		    false
+		end)
 	      | _ => (
 		let
-		    val _ = if (start) then
-				(TextIO.output (s, (key ^" ")))
-			    else
-				(TextIO.output (s, (("else"^ key) ^" ")))
-		    val _ = (TextIO.output
-				 (s, (expression_to_string 0 e)))
-		    val _ = (TextIO.output (s, " then\n"))
+		    val pp = if (start) then key else ("else"^ key)
+		    val cc = (pp ^" "^ (expression_to_string 0 e) ^" then")
+		    val _ = (TextIO.output (s, (cc ^"\n")))
 		    val _ = (app (dump_equation s) qq)
 		in
 		    false
@@ -874,10 +859,9 @@ fun dump_equation s q = (
 	case q of
 	    Eq_Eq ((e0, e1), aa, ww) => (
 	    let
-		val _ = (TextIO.output
-			     (s, ((expression_to_string 0 e0)
-				  ^" = "^
-				  (expression_to_string 0 e1) ^";\n")))
+		val ss = ((expression_to_string 0 e0)
+			  ^" = "^ (expression_to_string 0 e1))
+		val _ = (TextIO.output (s, (ss ^";\n")))
 	    in
 		()
 	    end)
@@ -921,12 +905,9 @@ fun dump_equation s q = (
 	    end)
 	  | Eq_For ((ii, qq), aa, ww) => (
 	    let
-		val _ = (TextIO.output (s, "for "))
-		val ss = ((String.concatWith)
-			      ", "
+		val ss = ((String.concatWith ", ")
 			      (map for_index_to_string ii))
-		val _ = (TextIO.output (s, ss))
-		val _ = (TextIO.output (s, " loop\n"))
+		val _ = (TextIO.output (s, ("for "^ ss ^" loop\n")))
 		val _ = (app (dump_equation s) qq)
 		val _ = (TextIO.output (s, "end for;\n"))
 	    in
@@ -934,12 +915,11 @@ fun dump_equation s q = (
 	    end)
 	  | Eq_App ((f, ee), aa, ww) => (
 	    let
-		val _ = (TextIO.output (s, (expression_to_string 0 f)))
-		val _ = (TextIO.output (s, "("))
-		val _ = (TextIO.output
-			     (s, ((String.concatWith)
-				      "," (map (expression_to_string 0) ee))))
-		val _ = (TextIO.output (s, ");\n"))
+		val nn = (expression_to_string 0 f)
+		val sa = ((String.concatWith ", ")
+			      (map (expression_to_string 0) ee))
+		val ss = (nn ^"("^ sa ^")")
+		val _ = (TextIO.output (s, (ss ^ ";\n")))
 	    in
 		()
 	    end)

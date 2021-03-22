@@ -5,14 +5,14 @@ Copyright (C) 2018-2021 RIKEN R-CCS
 __Baby-Modelica comes with ABSOLUTELY NO WARRANTY.__
 
 Baby-Modelica is a simple frontend (parser+flattener) for the Modelica
-language specification 3.4.  It parses the source code then performs
+language specification 3.4.  It parses source code then performs
 simple syntactic transformations, and optionally dumps a flat model.
-Flattening is an essential part of Modelica, and it resolves all the
-features as an object-oriented language.  Flattening is indispensable
-even for simple tools, because taking parameter values is not direct
-as they may be substituted multiple times by nested parameterization.
-A generated flat model is hopefully to be re-readable by Modelica
-compilers.
+Flattening is indispensable even for simple tools, because taking
+parameter values is not direct as they may be substituted multiple
+times by nested parameterization.  Flattening is a major part of
+Modelica, and it resolves all the features as an object-oriented
+language.  A generated flat model is hopefully to be re-readable by
+Modelica compilers.
 
 Current status is a pre-zero version, and we are working towards
 version zero.  The version number of Baby-Modelica is the last digits,
