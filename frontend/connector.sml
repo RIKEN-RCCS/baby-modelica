@@ -774,7 +774,8 @@ fun stream_equation iqconnector otherconnectors = (
 
 	fun denominator iqconnector otherconnectors = (
 	    App ((global_function "sum"),
-		 (map denominator_term otherconnectors)))
+		 [Array_Constructor
+		      (map denominator_term otherconnectors)]))
 
 	fun numerator_term (flow, stream, side) = (
 	    if (is_inside side) then
@@ -788,7 +789,8 @@ fun stream_equation iqconnector otherconnectors = (
 
 	fun numerator iqconnector otherconnectors = (
 	    App ((global_function "sum"),
-		 (map numerator_term otherconnectors)))
+		 [Array_Constructor
+		      (map numerator_term otherconnectors)]))
 
 	val (_, stream, side) = iqconnector
 	val lhs = if (is_inside side) then (mixin stream) else (term stream)

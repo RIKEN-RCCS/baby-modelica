@@ -5,8 +5,13 @@
 
 structure operator :
 sig
+    datatype operator_type_t
+	= ARITHMETIC_UOP | ARITHMETIC_BOP
+	  | BOOLEAN_UOP | BOOLEAN_BOP | STRING_CONCAT_OP | RELATIONAL_OP
+
     type definition_body_t
     type expression_t
+    type predefined_operator_t
 
     (*
     val unary_operator :
@@ -30,6 +35,8 @@ sig
 
     val bool_order : expression_t -> int
     val enumerator_order : expression_t -> int
+
+    val operator_type : predefined_operator_t -> operator_type_t
 end = struct
 
 open ast plain

@@ -3,7 +3,7 @@
 
 (* LIBRARY PATHS. *)
 
-structure settings  :
+structure settings :
 sig
     val modelica_paths : string list
     val modelica_msl : string

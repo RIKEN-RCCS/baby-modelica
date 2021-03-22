@@ -3,8 +3,8 @@
 
 (* Small functions on expressions. *)
 
-structure expression
-: sig
+structure expression :
+sig
     type number_type_t
     type expression_t
     type equation_t
