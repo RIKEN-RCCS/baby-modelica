@@ -152,6 +152,7 @@ fun list_elements (cooker : cooker_t) exclude_imported kp = (
 and gather_names_in_class (cooker : cooker_t) (subjkp, kp) : naming_t list = (
     let
 	val package = (class_is_package kp)
+	val (function, pure) = (class_is_function kp)
 
 	fun mark_imported (Naming (v, j, i, _, e)) = Naming (v, j, i, true, e)
 
@@ -200,12 +201,15 @@ and gather_names_in_class (cooker : cooker_t) (subjkp, kp) : naming_t list = (
 			else
 			    [Naming (v, subj, NONE, false,
 				     (z, r, EL_State d, h))]
-		    else
+		    else if (not function) then
 			if (declaration_is_constant d) then
 			    [Naming (v, subj, NONE, false,
 				     (z, r, EL_State d, h))]
 			else
 			    []
+		    else
+			[Naming (v, subj, NONE, false,
+				 (z, r, EL_State d, h))]
 		end)
 	      | Redefine_Class _ => []
 	      | Redeclare_State _ => []

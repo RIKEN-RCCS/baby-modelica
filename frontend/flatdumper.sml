@@ -21,6 +21,8 @@ val subject_to_instance_tree_path = classtree.subject_to_instance_tree_path
 val extract_base_classes = classtree.extract_base_classes
 val traverse_tree = classtree.traverse_tree
 
+val list_elements = finder.list_elements
+
 val simple_type_attribute = simpletype.simple_type_attribute
 val type_of_simple_type = simpletype.type_of_simple_type
 val take_enumarator_element = simpletype.take_enumarator_element
@@ -804,7 +806,7 @@ fun dump_record s k = (
 	  | _ => raise Match
     end)
 
-fun dump_function s k = (
+fun function_is_predefined k = (
     let
 	fun predefined tag = (
 	    case tag of
@@ -812,18 +814,47 @@ fun dump_function s k = (
 					 predefined_function_names)
 	      | _ => false)
     in
+	(predefined (tag_of_body k))
+    end)
+
+fun dump_predefined s k = (
+    let
+	val _ = if (function_is_predefined k) then () else raise Match
+	val name = (subject_to_string (subject_of_class k))
+	val dummy = ("/* function (predefined) "^ name ^" */\n")
+    in
+	(TextIO.output (s, dummy))
+    end)
+
+(*(Function false, {Encapsulated = false, Final = false, Partial = false},*)
+(*(Effort, Continuous, Modeless)*)
+
+fun dump_function s k = (
+    let
+	fun kind_string t = (
+	    case t of
+		Function pure  => if pure then "pure functions" else "function"
+	      | _ => raise Match)
+	fun class_prefixes_string {Final, Encapsulated, Partial} = ()
+	fun component_prefixes_string (a, v, d) = ()
+    in
 	case k of
 	    Def_Body (mk, j, (t, p, q), nm, cc, ee, aa, ww) => (
 	    let
-		val tag = (tag_of_body k)
+		val pp = (kind_string t)
 		val name = (subject_to_string (subject_of_class k))
-		val dummy = ("/* function (predefined) "^ name ^" */\n")
-		val ss = ("/* function "^ name ^" */\n")
+
+		fun faulting_cooker _ (_, _) = raise Match
+		val bindings = (list_elements faulting_cooker true k)
+		val (_, states) =
+		      (List.partition binding_is_class bindings)
+		(*val _ = raise Match*)
+
+		val _ = (TextIO.output (s, (pp ^" "^ name ^"\n")))
+		val _ = (TextIO.output (s, "end "^ name ^";\n"))
+		val _ = (TextIO.output (s, "\n"))
 	    in
-		if ((predefined tag)) then
-		    (TextIO.output (s, dummy))
-		else
-		    (TextIO.output (s, ss))
+		()
 	    end)
 	  | _ => raise Match
     end)
@@ -1030,9 +1061,11 @@ fun dump_flat_model () = (
 	val _ = (TextIO.output (s, "\n"))
 
 	val funs0 = (collect_functions PKG)
-	val funs1 = (collect_functions VAR)
-	val _ = (app (dump_function s) funs0)
-	val _ = (app (dump_function s) funs1)
+	val (funs1, funs2)  = (List.partition function_is_predefined funs0)
+	val funs3 = (collect_functions VAR)
+	val _ = (app (dump_predefined s) funs1)
+	val _ = (app (dump_function s) funs2)
+	val _ = (app (dump_function s) funs3)
 
 	(* Equation sections. *)
 

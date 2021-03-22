@@ -602,6 +602,24 @@ fun class_is_package k = (
 
 fun class_is_instance k = (not (class_is_package k))
 
+fun class_is_function k = (
+    case k of
+	Def_Body ((u, f, b), j, (t, p, q), nm, cc, ee, aa, ww) => (
+	case t of
+	    Function pure => (true, pure)
+	  | _ => (false, false))
+      | Def_Der _ => (false, false)
+      | Def_Primitive _ => (false, false)
+      | Def_Outer_Alias _ => raise Match
+      | Def_Name _ => raise Match
+      | Def_Scoped _ => raise Match
+      | Def_Refine _ => raise Match
+      | Def_Extending _ => raise Match
+      | Def_Replaced _ => raise Match
+      | Def_Displaced _ => raise Match
+      | Def_In_File => raise Match
+      | Def_Mock_Array _ => raise Match)
+
 (* ================================================================ *)
 
 fun declaration_to_string (d as Defvar (v, q, k, c, a, w)) = (
