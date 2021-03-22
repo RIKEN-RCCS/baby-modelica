@@ -3603,6 +3603,736 @@ Prefix Rules [4.4.2.2 Prefix Rules].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\section{List of keywords and predefined names}
+
+%% KEYWORDS AND BUILTINS
+
+This appendix summarizes some list of keywords and predefined names,
+etc.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Modelica keywords}
+
+%% (Make quoted words separated; use ~ for usual spacing).
+\def\widespacing{\spaceskip=2em%
+\fussy\hyphenpenalty=10000\exhyphenpenalty=10000%
+\let~=\enspace}
+%%\sloppy\fussy\linepenalty=0\tolerance=0%
+
+(\specref{2.3.3}\/)
+
+\subsubsection*{Syntactic keywords}
+
+\begin{quote}\widespacing
+algorithm
+and
+annotation
+block
+break
+class
+connect
+connector
+constant
+constrainedby
+der
+discrete
+each
+else
+elseif
+elsewhen
+encapsulated
+end
+enumeration
+equation
+expandable
+extends
+external
+false
+final
+flow
+for
+function
+if
+import
+impure
+in
+initial
+inner
+input
+loop
+model
+not
+operator
+or
+outer
+output
+package
+parameter
+partial
+protected
+public
+pure
+record
+redeclare
+replaceable
+return
+stream
+then
+true
+type
+when
+while
+within
+\end{quote}
+
+\subsubsection*{Reserved type names}
+
+\begin{quote}\widespacing
+Real
+Integer
+Boolean
+String
+\end{quote}
+
+\noindent
+In addition to the syntactic keywords above, the type names are
+reserved and cannot be redefined (See Quote~\ref{quo:reserved-words}).
+These names have overloaded meanings.
+
+(*CHECK*) Check the status of "constructor".
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Predefined_classes}
+
+(\specref{4.8}\/)
+
+\subsubsection*{Classes}
+
+\begin{quote}
+\spaceskip=2em
+\sloppy\hyphenpenalty=10000\exhyphenpenalty=10000
+
+Real
+Integer
+Boolean
+String
+{\it{}enumeration}
+Clock
+StateSelect
+ExternalObject
+AssertionLevel
+Connections
+
+\end{quote}
+
+\noindent $\mathit{enumeration}$ means names of any enumeration.  All
+enumerations are members of simle_types.  It may be referred to as
+{\it{}EnumTypeName\/} in the_specification.
+
+\subsubsection*{Attributes}
+
+\begin{quote}\widespacing
+
+start
+fixed
+nominal
+unbounded
+
+\end{quote}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Predefined variable}
+
+\subsubsection*{Time}
+
+(\specref{3.6.7}\/)
+
+\begin{quote}\widespacing
+time
+\end{quote}
+
+\noindent $\mathit{time}$ is defined in the unnamed root.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Operators with special syntax}
+
+\subsubsection*{Arithmetic operators (on scalars or arrays of Real, Integer)}
+
+(\specref{10.6}\/)
+
+\begin{quote}
+\spaceskip=2em
+\begin{verbatim}
++ - .+ .- * / ^ .* ./ .^ = :=
+\end{verbatim}
+\end{quote}
+
+\noindent The descriptions span multiple sections:
+\specref{10.6.2},
+\specref{10.6.3},
+\specref{10.6.4},
+\specref{10.6.5},
+\specref{10.6.6},
+\specref{10.6.7},
+\specref{10.6.8}.
+
+\subsubsection*{Relational operators (on scalars of Real, Integer, Boolean, String)}
+
+(\specref{10.6.10}\/)
+
+\begin{quote}
+\spaceskip=2em
+\begin{verbatim}
+== <> < <= > >=
+\end{verbatim}
+\end{quote}
+
+\subsubsection*{Boolean operators (on scalars or arrays of Boolean)}
+
+(\specref{10.6.11}\/)
+
+\begin{quote}
+\spaceskip=2em
+\begin{verbatim}
+and or not
+\end{verbatim}
+\end{quote}
+
+\subsubsection*{Class constructors}
+
+\begin{quote}
+\spaceskip=2em
+\begin{verbatim}
+0 constructor
+\end{verbatim}
+\end{quote}
+
+\noindent These are used in defining constructors.
+
+\subsubsection*{Array constructor}
+(\specref{10.4}\/)
+
+\begin{quote}
+\begin{verbatim}
+{...}
+\end{verbatim}
+\end{quote}
+
+\noindent This can be written as $\mathrm{array}\,(...)$.
+
+\subsubsection*{Matrix constructor}
+(\specref{10.4.2}\/)
+
+\begin{quote}
+\begin{verbatim}
+[...]
+\end{verbatim}
+\end{quote}
+
+\noindent "," is a column separator, and ";" is a row separator.  This
+is a restricted notation of $\mathrm{cat}\,(...)$ for two dimensional
+cases.
+
+\subsubsection*{String literal}
+
+\begin{quote}
+\begin{verbatim}
+"..."
+\end{verbatim}
+\end{quote}
+
+\subsubsection*{String operators}
+
+\begin{quote}
+\begin{verbatim}
++
+\end{verbatim}
+\end{quote}
+
+\subsubsection*{Array indexing operator}
+(\specref{10.5}\/)
+
+\begin{quote}
+\begin{verbatim}
+_ [...]
+\end{verbatim}
+\end{quote}
+
+\subsubsection*{Record access operator}
+
+\begin{quote}
+\begin{verbatim}
+.
+\end{verbatim}
+\end{quote}
+
+\subsubsection*{Function call}
+
+\begin{quote}
+\begin{verbatim}
+_ (...)
+\end{verbatim}
+\end{quote}
+
+\subsubsection*{Array range}
+(\specref{10.4.3}\/)
+
+%%({3.6.4 Array Range Operator} is just a pointer to {10.4.3})
+
+\begin{quote}
+\spaceskip=2em
+\begin{verbatim}
+_:_ _:_:_
+\end{verbatim}
+\end{quote}
+
+\noindent See Section~\ref{sec:array-ranges}.
+
+\subsubsection*{Tuples}
+(\specref{8.3.1}, \specref{11.2.1.1}\/)
+
+\begin{quote}
+\spaceskip=2em
+\begin{verbatim}
+(...)
+\end{verbatim}
+\end{quote}
+
+\noindent Tuples are comma separated expressions.  Tuples are only
+used in equalities and assignments for functions returning multiple
+values.
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Predefined functions}
+(\specref{3.7}\/)
+
+Predefined functions are defined in the unnamed root, and it can be
+accessed with a preceding dot $.\mathit{abs}\,(v)$ for
+$\mathit{abs}\,(v)$.  Array constructor admits an iterator syntax
+($\mathrm{array}$).  Reductions admit a reduction syntax in addition
+to a function call syntax ($\mathrm{min}$, $\mathrm{max}$,
+$\mathrm{sum}$, and $\mathrm{product}$).  $\mathrm{der}$ and
+$\mathrm{pure}$ are keywords but they can also be used by a function
+call syntax.
+
+\subsubsection*{Numeric functions and conversion functions}
+(\specref{3.7.1}\/)
+
+\begin{quote}\widespacing
+
+abs(v)
+sign(v)
+sqrt(v)
+Integer(e)
+{\it{}enumeration}(i)
+String(...)
+
+\end{quote}
+
+\subsubsection*{Event triggering mathematical functions}
+(\specref{3.7.1.1}\/)
+
+\begin{quote}\widespacing
+
+div(x,~y)
+mod(x,~y)
+rem(x,~y)
+ceil(x)
+floor(x)
+integer(x)
+
+\end{quote}
+
+\subsubsection*{Predefined mathematical functions}
+(\specref{3.7.1.2}\/)
+
+\begin{quote}\widespacing
+
+sin(x)
+cos(x)
+tan(x)
+asin(x)
+acos(x)
+atan(x)
+atan2(y,~x)
+sinh(x)
+cosh(x)
+tanh(x)
+exp(x)
+log(x)
+log10(x)
+
+\end{quote}
+
+\subsubsection*{Derivative and special purpose operators}
+(\specref{3.7.2}\/)
+
+\begin{quote}\widespacing
+
+der(expr)
+delay(expr,~delayTime,~delayMax)
+delay(expr,~delayTime)
+cardinality(c)
+homotopy(actual,~simplified)
+semiLinear(x,~positiveSlope,~negativeSlope)
+inStream(v)
+actualStream(v)
+spatialDistribution(in0,~in1,~x,~positiveVelocity,~initialPoints,~initialValues)
+getInstanceName()
+
+\end{quote}
+
+\noindent $\mathrm{der}\,(...)$ accepts only one argument, although it
+can accept a list of arguments by the syntax definition.
+
+inStream(v) and actualStream(v) introduce a new state variable and
+equations related to a given steam variable $v$.
+
+\subsubsection*{Event-related operators}
+(\specref{3.7.3}\/)
+
+\begin{quote}\widespacing
+
+initial()
+terminal()
+noEvent(expr)
+smooth(p,~expr)
+sample(start,~interval)
+pre(y)
+edge(b)
+change(v)
+reinit(x,~expr)
+
+\end{quote}
+
+\subsubsection*{Assert}
+(\specref{8.3.7}\/)
+
+\begin{quote}\widespacing
+
+assert(condition,~message,~level)
+
+\end{quote}
+
+\subsubsection*{Terminate}
+(\specref{8.3.8}\/)
+
+\begin{quote}\widespacing
+
+terminate(s)
+
+\end{quote}
+
+\subsubsection*{Array dimension and size functions}
+(\specref{10.3.1}\/)
+
+\begin{quote}\widespacing
+
+ndims(A)
+size(A,~i)
+size(A)
+
+\end{quote}
+
+\noindent See~\ref{sec:array-size}.
+
+\subsubsection*{Dimensionality conversion functions}
+(\specref{10.3.2}\/)
+
+\begin{quote}\widespacing
+
+scalar(A)
+vector(A)
+matrix(A)
+
+\end{quote}
+
+\subsubsection*{Array constructor}
+(\specref{10.4.1}\/)
+
+\begin{quote}\widespacing
+array(...)
+\end{quote}
+
+\noindent This can be written as $\{...\}$.
+
+\subsubsection*{Specialized array constructor functions}
+(\specref{10.3.3}\/)
+
+\begin{quote}\widespacing
+identity(n)
+diagonal(v)
+zeros(n1,~n2,~n3,~...)
+ones(n1,~n2,~n3,~...)\\
+fill(e,~n1,~n2,~n3,~...)
+linspace(x1,~x2,~n)
+\end{quote}
+
+\noindent See~\ref{sec:array-size}.
+
+\subsubsection*{Array concatenation}
+(\specref{10.4.2}\/)
+
+\begin{quote}\widespacing
+cat(k,~A,~B,~C,~...)
+\end{quote}
+
+\noindent This can be written as $[...]$ in the two dimensional
+case.
+
+%% \subsubsection*{Predefined array functions}
+%% (\specref{10.3})
+%% \begin{quote}
+%% \spaceskip=2em
+%% \sloppy\hyphenpenalty=10000\exhyphenpenalty=10000
+%% \let~=\enspace
+%% promote(A,n)
+%% \end{quote}
+
+\subsubsection*{Matrix and vector algebra functions}
+(\specref{10.3.5}\/)
+
+\begin{quote}\widespacing
+transpose(A)
+outerProduct(v1,~v2)
+symmetric(A)
+cross(x,~y)
+skew(x)
+\end{quote}
+
+\subsubsection*{Reduction functions and operators}
+(\specref{10.3.4}\/)
+
+\begin{quote}\widespacing
+
+min(A)
+min(x,~y)
+min(e(i,~...,~j)~for~i~in~u,~...,~j~in~v)
+max(A)
+max(x,~y)
+max(e(i,~...,~j)~for~i~in~u,~...,~j~in~v)
+sum(A)
+sum(e(i,~...,~j)~for~i~in~u,~...,~j~in~v)
+product(A)
+product(e(i,~...,~j)~for~i~in~u,~...,~j~in~v)
+
+\end{quote}
+
+\subsubsection*{pure}
+(\specref{12.3}\/)
+
+\begin{quote}\widespacing
+pure(...)
+\end{quote}
+
+\noindent See Section~\ref{pure-expression}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Predefined elements}
+
+\subsubsection*{Functions in types and records}
+
+\begin{quote}\widespacing
+
+equalityConstraint(x,~y)
+
+\end{quote}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{Synchronous language}
+
+\subsubsection*{Clock class}
+
+\begin{quote}
+class Clock;
+\end{quote}
+
+\subsubsection*{Discrete states}
+(\specref{16.4}\/)
+
+\begin{quote}\widespacing
+
+previous(u)
+
+\end{quote}
+
+\subsubsection*{Base-clock conversion operators}
+(\specref{16.5.1}\/)
+
+\begin{quote}\widespacing
+
+sample(u,~c)
+hold(u)
+
+\end{quote}
+
+\subsubsection*{Sub-clock conversion operators}
+(\specref{16.5.2}\/)
+
+\begin{quote}\widespacing
+
+subSample(u,~factor)
+superSample(u,~factor)
+shiftSample(u,~shiftCounter,~resolution)
+backSample(u,~backCounter,~resolution)
+noClock(u)
+
+\end{quote}
+
+\subsubsection*{Other operators}
+(\specref{16.10}\/)
+
+\begin{quote}\widespacing
+
+firstTick(u)
+interval(u)
+
+\end{quote}
+
+%%%%%%%%%%%%%%%%
+
+\subsection{State machines}
+
+\subsubsection*{Transitions}
+(\specref{17.1}\/)
+
+\begin{quote}\widespacing
+
+transition(from,~to,~condition,~immediate,~reset,~synchronize,~priority)
+initialState(state)
+activeState(state)
+ticksInState()
+timeInState()
+
+\end{quote}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Mandatory annotations (maybe)}
+
+\def\quotespace{\spaceskip=2em%
+\sloppy\hyphenpenalty=10000\exhyphenpenalty=10000}
+
+There are some annotations predefined (chapter 18): annotations for
+graphical representation, annotations for code generation (18.3),
+annotations for simulation experiments (18.4), annotations for
+functions (12.7, 12.8 and 12.9).  Some of them are likely mandatory to
+translators.
+
+\subsubsection*{Derivative and inverses}
+(\specref{12.7.1}, \specref{12.8}\/)
+
+\begin{quote}\spaceskip=2em
+derivative
+inverse
+\end{quote}
+
+These directives are placed in function body elements.
+
+\subsubsection*{(Redeclaration choices)}
+(\specref{7.3.4}\/)
+
+\begin{quote}\spaceskip=2em
+choices
+choice
+\end{quote}
+
+(?) The choices directive is associated to replaceables or modifiers,
+and is placed at replacable and non-replacable elements by
+short_class_definitons or declarations.
+
+\subsubsection*{Fortran interface}
+(\specref{12.9.1.2}\/)
+
+\begin{quote}\spaceskip=2em
+arrayLayout
+\end{quote}
+
+\subsubsection*{External libraries}
+(\specref{12.9.4}\/)
+
+\begin{quote}\spaceskip=2em
+Library
+Include
+IncludeDirectory
+LibraryDirectory
+\end{quote}
+
+\subsubsection*{Code generation}
+(\specref{18.3}\/)
+
+\begin{quote}\spaceskip=2em
+Evaluate
+HideResult
+Inline
+LateInline
+GenerateEvents
+smoothOrder
+\end{quote}
+
+$\mathit{Evaluate}$ and $\mathit{HideResult}$ affect component
+declarations.  They are attached to component declarations, class
+definitions, and a base class of class definitions.
+$\mathit{Evaluate}$ is ignored for non-parameter components.
+
+$\mathit{Inline}$, $\mathit{LateInline}$, $\mathit{GenerateEvents}$,
+and $\mathit{smoothOrder}$ are placed in elements of function
+definitions.
+
+$\mathit{smoothOrder}=n$ is placed in algorithm sections of functions.
+It takes optional argument $\mathit{normallyConstant}$.
+
+\subsubsection*{Simulation setting}
+(\specref{18.4}\/)
+
+\begin{quote}\spaceskip=2em
+experiment
+StartTime
+StopTime
+Interval
+Toleranc
+\end{quote}
+
+(?) $\mathit{experiment}$ is placed in class body elements.
+
+\subsubsection*{Singleton instances}
+(\specref{18.5}\/)
+
+\begin{quote}\spaceskip=2em
+singleInstance
+\end{quote}
+
+(?) $\mathit{singleInstance}$ is palced in class body elements.
+
+\subsubsection*{Diagnostics messages}
+(\specref{18.7}\/)
+
+\begin{quote}\spaceskip=2em
+missingInnerMessage
+obsolete
+unassignedMessage
+\end{quote}
+
+$\mathit{obsolete}$ applies to classes.
+
+\subsubsection*{Version setting}
+(\specref{18.8.2}\/)
+
+\begin{quote}\spaceskip=2em
+version
+conversion
+uses
+\end{quote}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \section{Some noteworthy excerpts}
 
 %%%%%%%%%%%%%%%%
@@ -4471,740 +5201,6 @@ similarly after {\tt{}"fun~f~=~({\char`\\}n"}.
 
 \appendix
 %%\appendices
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%%%%%%%%%%%%%%%%
-
-\section{List of keywords and predefined names}
-
-%% KEYWORDS AND BUILTINS
-
-This appendix summarizes some list of keywords and predefined names,
-etc.
-
-%%%%%%%%%%%%%%%%
-
-\subsection{Modelica keywords}
-
-%% (Make quoted words separated; use ~ for usual spacing).
-\def\widespacing{\spaceskip=2em%
-\fussy\hyphenpenalty=10000\exhyphenpenalty=10000%
-\let~=\enspace}
-%%\sloppy\fussy\linepenalty=0\tolerance=0%
-
-(\specref{2.3.3}\/)
-
-\subsubsection*{Syntactic keywords}
-
-\begin{quote}\widespacing
-algorithm
-and
-annotation
-block
-break
-class
-connect
-connector
-constant
-constrainedby
-der
-discrete
-each
-else
-elseif
-elsewhen
-encapsulated
-end
-enumeration
-equation
-expandable
-extends
-external
-false
-final
-flow
-for
-function
-if
-import
-impure
-in
-initial
-inner
-input
-loop
-model
-not
-operator
-or
-outer
-output
-package
-parameter
-partial
-protected
-public
-pure
-record
-redeclare
-replaceable
-return
-stream
-then
-true
-type
-when
-while
-within
-\end{quote}
-
-\subsubsection*{Reserved type names}
-
-\begin{quote}\widespacing
-Real
-Integer
-Boolean
-String
-\end{quote}
-
-\noindent
-In addition to the syntactic keywords above, the type names are
-reserved and cannot be redefined (See Quote~\ref{quo:reserved-words}).
-These names have overloaded meanings.
-
-(*CHECK*) Check the status of "constructor".
-
-%%%%%%%%%%%%%%%%
-
-\subsection{Predefined_classes}
-
-(\specref{4.8}\/)
-
-\subsubsection*{Classes}
-
-\begin{quote}
-\spaceskip=2em
-\sloppy\hyphenpenalty=10000\exhyphenpenalty=10000
-
-Real
-Integer
-Boolean
-String
-{\it{}enumeration}
-Clock
-StateSelect
-ExternalObject
-AssertionLevel
-Connections
-
-\end{quote}
-
-\noindent $\mathit{enumeration}$ means names of any enumeration.  All
-enumerations are members of simle_types.  It may be referred to as
-{\it{}EnumTypeName\/} in the_specification.
-
-\subsubsection*{Attributes}
-
-\begin{quote}\widespacing
-
-start
-fixed
-nominal
-unbounded
-
-\end{quote}
-
-%%%%%%%%%%%%%%%%
-
-\subsection{Predefined variable}
-
-\subsubsection*{Time}
-
-(\specref{3.6.7}\/)
-
-\begin{quote}\widespacing
-time
-\end{quote}
-
-\noindent $\mathit{time}$ is defined in the unnamed root.
-
-%%%%%%%%%%%%%%%%
-
-\subsection{Operators with special syntax}
-
-\subsubsection*{Arithmetic operators (on scalars or arrays of Real, Integer)}
-
-(\specref{10.6}\/)
-
-\begin{quote}
-\spaceskip=2em
-\begin{verbatim}
-+ - .+ .- * / ^ .* ./ .^ = :=
-\end{verbatim}
-\end{quote}
-
-\noindent The descriptions span multiple sections:
-\specref{10.6.2},
-\specref{10.6.3},
-\specref{10.6.4},
-\specref{10.6.5},
-\specref{10.6.6},
-\specref{10.6.7},
-\specref{10.6.8}.
-
-\subsubsection*{Relational operators (on scalars of Real, Integer, Boolean, String)}
-
-(\specref{10.6.10}\/)
-
-\begin{quote}
-\spaceskip=2em
-\begin{verbatim}
-== <> < <= > >=
-\end{verbatim}
-\end{quote}
-
-\subsubsection*{Boolean operators (on scalars or arrays of Boolean)}
-
-(\specref{10.6.11}\/)
-
-\begin{quote}
-\spaceskip=2em
-\begin{verbatim}
-and or not
-\end{verbatim}
-\end{quote}
-
-\subsubsection*{Class constructors}
-
-\begin{quote}
-\spaceskip=2em
-\begin{verbatim}
-0 constructor
-\end{verbatim}
-\end{quote}
-
-\noindent These are used in defining constructors.
-
-\subsubsection*{Array constructor}
-(\specref{10.4}\/)
-
-\begin{quote}
-\begin{verbatim}
-{...}
-\end{verbatim}
-\end{quote}
-
-\noindent This can be written as $\mathrm{array}\,(...)$.
-
-\subsubsection*{Matrix constructor}
-(\specref{10.4.2}\/)
-
-\begin{quote}
-\begin{verbatim}
-[...]
-\end{verbatim}
-\end{quote}
-
-\noindent "," is a column separator, and ";" is a row separator.  This
-is a restricted notation of $\mathrm{cat}\,(...)$ for two dimensional
-cases.
-
-\subsubsection*{String literal}
-
-\begin{quote}
-\begin{verbatim}
-"..."
-\end{verbatim}
-\end{quote}
-
-\subsubsection*{String operators}
-
-\begin{quote}
-\begin{verbatim}
-+
-\end{verbatim}
-\end{quote}
-
-\subsubsection*{Array indexing operator}
-(\specref{10.5}\/)
-
-\begin{quote}
-\begin{verbatim}
-_ [...]
-\end{verbatim}
-\end{quote}
-
-\subsubsection*{Record access operator}
-
-\begin{quote}
-\begin{verbatim}
-.
-\end{verbatim}
-\end{quote}
-
-\subsubsection*{Function call}
-
-\begin{quote}
-\begin{verbatim}
-_ (...)
-\end{verbatim}
-\end{quote}
-
-\subsubsection*{Array range}
-(\specref{10.4.3}\/)
-
-%%({3.6.4 Array Range Operator} is just a pointer to {10.4.3})
-
-\begin{quote}
-\spaceskip=2em
-\begin{verbatim}
-_:_ _:_:_
-\end{verbatim}
-\end{quote}
-
-\noindent See Section~\ref{sec:array-ranges}.
-
-\subsubsection*{Tuples}
-(\specref{8.3.1}, \specref{11.2.1.1}\/)
-
-\begin{quote}
-\spaceskip=2em
-\begin{verbatim}
-(...)
-\end{verbatim}
-\end{quote}
-
-\noindent Tuples are comma separated expressions.  Tuples are only
-used in equalities and assignments for functions returning multiple
-values.
-
-%%%%%%%%%%%%%%%%
-
-\subsection{Predefined functions}
-(\specref{3.7}\/)
-
-Predefined functions are defined in the unnamed root, and it can be
-accessed with a preceding dot $.\mathit{abs}\,(v)$ for
-$\mathit{abs}\,(v)$.  Array constructor admits an iterator syntax
-($\mathrm{array}$).  Reductions admit a reduction syntax in addition
-to a function call syntax ($\mathrm{min}$, $\mathrm{max}$,
-$\mathrm{sum}$, and $\mathrm{product}$).  $\mathrm{der}$ and
-$\mathrm{pure}$ are keywords but they can also be used by a function
-call syntax.
-
-\subsubsection*{Numeric functions and conversion functions}
-(\specref{3.7.1}\/)
-
-\begin{quote}\widespacing
-
-abs(v)
-sign(v)
-sqrt(v)
-Integer(e)
-{\it{}enumeration}(i)
-String(...)
-
-\end{quote}
-
-\subsubsection*{Event triggering mathematical functions}
-(\specref{3.7.1.1}\/)
-
-\begin{quote}\widespacing
-
-div(x,~y)
-mod(x,~y)
-rem(x,~y)
-ceil(x)
-floor(x)
-integer(x)
-
-\end{quote}
-
-\subsubsection*{Predefined mathematical functions}
-(\specref{3.7.1.2}\/)
-
-\begin{quote}\widespacing
-
-sin(x)
-cos(x)
-tan(x)
-asin(x)
-acos(x)
-atan(x)
-atan2(y,~x)
-sinh(x)
-cosh(x)
-tanh(x)
-exp(x)
-log(x)
-log10(x)
-
-\end{quote}
-
-\subsubsection*{Derivative and special purpose operators}
-(\specref{3.7.2}\/)
-
-\begin{quote}\widespacing
-
-der(expr)
-delay(expr,~delayTime,~delayMax)
-delay(expr,~delayTime)
-cardinality(c)
-homotopy(actual,~simplified)
-semiLinear(x,~positiveSlope,~negativeSlope)
-inStream(v)
-actualStream(v)
-spatialDistribution(in0,~in1,~x,~positiveVelocity,~initialPoints,~initialValues)
-getInstanceName()
-
-\end{quote}
-
-\noindent $\mathrm{der}\,(...)$ accepts only one argument, although it
-can accept a list of arguments by the syntax definition.
-
-inStream(v) and actualStream(v) introduce a new state variable and
-equations related to a given steam variable $v$.
-
-\subsubsection*{Event-related operators}
-(\specref{3.7.3}\/)
-
-\begin{quote}\widespacing
-
-initial()
-terminal()
-noEvent(expr)
-smooth(p,~expr)
-sample(start,~interval)
-pre(y)
-edge(b)
-change(v)
-reinit(x,~expr)
-
-\end{quote}
-
-\subsubsection*{Assert}
-(\specref{8.3.7}\/)
-
-\begin{quote}\widespacing
-
-assert(condition,~message,~level)
-
-\end{quote}
-
-\subsubsection*{Terminate}
-(\specref{8.3.8}\/)
-
-\begin{quote}\widespacing
-
-terminate(s)
-
-\end{quote}
-
-\subsubsection*{Array dimension and size functions}
-(\specref{10.3.1}\/)
-
-\begin{quote}\widespacing
-
-ndims(A)
-size(A,~i)
-size(A)
-
-\end{quote}
-
-\noindent See~\ref{sec:array-size}.
-
-\subsubsection*{Dimensionality conversion functions}
-(\specref{10.3.2}\/)
-
-\begin{quote}\widespacing
-
-scalar(A)
-vector(A)
-matrix(A)
-
-\end{quote}
-
-\subsubsection*{Array constructor}
-(\specref{10.4.1}\/)
-
-\begin{quote}\widespacing
-array(...)
-\end{quote}
-
-\noindent This can be written as $\{...\}$.
-
-\subsubsection*{Specialized array constructor functions}
-(\specref{10.3.3}\/)
-
-\begin{quote}\widespacing
-identity(n)
-diagonal(v)
-zeros(n1,~n2,~n3,~...)
-ones(n1,~n2,~n3,~...)\\
-fill(e,~n1,~n2,~n3,~...)
-linspace(x1,~x2,~n)
-\end{quote}
-
-\noindent See~\ref{sec:array-size}.
-
-\subsubsection*{Array concatenation}
-(\specref{10.4.2}\/)
-
-\begin{quote}\widespacing
-cat(k,~A,~B,~C,~...)
-\end{quote}
-
-\noindent This can be written as $[...]$ in the two dimensional
-case.
-
-%% \subsubsection*{Predefined array functions}
-%% (\specref{10.3})
-%% \begin{quote}
-%% \spaceskip=2em
-%% \sloppy\hyphenpenalty=10000\exhyphenpenalty=10000
-%% \let~=\enspace
-%% promote(A,n)
-%% \end{quote}
-
-\subsubsection*{Matrix and vector algebra functions}
-(\specref{10.3.5}\/)
-
-\begin{quote}\widespacing
-transpose(A)
-outerProduct(v1,~v2)
-symmetric(A)
-cross(x,~y)
-skew(x)
-\end{quote}
-
-\subsubsection*{Reduction functions and operators}
-(\specref{10.3.4}\/)
-
-\begin{quote}\widespacing
-
-min(A)
-min(x,~y)
-min(e(i,~...,~j)~for~i~in~u,~...,~j~in~v)
-max(A)
-max(x,~y)
-max(e(i,~...,~j)~for~i~in~u,~...,~j~in~v)
-sum(A)
-sum(e(i,~...,~j)~for~i~in~u,~...,~j~in~v)
-product(A)
-product(e(i,~...,~j)~for~i~in~u,~...,~j~in~v)
-
-\end{quote}
-
-\subsubsection*{pure}
-(\specref{12.3}\/)
-
-\begin{quote}\widespacing
-pure(...)
-\end{quote}
-
-\noindent See Section~\ref{pure-expression}
-
-%%%%%%%%%%%%%%%%
-
-\subsection{Predefined elements}
-
-\subsubsection*{Functions in types and records}
-
-\begin{quote}\widespacing
-
-equalityConstraint(x,~y)
-
-\end{quote}
-
-%%%%%%%%%%%%%%%%
-
-\subsection{Synchronous language}
-
-\subsubsection*{Clock class}
-
-\begin{quote}
-class Clock;
-\end{quote}
-
-\subsubsection*{Discrete states}
-(\specref{16.4}\/)
-
-\begin{quote}\widespacing
-
-previous(u)
-
-\end{quote}
-
-\subsubsection*{Base-clock conversion operators}
-(\specref{16.5.1}\/)
-
-\begin{quote}\widespacing
-
-sample(u,~c)
-hold(u)
-
-\end{quote}
-
-\subsubsection*{Sub-clock conversion operators}
-(\specref{16.5.2}\/)
-
-\begin{quote}\widespacing
-
-subSample(u,~factor)
-superSample(u,~factor)
-shiftSample(u,~shiftCounter,~resolution)
-backSample(u,~backCounter,~resolution)
-noClock(u)
-
-\end{quote}
-
-\subsubsection*{Other operators}
-(\specref{16.10}\/)
-
-\begin{quote}\widespacing
-
-firstTick(u)
-interval(u)
-
-\end{quote}
-
-%%%%%%%%%%%%%%%%
-
-\subsection{State machines}
-
-\subsubsection*{Transitions}
-(\specref{17.1}\/)
-
-\begin{quote}\widespacing
-
-transition(from,~to,~condition,~immediate,~reset,~synchronize,~priority)
-initialState(state)
-activeState(state)
-ticksInState()
-timeInState()
-
-\end{quote}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\section{Mandatory annotations (maybe)}
-
-\def\quotespace{\spaceskip=2em%
-\sloppy\hyphenpenalty=10000\exhyphenpenalty=10000}
-
-There are some annotations predefined (chapter 18): annotations for
-graphical representation, annotations for code generation (18.3),
-annotations for simulation experiments (18.4), annotations for
-functions (12.7, 12.8 and 12.9).  Some of them are likely mandatory to
-translators.
-
-\subsubsection*{Derivative and inverses}
-(\specref{12.7.1}, \specref{12.8}\/)
-
-\begin{quote}\spaceskip=2em
-derivative
-inverse
-\end{quote}
-
-These directives are placed in function body elements.
-
-\subsubsection*{(Redeclaration choices)}
-(\specref{7.3.4}\/)
-
-\begin{quote}\spaceskip=2em
-choices
-choice
-\end{quote}
-
-(?) The choices directive is associated to replaceables or modifiers,
-and is placed at replacable and non-replacable elements by
-short_class_definitons or declarations.
-
-\subsubsection*{Fortran interface}
-(\specref{12.9.1.2}\/)
-
-\begin{quote}\spaceskip=2em
-arrayLayout
-\end{quote}
-
-\subsubsection*{External libraries}
-(\specref{12.9.4}\/)
-
-\begin{quote}\spaceskip=2em
-Library
-Include
-IncludeDirectory
-LibraryDirectory
-\end{quote}
-
-\subsubsection*{Code generation}
-(\specref{18.3}\/)
-
-\begin{quote}\spaceskip=2em
-Evaluate
-HideResult
-Inline
-LateInline
-GenerateEvents
-smoothOrder
-\end{quote}
-
-$\mathit{Evaluate}$ and $\mathit{HideResult}$ affect component
-declarations.  They are attached to component declarations, class
-definitions, and a base class of class definitions.
-$\mathit{Evaluate}$ is ignored for non-parameter components.
-
-$\mathit{Inline}$, $\mathit{LateInline}$, $\mathit{GenerateEvents}$,
-and $\mathit{smoothOrder}$ are placed in elements of function
-definitions.
-
-$\mathit{smoothOrder}=n$ is placed in algorithm sections of functions.
-It takes optional argument $\mathit{normallyConstant}$.
-
-\subsubsection*{Simulation setting}
-(\specref{18.4}\/)
-
-\begin{quote}\spaceskip=2em
-experiment
-StartTime
-StopTime
-Interval
-Toleranc
-\end{quote}
-
-(?) $\mathit{experiment}$ is placed in class body elements.
-
-\subsubsection*{Singleton instances}
-(\specref{18.5}\/)
-
-\begin{quote}\spaceskip=2em
-singleInstance
-\end{quote}
-
-(?) $\mathit{singleInstance}$ is palced in class body elements.
-
-\subsubsection*{Diagnostics messages}
-(\specref{18.7}\/)
-
-\begin{quote}\spaceskip=2em
-missingInnerMessage
-obsolete
-unassignedMessage
-\end{quote}
-
-$\mathit{obsolete}$ applies to classes.
-
-\subsubsection*{Version setting}
-(\specref{18.8.2}\/)
-
-\begin{quote}\spaceskip=2em
-version
-conversion
-uses
-\end{quote}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \end{document}
 
