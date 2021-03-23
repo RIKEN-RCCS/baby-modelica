@@ -178,11 +178,12 @@ packages or non-packages.  A constant refererence in a class is like
 $A.B.C.a[...].b[...].c[..]$, where all $a$, $b$, and $c$ are constants
 and subscripts are optional.
 
-A (non-constant) variable reference does not have any prefixes (none
-of a dot nor packages).  A class reference may be with a preceding
-dot, which refers to the unnamed root.  Or, a class reference may
-follow a variable reference, in that case classes are considered as
-packages.
+A non-constant variable (instance) reference does not have any
+prefixes of classes nor a preceding dot.
+
+A class reference may be with a preceding dot, which refers to the
+unnamed root.  Or, a class reference may follow a variable reference,
+in that case classes are considered as packages.
 
 \begin{QRULE}\label{mixed-class-instance-reference} There is a single
 namespace for classes and variables.  It is allowed to refer to a
@@ -210,9 +211,10 @@ includes the constants but variables are ignored.\end{QFACT}
 %%%%
 See Rule~\ref{model-nesting} for the binary roles of a class.
 
-\if 0
-%%%% Rewrite then include to the body (AHO 2020-02-04)
-\fi
+\begin{QFACT} Array indexing is a part of a composite name.  Array
+indexing to general expressions is ungrammatical.\end{QFACT}
+%%%%
+For example, (illegal) $\{1,2,3\}[1]$ is not allowed.
 
 \subsubsection*{Scopes}
 
@@ -2794,7 +2796,7 @@ $x[1].c$.
 
 \begin{QFACT} Multi-dimensional arrays are arrays of arrays.  The
 ordering of an array dimension is "row-major".\end{QFACT}
-
+%%%%
 See code examples in (\specref{10.1}\/):
 %%%%
 \begin{qquote} (\specref{10.1}\/) It is possible to mix the two
@@ -2803,7 +2805,7 @@ declaration forms although it might be confusing.
 Real[3,2] x[4,5]; // x has type Real[4,5,3,2];
 \end{lstlisting}
 \end{qquote}
-%%%%
+
 Note that accessing the example array by $x[\textrm{-},\textrm{-}]$
 returns an array of $[3,2]$, which means, partial indexing is applied
 from the left in the dimension.  This ordering is row-major, despite
