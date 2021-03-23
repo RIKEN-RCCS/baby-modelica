@@ -92,6 +92,9 @@ sig
     val component_is_expandable : component_slot_t -> bool
     val component_class : component_slot_t -> definition_body_t
 
+    val find_component :
+	id_t -> component_slot_t list -> component_slot_t option
+
     val clear_syntaxer_tables : unit -> unit
 
     val enumerate_instances :

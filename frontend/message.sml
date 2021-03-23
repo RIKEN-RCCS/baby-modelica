@@ -302,6 +302,8 @@ val error_subscripts_to_iterator = Match
 
 val error_components_to_iterator = Match
 
+val error_component_not_found = Match
+
 val error_subscripts_to_scalar = Match
 
 val error_split_array_dimension = Match

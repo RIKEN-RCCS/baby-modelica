@@ -12,10 +12,11 @@ sig
     type subject_t
     type ctx_t
 
-    val secure_reference :
-	definition_body_t -> bool -> expression_t -> expression_t
     val instantiate_class :
 	subject_t * definition_body_t -> int list * definition_body_t list
+    val secure_reference :
+	definition_body_t -> bool -> expression_t -> expression_t
+
     val traverse_with_instantiation : definition_body_t -> unit
 
     val xreset : unit -> unit
@@ -42,6 +43,7 @@ val component_is_outer_alias = classtree.component_is_outer_alias
 val component_is_expandable = classtree.component_is_expandable
 val dereference_outer_alias = classtree.dereference_outer_alias
 val instantiate_outer_alias = classtree.instantiate_outer_alias
+val find_component = classtree.find_component
 
 val find_name_initial_part = finder.find_name_initial_part
 val list_elements = finder.list_elements
@@ -122,6 +124,12 @@ fun assert_inner_outer_condition binding = (
     in
 	()
     end)
+
+fun assemble_package_if_package (subj, k0) = (
+    if (class_is_package k0) then
+	(assemble_package E3 (subj, k0))
+    else
+	k0)
 
 (* ================================================================ *)
 
@@ -239,7 +247,7 @@ and settle_dimension kp ss mm = (
    needs to be step-by-step, because resolving new variables is
    necessary at each step. *)
 
-and simplify_expression ctx buildphase w0 = (
+and simplify_expression ctx buildphase_ w0 = (
     let
 	val buildphase = true
 	val w1 = (bind_in_scoped_expression buildphase ctx w0)
@@ -252,8 +260,9 @@ and simplify_expression ctx buildphase w0 = (
 	    (simplify_expression ctx buildphase w3)
     end)
 
-and secure_reference_in_expression ctx buildphase w0 = (
+and secure_reference_in_expression ctx buildphase_ w0 = (
     let
+	val buildphase = true
 	val efix = (fn (x, _) => ((secure_reference ctx buildphase x), ()))
 	val (w1, _) = (walk_in_expression efix (w0, ()))
     in
@@ -291,12 +300,8 @@ and secure_reference_loop ctx (retrying : bool) path0 node0 = (
 	let
 	    val (subj, kx, cx) = node0
 	    val k0 = (! kx)
+	    val kp = (assemble_package_if_package (subj, k0))
 	    val components = (! cx)
-
-	    val kp = if (class_is_instance k0) then
-			 k0
-		     else
-			 (assemble_package E3 (subj, k0))
 
 	    val _ = if (kp = (! kx)) then () else raise Match
 	    val _ = if (step_is_at_least E3 kp) then () else raise Match
@@ -304,29 +309,28 @@ and secure_reference_loop ctx (retrying : bool) path0 node0 = (
 		    else if (class_is_enum kp) then ()
 		    else raise error_attribute_access_to_simple_type
 	in
-	    case (List.find (fn (Slot (x, _, _, _)) => (x = id)) components) of
+	    case (find_component id components) of
 		NONE => (
-		let
-		    val _ = if (not retrying) then () else raise Match
-		    val (dim, array) = (instantiate_class_in_class kp id)
-		in
-		    (secure_reference_loop
-			 ctx true path0 node0)
-		end)
+		if (retrying) then
+		    raise error_component_not_found
+		else
+		    let
+			val (dim, array) = (instantiate_class_in_class kp id)
+		    in
+			(secure_reference_loop ctx true path0 node0)
+		    end)
 	      | SOME (slot as Slot (_, dim, nodes, dummy)) => (
 		if (component_is_outer_alias slot) then
 		    let
 			val node1 = (dereference_outer_alias slot)
 		    in
-			(secure_reference_loop
-			     ctx true path0 node1)
+			(secure_reference_loop ctx true path0 node1)
 		    end
 		else if (component_is_expandable slot) then
 		    nodes
 		else
 		    (List.concat
-			 (map (secure_reference_loop
-				   ctx false path1) nodes)))
+			 (map (secure_reference_loop ctx false path1) nodes)))
 	end))
 
 (* Checks an access is proper about scalar or array.  It is an error
@@ -499,29 +503,22 @@ fun traverse_with_instantiation k0 = (
 		in
 		    array
 		end))
-
-	and traverse kx = (
-	    if (class_is_outer_alias kx) then
-		()
-	    else if (class_is_simple_type kx) then
-		()
-	    else
-		let
-		    (*val _ = (assert_match_subject_sans_subscript subj kx)*)
-		    val cooker = assemble_package
-		    val bindings = (list_elements cooker true kx)
-		    val (classes, states) =
-			  (List.partition binding_is_class bindings)
-		    val _ = (app assert_inner_outer_condition states)
-		    val instances = (List.concat (map (instantiate kx) states))
-		    val _ = (app traverse instances)
-		in
-		    ()
-		end)
-
-	(*val _ = (assert_subject_is_not_array subj0)*)
     in
-	(traverse k0)
+	if (class_is_outer_alias k0) then
+	    ()
+	else if (class_is_simple_type k0) then
+	    ()
+	else
+	    let
+		val cooker = assemble_package
+		val bindings = (list_elements cooker true k0)
+		val (classes, states) =
+		      (List.partition binding_is_class bindings)
+		val _ = (app assert_inner_outer_condition states)
+		val instances = (List.concat (map (instantiate k0) states))
+	    in
+		(app traverse_with_instantiation instances)
+	    end
     end)
 
 (* ================================================================ *)

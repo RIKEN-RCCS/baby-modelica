@@ -385,7 +385,7 @@ fun bind_in_instance (scanning : bool) k0 = (
 	false
     else if (class_is_enumerator_definition k0) then
 	false
-    else if (class_is_package k0) then
+    else if ((class_is_package k0) andalso (not (kind_is_function k0))) then
 	false
     else if ((not scanning) andalso (step_is_at_least E5 k0)) then
 	false
