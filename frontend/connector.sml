@@ -68,15 +68,6 @@ datatype root_marker_t__ = Root of bool
 
 (* ================================================================ *)
 
-fun class_is_ordinary_instance k = (
-    let
-	val _ = if (not (class_is_primitive k)) then () else raise Match
-    in
-	(not ((class_is_outer_alias k)
-	      orelse (class_is_enumerator_definition k)
-	      orelse (class_is_package k)))
-    end)
-
 fun is_inside side = (side = false)
 
 fun is_outside side = (side = true)
@@ -348,7 +339,7 @@ fun enable_instance enable0 k0 = (
 
 fun enable_component_node enable0 node = (
     let
-	val (kp, components) = (access_node node)
+	val (kp, components) = (access_node E5 node)
 	val enable1 = (enable_instance enable0 kp)
 	val _ = (app (fn (Slot (v, dim, nodes, _)) =>
 			 (app (enable_component_node enable1) nodes))
@@ -939,7 +930,7 @@ fun collect_unconnected_flow_components connected = (
 	fun collect (node, acc0) = (
 	    let
 		val (subj, _, _) = node
-		val (kp, components) = (access_node node)
+		val (kp, components) = (access_node E5 node)
 	    in
 		if (List.exists (subject_is_component subj) connected) then
 		    acc0
@@ -1092,12 +1083,12 @@ fun connect_connectors (instream, actualstream, cardinality) = (
 
 (* ================================================================ *)
 
-val bind_model = postbinder.bind_model
+val bind_in_model = postbinder.bind_in_model
 val substitute_outer = postbinder.substitute_outer
 
 fun xbind () = (
     let
-	val _ = (bind_model true)
+	val _ = (bind_in_model ())
 	val _ = (substitute_outer ())
     in
 	()

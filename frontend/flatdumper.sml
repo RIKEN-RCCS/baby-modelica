@@ -439,9 +439,6 @@ fun collect_enumerations root = (
 
 fun collect_records root = (
     let
-	fun class_is_record_definition k = (
-	    (kind_is_record k) andalso (class_is_package k))
-
 	fun collect (kp, acc) = (
 	    if (class_is_outer_alias kp) then
 		(* THIS WILL BE REMOVED. *)
@@ -992,17 +989,6 @@ fun dump_equations s (subj, ee) = (
 fun dump_flat_model () = (
     let
 	val _ = tr_flat (";; Flatten a model in \"x.mo\"...")
-
-	fun class_is_constant k = (
-	    case k of
-		Def_Body (mk, j, (t, p, q), nm, cc, ee, aa, ww) => (
-		let
-		    val (lg, vc, io) = q
-		in
-		    vc = Constant orelse vc = Parameter
-		end)
-	      | Def_Der _ => false
-	      | _ => raise Match)
 
 	val filename = "x.mo"
 	val s = (TextIO.openOut filename)

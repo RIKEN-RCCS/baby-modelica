@@ -10,7 +10,7 @@ sig
     type binder_t
     type ctx_t
 
-    val bind_model : bool -> unit
+    val bind_in_model : unit -> unit
     val substitute_outer : unit -> unit
     val bind_in_instance : bool -> definition_body_t -> bool
 
@@ -33,6 +33,7 @@ val fetch_from_instance_tree = classtree.fetch_from_instance_tree
 val component_is_outer_alias = classtree.component_is_outer_alias
 val traverse_tree = classtree.traverse_tree
 val substitute_outer_reference = classtree.substitute_outer_reference
+val access_node = classtree.access_node
 
 val find_class = finder.find_class
 
@@ -372,12 +373,12 @@ fun secure_record_class kp = (
     else
 	())
 
-(* Resolves variable references in a package/instance.  It returns
-   true if some instances are processed, so that it can repeat the
-   process until it stabilizes.  It, with scanning=true, processes all
-   instances, because the building routine may leave some instances in
-   a partially resolved state (such as simple-types, whose value
-   attribute is only resolved). *)
+(* Resolves variable references in an instance and a function.  It
+   returns true if some instances/functions are processed, so that it
+   can repeat the process until it stabilizes.  It, with
+   scanning=true, processes all instances, because the building phase
+   may leave some instances in a partially resolved state (such as
+   simple-types, whose value attribute is only resolved). *)
 
 fun bind_in_instance (scanning : bool) k0 = (
     if (class_is_outer_alias k0) then
@@ -426,22 +427,10 @@ fun bind_in_instance (scanning : bool) k0 = (
 
 fun bind_instances_loop (scanning : bool) node0 = (
     let
-	val (subj, kx, cx) = node0
-	val kp = (! kx)
-
-	val _ = if ((cook_step kp) <> E0) then () else raise Match
-	val _ = if ((class_is_package kp) orelse (step_is_at_least E3 kp))
-		then () else raise Match
-
+	val (kp, _) = (access_node E3 node0)
 	val changes0 = (bind_in_instance scanning kp)
-	(* KEEP ORDERING. *)
-	val c0 = (! cx)
-	val components = (List.filter (not o component_is_outer_alias) c0)
-
-	val _ = if (null components) then ()
-		else if (not (class_is_simple_type kp)) then ()
-		else if (class_is_enum kp) then ()
-		else raise error_attribute_access_to_simple_type
+	(* ACCESS AGAIN. *)
+	val (_, components) = (access_node E3 node0)
 
 	val changes1
 	    = (List.concat
@@ -452,19 +441,26 @@ fun bind_instances_loop (scanning : bool) node0 = (
 	(List.exists (fn x => x) (changes0 :: changes1))
     end)
 
-(* Binds variables in the model.  Call it with true.  It repeatedly
-   calls the binding procedure until settled, because values and
-   equations in accessed instances introduce new references. *)
+(* Binds variables in the model.  It repeatedly calls the binding
+   procedure until settled, because values and equations accessed may
+   introduce new references.  Although all variables has been created
+   in the building phase, constants may still be introduced and
+   scanning in the instance_tree is necessary. *)
 
-fun bind_model scanning = (
+fun bind_in_model () = (
     let
-	val changes0 = (bind_instances_loop scanning instance_tree)
-	val changes1 = (bind_instances_loop scanning class_tree)
+	fun loop scanning = (
+	    let
+		val changes0 = (bind_instances_loop scanning instance_tree)
+		val changes1 = (bind_instances_loop scanning class_tree)
+	    in
+		if (changes0 orelse changes1) then
+		    (loop false)
+		else
+		    ()
+	    end)
     in
-	if (changes0 orelse changes1) then
-	    (bind_model false)
-	else
-	    ()
+	(loop true)
     end)
 
 (* ================================================================ *)
@@ -472,6 +468,10 @@ fun bind_model scanning = (
 val substitute_outer_in_instance
     = (substitute_expression
 	   (fn _ => (fn (w, _) => ((substitute_outer_reference w), []))))
+
+(* Replaces outer references with inner references in the
+   instance_tree.  Outer references are kept until to judge the sides
+   of connectors properly. *)
 
 fun substitute_outer () = (
     ignore (traverse_tree substitute_outer_in_instance (instance_tree, [])))

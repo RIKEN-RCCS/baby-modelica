@@ -54,15 +54,6 @@ fun tag_as_name tag = (
       | Ctag [] => raise Match
       | Ctag nn => Name ("" :: nn))
 
-(* Returns true if a qualified-name is a single part. *)
-
-fun class_is_at_top_level tag = (
-    case tag of
-	Ctag [""] => raise Match
-      | Ctag [] => false
-      | Ctag [_] => true
-      | Ctag _ => false)
-
 fun declaration_id (Defvar (v, _, _, _, _, _)) = v
 
 fun same_class k0 k1 = (
@@ -290,25 +281,6 @@ fun find_all_in_elements f (b : definition_body_t) = (
 
 fun app_in_element f (d as Defclass ((v, g), k)) = (
     (app f (class_elements d)))
-
-fun class_is_encapsulated k = (
-    let
-	fun check (t, {Encapsulated, ...}, _) = Encapsulated
-    in
-	case k of
-	    Def_Body (mk, j, cs, nm, cc, ee, aa, ww) => (check cs)
-	  | Def_Der (c, cs, n, vv, aa, ww) => (check cs)
-	  | Def_Primitive _ => raise Match
-	  | Def_Outer_Alias _ => raise Match
-	  | Def_Name _ => raise Match
-	  | Def_Scoped _ => raise Match
-	  | Def_Refine _ => raise Match
-	  | Def_Extending _ => raise Match
-	  | Def_Replaced _ => raise Match
-	  | Def_Displaced _ => raise Match
-	  | Def_In_File => raise Match
-	  | Def_Mock_Array _ => raise Match
-    end)
 
 (* Tests if modifiers is empty or a single value. *)
 

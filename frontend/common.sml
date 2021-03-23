@@ -602,24 +602,6 @@ fun class_is_package k = (
 
 fun class_is_instance k = (not (class_is_package k))
 
-fun class_is_function k = (
-    case k of
-	Def_Body ((u, f, b), j, (t, p, q), nm, cc, ee, aa, ww) => (
-	case t of
-	    Function pure => (true, pure)
-	  | _ => (false, false))
-      | Def_Der _ => (false, false)
-      | Def_Primitive _ => (false, false)
-      | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => raise Match
-      | Def_Scoped _ => raise Match
-      | Def_Refine _ => raise Match
-      | Def_Extending _ => raise Match
-      | Def_Replaced _ => raise Match
-      | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
-      | Def_Mock_Array _ => raise Match)
-
 (* ================================================================ *)
 
 fun declaration_to_string (d as Defvar (v, q, k, c, a, w)) = (
@@ -1044,11 +1026,29 @@ fun kind_is_record k = (
 	SOME Record => true
       | _ => false)
 
+fun class_is_function__ k = (
+    case k of
+	Def_Body ((u, f, b), j, (t, p, q), nm, cc, ee, aa, ww) => (
+	case t of
+	    Function pure => (true, pure)
+	  | _ => (false, false))
+      | Def_Der _ => (false, false)
+      | Def_Primitive _ => (false, false)
+      | Def_Outer_Alias _ => raise Match
+      | Def_Name _ => raise Match
+      | Def_Scoped _ => raise Match
+      | Def_Refine _ => raise Match
+      | Def_Extending _ => raise Match
+      | Def_Replaced _ => raise Match
+      | Def_Displaced _ => raise Match
+      | Def_In_File => raise Match
+      | Def_Mock_Array _ => raise Match)
+
 (* Tests if a class definition is not modified.  A reference in a
    package in an instance (such as "x.P1.c") can be simplified as one
    in a fully-qualified package ("P0.P1.c"). *)
 
-fun class_is_unmodified k = raise Match
+fun class_is_unmodified__ k = raise Match
 
 fun class_name_of_instance k = (
     case k of
@@ -1139,6 +1139,57 @@ fun choose_non_nil x0 x1 = (
 	val _ = if (x0 = NIL orelse x1 = NIL) then () else raise Match
     in
 	if (x1 <> NIL) then x1 else x0
+    end)
+
+fun class_is_record_definition k = (
+    (kind_is_record k) andalso (class_is_package k))
+
+fun class_is_constant k = (
+    case k of
+	Def_Body (mk, j, (t, p, q), nm, cc, ee, aa, ww) => (
+	let
+	    val (lg, vc, io) = q
+	in
+	    vc = Constant orelse vc = Parameter
+	end)
+      | Def_Der _ => false
+      | _ => raise Match)
+
+fun class_is_ordinary_instance k = (
+    let
+	val _ = if (not (class_is_primitive k)) then () else raise Match
+    in
+	(not ((class_is_outer_alias k)
+	      orelse (class_is_enumerator_definition k)
+	      orelse (class_is_package k)))
+    end)
+
+(* Returns true if a qualified-name is a single part. *)
+
+fun class_is_at_top_level tag = (
+    case tag of
+	Ctag [""] => raise Match
+      | Ctag [] => false
+      | Ctag [_] => true
+      | Ctag _ => false)
+
+fun class_is_encapsulated k = (
+    let
+	fun check (t, {Encapsulated, ...}, _) = Encapsulated
+    in
+	case k of
+	    Def_Body (mk, j, cs, nm, cc, ee, aa, ww) => (check cs)
+	  | Def_Der (c, cs, n, vv, aa, ww) => (check cs)
+	  | Def_Primitive _ => raise Match
+	  | Def_Outer_Alias _ => raise Match
+	  | Def_Name _ => raise Match
+	  | Def_Scoped _ => raise Match
+	  | Def_Refine _ => raise Match
+	  | Def_Extending _ => raise Match
+	  | Def_Replaced _ => raise Match
+	  | Def_Displaced _ => raise Match
+	  | Def_In_File => raise Match
+	  | Def_Mock_Array _ => raise Match
     end)
 
 (* ================================================================ *)

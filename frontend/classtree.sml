@@ -84,7 +84,8 @@ sig
 	(definition_body_t * 'a -> 'a) -> instance_node_t * 'a -> 'a
 
     val access_node :
-	instance_node_t -> (definition_body_t * component_slot_t list)
+	cook_step_t -> instance_node_t
+	-> (definition_body_t * component_slot_t list)
 
     val dereference_outer_alias : component_slot_t -> instance_node_t
     val component_is_outer_alias : component_slot_t -> bool
@@ -971,9 +972,10 @@ fun clear_syntaxer_tables () = (
 
 (* Accesses an instance-tree node and returns an instance and a list
    of components.  Each component is Slot(v,d,a,_), where ID "v", a
-   dimension "d", and an array of nodes "a". *)
+   dimension "d", and an array of nodes "a".  It takes a required step
+   E3 or E5. *)
 
-fun access_node node0 = (
+fun access_node step node0 = (
     let
 	val (subj, kx, cx) = node0
 	val kp = (! kx)
@@ -981,7 +983,7 @@ fun access_node node0 = (
 	val components = (List.filter (not o component_is_outer_alias) c0)
 
 	val _ = if ((cook_step kp) <> E0) then () else raise Match
-	val _ = if ((class_is_package kp) orelse (step_is_at_least E5 kp))
+	val _ = if ((class_is_package kp) orelse (step_is_at_least step kp))
 		then () else raise Match
 	val _ = if (null components) then ()
 		else if (not (class_is_simple_type kp)) then ()
@@ -991,12 +993,12 @@ fun access_node node0 = (
 	(kp, components)
     end)
 
-(* Calls f on each instance (with a folding argument) in the
+(* Calls f on each package/instance with a folding argument in the
    class_tree/instance_tree. *)
 
 fun traverse_tree f (node0, acc0) = (
     let
-	val (kp, components) = (access_node node0)
+	val (kp, components) = (access_node E5 node0)
 	val acc1 = (f (kp, acc0))
 	val acc2 = (foldl (fn (Slot (v, dim, nodes, _), accx) =>
 			      (foldl (traverse_tree f) accx nodes))
@@ -1011,7 +1013,7 @@ fun enumerate_in_node f path0 (node, acc) = (
     let
 	val (subj, kx, cx) = node
 	(*val components = (! cx)*)
-	val (kp, components) = (access_node node)
+	val (kp, components) = (access_node E5 node)
     in
 	case path0 of
 	    [] => f (subj, acc)
