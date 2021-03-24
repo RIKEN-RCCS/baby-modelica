@@ -339,7 +339,7 @@ fun enable_instance enable0 k0 = (
 
 fun enable_component_node enable0 node = (
     let
-	val (kp, components) = (access_node E5 node)
+	val (kp, components) = (access_node E5 true node)
 	val enable1 = (enable_instance enable0 kp)
 	val _ = (app (fn (Slot (v, dim, nodes, _)) =>
 			 (app (enable_component_node enable1) nodes))
@@ -930,7 +930,7 @@ fun collect_unconnected_flow_components connected = (
 	fun collect (node, acc0) = (
 	    let
 		val (subj, _, _) = node
-		val (kp, components) = (access_node E5 node)
+		val (kp, components) = (access_node E5 true node)
 	    in
 		if (List.exists (subject_is_component subj) connected) then
 		    acc0

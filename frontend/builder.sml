@@ -43,6 +43,7 @@ val component_is_outer_alias = classtree.component_is_outer_alias
 val component_is_expandable = classtree.component_is_expandable
 val dereference_outer_alias = classtree.dereference_outer_alias
 val instantiate_outer_alias = classtree.instantiate_outer_alias
+val access_node = classtree.access_node
 val find_component = classtree.find_component
 
 val find_name_initial_part = finder.find_name_initial_part
@@ -301,9 +302,9 @@ and secure_reference_loop ctx (retrying : bool) path0 node0 = (
 	    val (subj, kx, cx) = node0
 	    val k0 = (! kx)
 	    val kp = (assemble_package_if_package (subj, k0))
-	    val components = (! cx)
-
 	    val _ = if (kp = (! kx)) then () else raise Match
+	    val (_, components) = (access_node E3 false node0)
+
 	    val _ = if (step_is_at_least E3 kp) then () else raise Match
 	    val _ = if (not (class_is_simple_type kp)) then ()
 		    else if (class_is_enum kp) then ()

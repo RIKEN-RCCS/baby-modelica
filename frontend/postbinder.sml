@@ -420,22 +420,22 @@ fun bind_in_instance (scanning : bool) k0 = (
 	end)
 
 (* Calls the variable resolving procedure on packages/instances in the
-   trees.  It returns true if some instances are processed.  It skips
-   classes that are named but are not used as packages (which have the
-   step=E0).  It accesses the component slot after processing the
+   trees.  It returns true if some are processed.  It skips classes
+   that are named but are not used as packages (which have the
+   step=E0).  It accesses the components after processing the
    class. *)
 
-fun bind_instances_loop (scanning : bool) node0 = (
+fun bind_in_instances_loop (scanning : bool) node0 = (
     let
-	val (kp, _) = (access_node E3 node0)
+	val (kp, _) = (access_node E3 true node0)
 	val changes0 = (bind_in_instance scanning kp)
 	(* ACCESS AGAIN. *)
-	val (_, components) = (access_node E3 node0)
+	val (_, components) = (access_node E5 true node0)
 
 	val changes1
 	    = (List.concat
 		   (map (fn (Slot (v, dim, nodes, dummy)) =>
-			    (map (bind_instances_loop scanning) nodes))
+			    (map (bind_in_instances_loop scanning) nodes))
 			components))
     in
 	(List.exists (fn x => x) (changes0 :: changes1))
@@ -451,8 +451,8 @@ fun bind_in_model () = (
     let
 	fun loop scanning = (
 	    let
-		val changes0 = (bind_instances_loop scanning instance_tree)
-		val changes1 = (bind_instances_loop scanning class_tree)
+		val changes0 = (bind_in_instances_loop scanning instance_tree)
+		val changes1 = (bind_in_instances_loop scanning class_tree)
 	    in
 		if (changes0 orelse changes1) then
 		    (loop false)
