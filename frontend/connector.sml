@@ -20,6 +20,7 @@ open small1
 fun tr_conn (s : string) = if true then (print (s ^"\n")) else ()
 fun tr_conn_vvv (s : string) = if false then (print (s ^"\n")) else ()
 
+val find_element = finder.find_element
 val list_elements = finder.list_elements
 
 val instance_tree = classtree.instance_tree
@@ -227,14 +228,14 @@ fun find_flow_variable (subj, side) = (
 
 	fun find_in_slot (Slot (id, dim, nodes, _)) = (
 	    ((map getclass (List.filter test_node nodes))
-	     @ (List.concat (map find_in_components nodes))))
+	     @ (List.concat (map find_flows_in_components nodes))))
 
-	and find_in_components (subj, kx, cx) = (
+	and find_flows_in_components (subj, kx, cx) = (
 	    (List.concat (map find_in_slot (! cx))))
 
 	val node = surely (fetch_instance_tree_node subj)
     in
-	case (find_in_components node) of
+	case (find_flows_in_components node) of
 	    [] => NONE
 	  | [k] => SOME (subject_of_class k)
 	  | _ => raise error_multiple_flow_variables
@@ -247,10 +248,11 @@ fun connector_is_overdetermined subj = (
     let
 	val kp = surely (fetch_from_instance_tree subj)
 	fun cooker u_ (subj_, k_) = raise Match
-	val bindings = (list_elements cooker true kp)
 	val id = Id "equalityConstraint"
+	(*val bindings = (list_elements cooker true kp)*)
     in
-	case (find_in_bindings id bindings) of
+	(*case (find_in_bindings id bindings) of*)
+	case (find_element cooker true kp id) of
 	    NONE => false
 	  | SOME (Naming (_, _, _, _, (z, r, EL_Class dx, h))) => true
 	  | SOME (Naming (_, _, _, _, (z, r, EL_State dx, h))) => false

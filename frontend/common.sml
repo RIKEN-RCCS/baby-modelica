@@ -651,7 +651,7 @@ fun body_is_root k = (
       | Def_In_File => raise Match
       | Def_Mock_Array _ => raise Match)
 
-fun class_is_root_body k = (
+fun class_is_root k = (
     case k of
 	Def_Body _ => (body_is_root k)
       | Def_Der _ => false

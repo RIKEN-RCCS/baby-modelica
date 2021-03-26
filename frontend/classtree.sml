@@ -92,7 +92,7 @@ sig
     val component_is_expandable : component_slot_t -> bool
     val component_class : component_slot_t -> definition_body_t
 
-    val find_component :
+    val find_in_components :
 	id_t -> component_slot_t list -> component_slot_t option
 
     val clear_syntaxer_tables : unit -> unit
@@ -312,7 +312,7 @@ fun access_component subj (Slot (v, dim, ee, dummy)) (index : int list) = (
 	    (access_component subj (Slot (v, dim1, ee1, dummy)) [])
 	end))
 
-fun find_component id components = (
+fun find_in_components id components = (
     (List.find (fn (Slot (x, _, _, _)) => (x = id)) components))
 
 (* Descends the instance_tree by one step. *)
@@ -322,7 +322,7 @@ fun descend_instance_tree_node id (node0 : instance_node_t) = (
 	val (subj, kx, cx) = node0
 	val components = (! cx)
     in
-	case (find_component id components) of
+	case (find_in_components id components) of
 	    NONE => NONE
 	  | SOME slot => SOME slot
     end)
@@ -335,7 +335,7 @@ fun descend_instance_tree_step__ (id, index) (node0 : instance_node_t) = (
 	val (subj, kx, cx) = node0
 	val components = (! cx)
     in
-	case (find_component id components) of
+	case (find_in_components id components) of
 	    NONE => NONE
 	  | SOME slot => (
 	    let
@@ -358,7 +358,7 @@ fun descend_instance_tree path0 (node0 : instance_node_t) = (
 	    val (subj, kx, cx) = node0
 	    val components = (! cx)
 	in
-	    case (find_component id components) of
+	    case (find_in_components id components) of
 		NONE => NONE
 	      | SOME slot => (
 		if (component_is_outer_alias slot) then
@@ -974,11 +974,12 @@ fun clear_syntaxer_tables () = (
 (* ================================================================ *)
 
 (* Accesses an instance-tree node and returns an instance and a list
-   of components.  It may access a package-tree node, too.  Each
-   component is Slot(v,d,a,_), where ID "v", a dimension "d", and an
-   array of nodes "a".  It takes a required step E3 or E5. *)
+   of components.  It may access a package-tree node, too.  Components
+   include packages.  Each component is Slot(v,d,a,_), where ID "v", a
+   dimension "d", and an array of nodes "a".  It takes a required step
+   E3 or E5. *)
 
-fun access_node step (omit_outer_alias : bool) node0 = (
+fun access_node step (exclude_outer_alias : bool) node0 = (
     let
 	val (subj, kx, cx) = node0
 	val kp = (! kx)
@@ -993,7 +994,7 @@ fun access_node step (omit_outer_alias : bool) node0 = (
 		else if (class_is_enum kp) then ()
 		else raise error_attribute_access_to_simple_type
     in
-	if (not omit_outer_alias) then
+	if (not exclude_outer_alias) then
 	    (kp, components)
 	else
 	    (kp, (List.filter (not o component_is_outer_alias) components))
@@ -1024,7 +1025,7 @@ fun enumerate_in_node f path0 (node, acc) = (
 	case path0 of
 	    [] => f (subj, acc)
 	  | (id :: path1) => (
-	    case (find_component id components) of
+	    case (find_in_components id components) of
 		NONE => raise Match
 	      | SOME (slot as (Slot (id_, dim, nodes, dummy))) => (
 		let

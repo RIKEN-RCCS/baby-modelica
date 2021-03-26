@@ -173,7 +173,7 @@ fun make_reference kp (_ : bool) w0 = (
 		val cooker = assemble_package
 		val subjkp = (subject_of_class kp)
 	    in
-		case (find_name_initial_part cooker E3 (subjkp, kp) id) of
+		case (find_name_initial_part cooker kp id) of
 		    NONE => raise (error_variable_name_not_found id kp)
 		  | SOME (Naming (_, subj, _, _, (z, r, EL_Class dx, h))) => (
 		    let

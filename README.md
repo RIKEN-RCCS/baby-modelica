@@ -34,17 +34,21 @@ If someone might be unfamiliar with SML, see
 
 ----
 
-## Source code files and directories
+## Implementation notes
 
-See frontend/notes.pdf first, then start with frontend/bbm.sml.
-* [frontend/notes.pdf](frontend/notes.pdf): Modelica reference manual
-  and implementation notes
-* frontend/bbm.sml: a list of the source code files
+* [frontend/notes.pdf](frontend/notes.pdf) is implementation notes and
+is a kind of a "Modelica reference manual" to supplement the
+specification.
+
+## Source code directories
 
 The toplevel directories are as follows.
 * [frontend](frontend): the source code
 * [silly-models](silly-models): trivial code to check the specification
 * [code-examples](code-examples): code snippets from the specification
+
+See [frontend/bbm.sml](frontend/bbm.sml) first as it contains a list
+of the source code files.
 
 ----
 

@@ -7,7 +7,7 @@
 
 \title{\bf{}Modelica: A Reference Manual\\
 \normalsize{}-- Or, Baby-Modelica Implementation Notes --}
-\author{Copyright (C) 2018-2021 RIKEN R-CCS}
+\author{Copyright (C) 2018-2021 Elica Modd}
 \date{Baby-Modelica 3.4.0, 2021-03-18}
 
 \usepackage[hidelinks]{hyperref}
@@ -191,8 +191,12 @@ constant in a package via a variable reference as $x.P.c$.  But, it is
 illegal to refer to a class via a variable reference in a declaration
 as (illegal) $x.C~v$.\end{QRULE}
 
-\begin{QRULE} A global variable reference cannot have a preceding dot.
-Note that $\mathit{time}$ is the only variable.\end{QRULE}
+\begin{QFACT} Global variables are visible everywhere.
+$\mathit{time}$ and $\mathit{end}$ are the only global
+variables.\end{QFACT}
+%%%%
+They are variables, and thus, not defined in the
+unnamed-enclosing-class.
 %%%%
 \begin{quote}
 \begin{lstlisting}[aboveskip=-\baselineskip]
@@ -5250,17 +5254,21 @@ If someone might be unfamiliar with SML, see
 
 ----
 
-## Source code files and directories
+## Implementation notes
 
-See frontend/notes.pdf first, then start with frontend/bbm.sml.
-* [frontend/notes.pdf](frontend/notes.pdf): Modelica reference manual
-  and implementation notes
-* frontend/bbm.sml: a list of the source code files
+* [frontend/notes.pdf](frontend/notes.pdf) is implementation notes and
+is a kind of a "Modelica reference manual" to supplement the
+specification.
+
+## Source code directories
 
 The toplevel directories are as follows.
 * [frontend](frontend): the source code
 * [silly-models](silly-models): trivial code to check the specification
 * [code-examples](code-examples): code snippets from the specification
+
+See [frontend/bbm.sml](frontend/bbm.sml) first as it contains a list
+of the source code files.
 
 ----
 

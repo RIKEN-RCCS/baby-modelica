@@ -269,17 +269,7 @@ fun subst_element_along f (k0, a0) = (
 fun subst_body_element f (k : definition_body_t) = (
     (replace_body_elements k (gather_in_body_elements f k)))
 
-(* Finds a class element for which (f e) returns SOME. *)
-
-fun find_in_elements f (k : definition_body_t) = (
-    (list_find_some f (body_elements k)))
-
-(* Finds all elements in a class for which (f e) returns SOME. *)
-
-fun find_all_in_elements f (b : definition_body_t) = (
-    (gather_some f (body_elements b)))
-
-fun app_in_element f (d as Defclass ((v, g), k)) = (
+fun app_in_element__ f (d as Defclass ((v, g), k)) = (
     (app f (class_elements d)))
 
 (* Tests if modifiers is empty or a single value. *)

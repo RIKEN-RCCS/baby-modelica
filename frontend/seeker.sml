@@ -34,6 +34,7 @@ val assert_stored_in_instance_tree = classtree.assert_stored_in_instance_tree
 val lookup_class_in_root = loader.lookup_class_in_root
 val fetch_enclosing_class = loader.fetch_enclosing_class
 
+val find_element = finder.find_element
 val list_elements = finder.list_elements
 
 datatype seek_mode_t = Seek_Export | Seek_Base
@@ -45,6 +46,16 @@ fun tr_seek (s : string) = if true then (print (s ^"\n")) else ()
 fun tr_seek_vvv (s : string) = if false then (print (s ^"\n")) else ()
 
 (* ================================================================ *)
+
+(* Finds a class element for which (f e) returns SOME. *)
+
+fun find_in_elements f (k : definition_body_t) = (
+    (list_find_some f (body_elements k)))
+
+(* Finds all elements in a class for which (f e) returns SOME. *)
+
+fun find_all_in_elements f (k : definition_body_t) = (
+    (gather_some f (body_elements k)))
 
 (* Lists classes of direct importing candidates.  Note that a search
    for importing is not transitive.  It returns a pair (class,id),
@@ -179,9 +190,10 @@ fun lookup_in_main_and_bases (cooker : cooker_t) ctx kp id = (
 	      | NONE => raise (error_name_not_found id kp)
 	else if (step_is_at_least E3 kp) then
 	    let
-		val bindings = (list_elements cooker true kp)
+		(*val bindings = (list_elements cooker true kp)*)
 	    in
-		case (find_in_bindings id bindings) of
+		(*case (find_in_bindings id bindings) of*)
+		case (find_element cooker true kp id) of
 		    NONE => raise (error_name_not_found id kp)
 		  | SOME (Naming (_, subj, _, _, (z, r, EL_Class dx, h))) => (
 		    let

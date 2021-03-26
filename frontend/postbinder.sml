@@ -342,7 +342,7 @@ and bind_in_statement kp binder s0 = (
 
 (* ================================================================ *)
 
-fun secure_references_in_class kp = (
+fun secure_reference_in_class kp = (
     let
 	val ctx = kp
 	val buildphase = false
@@ -356,17 +356,16 @@ fun secure_references_in_class kp = (
 	()
     end)
 
-(* Makes a record accessible as a package if it is instantiated.  It
-   is because a record itself may be accessed (not as an instance) in
-   such as instantiation. *)
+(* Makes a record class accessible when it is instantiated, because a
+   record definition is needed (unlike other instances). *)
 
 fun secure_record_class kp = (
     if ((kind_is_record kp) andalso (class_is_instance kp)) then
 	let
 	    val record = (class_name_of_instance kp)
-	    val var = (subject_as_reference record)
+	    val w = (subject_as_reference record)
 	    val ctx = kp
-	    val _ = (secure_reference ctx false var)
+	    val _ = (secure_reference ctx false w)
 	in
 	    ()
 	end
@@ -400,7 +399,7 @@ fun bind_in_instance (scanning : bool) k0 = (
 	    val k1 = (bind_in_class ctx binder k0)
 	    val _ = if ((cook_step k1) = E5) then () else raise Match
 	    val _ = (store_to_instance_tree subj k1)
-	    val _ = (secure_references_in_class k1)
+	    val _ = (secure_reference_in_class k1)
 	    val _ = (secure_record_class k1)
 	in
 	    (*

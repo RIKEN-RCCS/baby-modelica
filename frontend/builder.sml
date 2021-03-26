@@ -44,8 +44,9 @@ val component_is_expandable = classtree.component_is_expandable
 val dereference_outer_alias = classtree.dereference_outer_alias
 val instantiate_outer_alias = classtree.instantiate_outer_alias
 val access_node = classtree.access_node
-val find_component = classtree.find_component
+val find_in_components = classtree.find_in_components
 
+val find_element = finder.find_element
 val find_name_initial_part = finder.find_name_initial_part
 val list_elements = finder.list_elements
 
@@ -270,9 +271,9 @@ and secure_reference_in_expression ctx buildphase_ w0 = (
 	w1
     end)
 
-(* Makes each package/instance in a composite variable reference be
-   accessible in the class_tree/instance_tree.  It secures all array
-   elements and thus ignores array subscripts (and it can be done
+(* Makes each package/instance in a composite name be accessible in
+   the class_tree/instance_tree.  It makes all array elements
+   accessible and thus ignores array subscripts (and it can be done
    without folding constants).  It does not secure inside an
    expandable connector (because it can contain undeclared elements).
    At each step, it descends a part of a reference in the tree.  The
@@ -283,6 +284,8 @@ and secure_reference ctx buildphase_ w0 = (
     case w0 of
 	Vref (_, []) => raise Match
       | Vref (NONE, _) => raise Match
+      | Vref (SOME VAR, [(Id "time", [])]) => (*AHOAHOAHO*) w0
+      | Vref (SOME VAR, [(Id "end", [])]) => (*AHOAHOAHO*) w0
       | Vref (SOME ns, rr0) => (
 	let
 	    val root = if (ns = PKG) then class_tree else instance_tree
@@ -304,19 +307,14 @@ and secure_reference_loop ctx (retrying : bool) path0 node0 = (
 	    val kp = (assemble_package_if_package (subj, k0))
 	    val _ = if (kp = (! kx)) then () else raise Match
 	    val (_, components) = (access_node E3 false node0)
-
-	    val _ = if (step_is_at_least E3 kp) then () else raise Match
-	    val _ = if (not (class_is_simple_type kp)) then ()
-		    else if (class_is_enum kp) then ()
-		    else raise error_attribute_access_to_simple_type
 	in
-	    case (find_component id components) of
+	    case (find_in_components id components) of
 		NONE => (
 		if (retrying) then
 		    raise error_component_not_found
 		else
 		    let
-			val (dim, array) = (instantiate_class_in_class kp id)
+			val (dim, array) = (instantiate_element_by_name kp id)
 		    in
 			(secure_reference_loop ctx true path0 node0)
 		    end)
@@ -366,13 +364,17 @@ and check_reference_subscripts__ (Slot (v, dim, nodes, dummy)) ss = (
 
 (* Instantiates a named entry (package/instance) in a class. *)
 
-and instantiate_class_in_class kp id = (
+and instantiate_element_by_name kp id = (
     let
 	val cooker = assemble_package
 	val subj = (subject_of_class kp)
 	(*val package = (class_is_package kp)*)
+	(*fun faulting_cooker _ (_, _) = raise Match*)
+	(*val bindings = (list_elements faulting_cooker true kp)*)
     in
-	case (find_name_initial_part cooker E3 (subj, kp) id) of
+	(*case (find_in_bindings id bindings) of*)
+	(*case (find_name_initial_part cooker kp id) of*)
+	case (find_element cooker true kp id) of
 	    NONE => raise (error_name_not_found id kp)
 	  | SOME binding => (
 	    let

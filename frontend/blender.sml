@@ -42,6 +42,7 @@ val register_enumerators_for_enumeration = simpletype.register_enumerators_for_e
 val fetch_displaced_class = loader.fetch_displaced_class
 
 val find_class = finder.find_class
+val find_element = finder.find_element
 val list_elements = finder.list_elements
 
 val find_import_class = seeker.find_import_class
@@ -72,12 +73,11 @@ fun make_base_list subj bases = (
     (map (fn (tag, k) => (subj, tag)) bases))
 
 (* Fetches a definition from a defining class.  It shortcuts a search,
-   when fetching a lexically visible class.  It can shortcut when a
-   class is in the lexical hierarchy because it cannot be modified.
-   Actually, this shortcutting is sometimes necessary to avoid a
-   potential cycle. *)
+   when fetching a lexically visible class.  It can shortcut because
+   such a class cannot be modified.  Actually, this shortcutting is
+   sometimes necessary to avoid a potential cycle. *)
 
-fun fetch_element_class cooker (defining, id) : definition_body_t = (
+fun fetch_element_class cooker_ (defining, id) : definition_body_t = (
     let
 	val subj = (compose_subject defining id [])
 	val tagopt = (subject_to_tag subj)
@@ -95,9 +95,11 @@ fun fetch_element_class cooker (defining, id) : definition_body_t = (
 		val kp = surely (fetch_from_instance_tree defining)
 		val _ = if (step_is_at_least E3 kp) then () else raise Match
 		(*val (id, pkg) = (tag_prefix tag)*)
-		val bindings = (list_elements cooker false kp)
+		fun faulting_cooker _ (_, _) = raise Match
+		(*val bindings = (list_elements faulting_cooker false kp)*)
 	    in
-		case (find_in_bindings id bindings) of
+		(*case (find_in_bindings id bindings) of*)
+		case (find_element faulting_cooker false kp id) of
 		    NONE => raise (error_name_not_found id kp)
 		  | SOME (Naming (_, _, _, _, (z, r, EL_Class dx, h))) => (
 		    let
@@ -624,7 +626,7 @@ fun assemble_package wantedstep (subj, k0) = (
 
 	val k2 = (getOpt ((fetch_from_instance_tree subj), k0))
     in
-	if (class_is_root_body k2) then
+	if (class_is_root k2) then
 	    k2
 	else if (body_is_unmodifiable k2) then
 	    (ensure_in_instance_tree (subj, k2))
@@ -718,7 +720,7 @@ and collect_refining main pkg (subj, k0) (name1, (t1, p1, q1), mm1, cc1, aa1) si
 				 (if main then ":main" else ":base") ^" ("^
 				 (subject_body_to_string (subj, k0)) ^")")
 
-	    val _ = if (not (class_is_root_body k0)) then () else raise Match
+	    val _ = if (not (class_is_root k0)) then () else raise Match
 	    val _ = if (not (body_is_unmodifiable k0)) then () else raise Match
 
 	    val ctx = k0
