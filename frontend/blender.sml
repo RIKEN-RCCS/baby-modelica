@@ -33,6 +33,7 @@ val ensure_in_instance_tree = classtree.ensure_in_instance_tree
 val assert_stored_in_instance_tree = classtree.assert_stored_in_instance_tree
 val assert_package_constraints = classtree.assert_package_constraints
 val assert_enclosings_are_cooked = classtree.assert_enclosings_are_cooked
+val assemble_package_if_fresh = classtree.assemble_package_if_fresh
 
 val simplify_simple_type = simpletype.simplify_simple_type
 val insert_attributes_to_enumeration = simpletype.insert_attributes_to_enumeration
@@ -875,21 +876,19 @@ and cook_class_body main pkg (subj, k0) siblings = (
       | Def_In_File => raise Match
       | Def_Mock_Array _ => raise Match)
 
-(* Transforms a class at the loaded-state (step=E0) be ready for
+(* Transforms a class at the loaded-state (step=E0) to be ready for
    finding class/variable names (step=E3).  It applies modifiers after
-   resolving the classes of importing and extending (it accepts a
-   class at step=E3 or higher).  The class is assigned a name as a
-   given subject.  The class is processed as a main/base specified by
-   main=true/false, and as a package/instance specified by pkg=PKG/VAR
-   (there are only small differences in processing).  Note that an
-   array dimension is not passed, because an array dimension is
-   processed at instantiation for instances, or arrays are illegal for
-   packages.  It reveals an intemediate state (step=E1,E2) of a
-   package so that a name resolution started by other classes can look
-   in this class.  A list siblings0 holds a chain of an
-   extends-relation to check a cycle in the base class hierarchy.  The
-   passed modifiers are scoped in the environment.  It calls
-   list_elements in the end, in order to build imported classes. *)
+   resolving the classes of importing and extending.  The class is
+   assigned a name as a given subject.  The class is processed as a
+   main/base specified by main=true/false, and as a package/instance
+   specified by pkg=PKG/VAR.  Note that an array dimension is not
+   passed, because an array dimension is processed at instantiation
+   for instances, or arrays are illegal for packages.  It reveals an
+   intemediate state (step=E1,E2) of a package so that a name
+   resolution started by other classes can look in this class.  A list
+   siblings0 holds a chain of an extends-relation to check a cycle in
+   the base class hierarchy.  The passed modifiers are scoped in the
+   environment.  *)
 
 and cook_class_with_modifiers main pkg (subj, k0) mm cc aa siblings0 = (
     let
@@ -930,10 +929,6 @@ and cook_class_with_modifiers main pkg (subj, k0) mm cc aa siblings0 = (
 	val k9 = (set_cook_step E3 k8)
 	val _ = (store_to_instance_tree_if packagemain subj k9)
 	val _ = (register_enumerators_for_enumeration k9)
-
-	(*AHOAHOAHO*)
-	(*val cooker = assemble_package*)
-	(*val _ = (list_elements cooker false k9)*)
 
 	val _ = tr_cook_vvv (";; cook_body:"^
 			     (if main then "main" else "base")
