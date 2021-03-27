@@ -191,12 +191,24 @@ constant in a package via a variable reference as $x.P.c$.  But, it is
 illegal to refer to a class via a variable reference in a declaration
 as (illegal) $x.C~v$.\end{QRULE}
 
-\begin{QFACT} Global variables are visible everywhere.
-$\mathit{time}$ and $\mathit{end}$ are the only global
-variables.\end{QFACT}
+\begin{QFACT} An enclosing class is considered as a package in the
+nesting of class definitions, and the scope of an enclosing class only
+includes the constants but variables are ignored.\end{QFACT}
 %%%%
-They are variables, and thus, not defined in the
-unnamed-enclosing-class.
+See Rule~\ref{model-nesting} for the binary roles of a class.
+
+\begin{QFACT} Array indexing is a part of a composite name.  Array
+indexing to general expressions is ungrammatical.\end{QFACT}
+%%%%
+For example, (illegal) $\{1,2,3\}[1]$ is not allowed.
+
+\subsubsection*{Predefined_variables}
+
+\begin{QRULE}\label{time-and-end} A variable $\mathit{time}$ is
+visible everywhere.  Variables $\mathit{end}$ are visible in array
+indexing.  These are the only predefined_variables.  $\mathit{time}$
+is a variable, and thus, not defined in the unnamed-enclosing-class
+(it is a package).\end{QRULE}
 %%%%
 \begin{quote}
 \begin{lstlisting}[aboveskip=-\baselineskip]
@@ -209,23 +221,14 @@ end M;
 \end{lstlisting}
 \end{quote}
 
-\begin{QFACT} An enclosing class is considered as a package in the
-nesting of class definitions, and the scope of an enclosing class only
-includes the constants but variables are ignored.\end{QFACT}
-%%%%
-See Rule~\ref{model-nesting} for the binary roles of a class.
-
-\begin{QFACT} Array indexing is a part of a composite name.  Array
-indexing to general expressions is ungrammatical.\end{QFACT}
-%%%%
-For example, (illegal) $\{1,2,3\}[1]$ is not allowed.
-
-\subsubsection*{Scopes}
+\subsubsection*{(?) Scopes}
 
 The scope is flat in most cases, spanning from the main (non-base)
-class to base classes where the class and variable names are distinct.
-But, class names and constants are visible via enclosing classes.  An
-enclosing class is defined to each (base) class.
+class to the base classes where the class and variable names are
+distinct.  However, class names and constants are visible via
+enclosing classes, and hiding some of the names in an enclosing class
+may happen.  An enclosing class is defined to each main and base
+class.
 
 %%%%%%%%%%%%%%%%
 
@@ -2180,7 +2183,7 @@ stream_variable (which may be an array).
 
 A type/record defining $\mathrm{equalityConstraint}\,(x,y)$ is called
 overdetermined_type/record.  The {Connections} class defines some
-predefined functions to reduce overdetermined constraints.
+predefined_functions to reduce overdetermined constraints.
 
 \subsubsection*{(?) Operator_record components}
 
@@ -2940,7 +2943,7 @@ constructor cannot be empty by the syntax definition, although an
 array can have zero in its dimension (it ensures the type an array
 constructor returns).
 
-\subsubsection*{Predefined functions on arrays}\label{sec:array-size}
+\subsubsection*{Predefined_functions on arrays}\label{sec:array-size}
 
 $\mathrm{ndims}\,(A)=0$ and $\mathrm{size}\,(A)=\{\}$ (an empty array)
 for a scalar $A$ (See \specref{10.3.1}\/).
@@ -3066,7 +3069,7 @@ operator record or an array of it.
 \begin{QFACT} Functions are not overloaded.  Functions are classes and
 having the same name is a duplication.\end{QFACT}
 
-Some predefined functions are overloaded.  They include simple_type
+Some predefined_functions are overloaded.  They include simple_type
 names of Integer, String, and $\mathit{enumeration}$ (see
 Fact~\ref{simple-type-conversions}).  They also include ones taking
 array arguments of varying dimensions, including ndims, size, and
@@ -3125,8 +3128,8 @@ in the operator_record $\tilde{A}$ with arrays stripped off from $A$.
 
 \begin{itemize}
 
-\item If $A$ is a simple_type or an array of it, apply a predefined
-operator.
+\item If $A$ is a simple_type or an array of it, apply a
+predefined_operator.
 
 \item Apply a function $f \in \tilde{A}.\oplus$, whose argument type
 is $A$.  If $f$ is not unique, it is illegal.
@@ -3142,7 +3145,7 @@ tried in the specified order.
 \begin{itemize}
 
 \item If $A$ and $B$ are simple_types or arrays of them, apply a
-predefined operator.
+predefined_operator.
 
 \item Apply a function $f \in \tilde{A}.\oplus$ or $f \in
 \tilde{B}.\oplus$, whose argument types are $A\times B$.  If $f$ is
@@ -3188,7 +3191,7 @@ default attributes...\end{qquote}
 
 %%%%%%%%%%%%%%%%
 
-\subsection{Predefined operators}\label{sec:predefined-operators}
+\subsection{Predefined_operators}\label{sec:predefined-operators}
 
 Operators are overloaded on the arguments of a simple_type or an array
 of it.  The set of operators is different from the one for operator
@@ -3329,7 +3332,7 @@ relational operator).
 
 \paragraph{Remark}
 
-The predefined operators are defined for the simple_types, although
+The predefined_operators are defined for the simple_types, although
 \specref{14.3}\/ and \specref{14.4}\/ refer to the predefined_types.
 The predefined_types excluding the simple_types cannot have operators,
 because they are not operator records.
@@ -3425,7 +3428,7 @@ allows calling impure functions in any pure context,\end{qquote}
 $\mathrm{pure}$ accepts only one argument, although it can accept a
 list of arguments by the syntax definition.
 
-\subsubsection*{Predefined operators}
+\subsubsection*{Predefined_operators}
 
 See Section~\ref{sec:predefined-operators}.
 
@@ -3750,9 +3753,9 @@ unbounded
 
 %%%%%%%%%%%%%%%%
 
-\subsection{A predefined variable}
+\subsection{Predefined_variables}
 
-\subsubsection*{Time}
+\subsubsection*{time}
 
 (\specref{3.6.7}\/)
 
@@ -3760,7 +3763,16 @@ unbounded
 time
 \end{quote}
 %%%%
-($\mathit{time}$ looks like being defined in the model's root).
+
+$\mathit{time}$ has a special scoping rule.
+
+\subsubsection*{end}
+
+\begin{quote}\widespacing
+end
+\end{quote}
+
+Variables $\mathit{end}$ have a special scoping rule.
 
 %%%%%%%%%%%%%%%%
 
@@ -3914,10 +3926,10 @@ values.
 
 %%%%%%%%%%%%%%%%
 
-\subsection{Predefined functions}
+\subsection{Predefined_functions}
 (\specref{3.7}\/)
 
-Predefined functions are defined in the unnamed root, and it can be
+Predefined_functions are defined in the unnamed root, and it can be
 accessed with a preceding dot $.\mathit{abs}\,(v)$ for
 $\mathit{abs}\,(v)$.  Array constructor admits an iterator syntax
 ($\mathrm{array}$).  Reductions admit a reduction syntax in addition
@@ -4790,8 +4802,8 @@ BYACC\@.
 
 The keywords {\bf{}end} and {\bf{}initial} appearing in the
 {\it{}primary\/} expression of the syntax rules cause conflicts in
-BYACC\@.  {\bf{}end} may appear as a predefined variable as well as a
-keyword.  {\bf{}initial} may also appear as a predefined function as
+BYACC\@.  {\bf{}end} may appear as a predefined_variable as well as a
+keyword.  {\bf{}initial} may also appear as a predefined_function as
 well as a keyword.  For {\bf{}end}, see \specref{10.5.2}.  For
 {\bf{}initial}, see \specref{8.6}.
 
@@ -4986,6 +4998,12 @@ exceptions on overflows in folding constants.
 The_implementation does not distinguish constants and parameters.
 Both are treated as translation-time constants.  See
 Fact~\ref{parameters}.
+
+\subsubsection*{Variables {time} and {end}}
+
+The_implementation treats {time} and {end} as if they were defined in
+the unnamed-enclosing-class, because a look up of a name ends there.
+It violates the Rule~\ref{time-and-end}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
