@@ -31,7 +31,7 @@ val ensure_in_instance_tree = classtree.ensure_in_instance_tree
 val assemble_package_if_fresh = classtree.assemble_package_if_fresh
 val assert_stored_in_instance_tree = classtree.assert_stored_in_instance_tree
 
-val lookup_class_in_root = loader.lookup_class_in_root
+val lookup_class_in_package_root = loader.lookup_class_in_package_root
 val fetch_enclosing_class = loader.fetch_enclosing_class
 
 val find_element = finder.find_element
@@ -163,8 +163,8 @@ fun lookup_in_declared (cooker : cooker_t) ctx fullaccess kp id = (
 	val _ = if (class_is_body kp) then () else raise Match
 	val enclosing = (subject_of_class kp)
     in
-	if (body_is_root kp) then
-	    case (lookup_class_in_root id) of
+	if (body_is_package_root kp) then
+	    case (lookup_class_in_package_root id) of
 		NONE => NONE
 	      | SOME (subj, kx) => SOME (subj, kx)
 	else
@@ -184,7 +184,7 @@ fun lookup_in_main_and_bases (cooker : cooker_t) ctx kp id = (
 	val enclosing = (subject_of_class kp)
 	val (openscope, fullaccess) = (false, false)
     in
-	if (body_is_root kp) then
+	if (body_is_package_root kp) then
 	    case (lookup_in_declared cooker ctx fullaccess kp id) of
 		SOME (subj, kx) => SOME (enclosing, (subj, kx))
 	      | NONE => raise (error_name_not_found id kp)
@@ -320,7 +320,7 @@ fun lookup_for_bases (cooker : cooker_t) ctx kp id = (
 	case (lookup_in_declared cooker ctx fullaccess kp id) of
 	    SOME (subjx, kx) => SOME (enclosing, (subjx, kx))
 	  | NONE => (
-	    if (body_is_root kp) then
+	    if (body_is_package_root kp) then
 		raise (error_name_not_found id kp)
 	    else if (not openscope) then
 		raise (error_name_not_found id kp)

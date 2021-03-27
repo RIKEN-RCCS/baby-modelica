@@ -334,13 +334,14 @@ and type_marker_t = ENUM | MAIN | BASE | SIMP
    Def_Replaced is introduced by a redeclaration, and holds an
    original definition for information.  The first slot is the new
    definition.  Def_Primitive represents a value of a simple-type and
-   holds its value.  Def_Displaced is a tag left in place of a
-   definition body.  Its subject slot indicates an enclosing class, to
-   refer to an enclosing class that is modified.  Def_In_File
-   indicates that a class is yet to be loaded from a file.  It is only
-   placed in the loaded_classes table.  Such entries are created for
-   file/directory entries when a "package.mo" is loaded.  It is a pair
-   of an outer reference and a matching inner reference.
+   holds its value.  Def_Displaced is a tag left in place of a class
+   definition, where all class definitions are moved out of a class.
+   The subject slot indicates an enclosing class.  It is necessary
+   because an enclosing class changes when it is modified.
+   Def_In_File indicates that a class is yet to be loaded from a file.
+   It is only placed in the loaded_classes table.  Such entries are
+   created for file/directory entries when a "package.mo" is loaded.
+   It is a pair of an outer reference and a matching inner reference.
    Def_Mock_Array is temporarily used to represent an array of
    instances, which is created on accessing the instance_tree. *)
 

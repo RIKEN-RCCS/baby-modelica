@@ -106,7 +106,7 @@ fun discern_connector_component subj w = (
 (* Tests a global reference, which starts with "" and is considered
    bound. *)
 
-fun reference_is_global x0 = (
+fun reference_is_in_package_root x0 = (
     case x0 of
 	Vref (_, []) => raise Match
       | Vref (NONE, (Id "", []) :: _) => true
@@ -166,7 +166,7 @@ fun make_reference kp (_ : bool) w0 = (
     case w0 of
 	Vref (_, []) => raise Match
       | Vref (NONE, rr as (id, ss_) :: rr1) => (
-	if (reference_is_global w0) then
+	if (reference_is_in_package_root w0) then
 	    Vref (SOME PKG, (drop_dot_of_package_root PKG rr))
 	else
 	    let

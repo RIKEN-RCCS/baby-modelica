@@ -40,7 +40,7 @@ val assert_enclosings_are_cooked = classtree.assert_enclosings_are_cooked
 val main_class = classtree.main_class
 val assemble_package_if_fresh = classtree.assemble_package_if_fresh
 
-val lookup_class_in_root = loader.lookup_class_in_root
+val lookup_class_in_package_root = loader.lookup_class_in_package_root
 val fetch_enclosing_class = loader.fetch_enclosing_class
 
 (* Prints a trace message. *)
@@ -67,6 +67,11 @@ fun find_predefined_variable v = (
     case (List.find (fn d => (declaration_id d = v)) predefined_variables) of
 	NONE => NONE
       | SOME d => SOME (EL_State d))
+
+fun import_name_to_string tag idxid = (
+    case idxid of
+	NONE => (tag_to_string tag)
+      | SOME (id, _) => ((tag_to_string tag) ^"."^ (id_to_string id)))
 
 (* ================================================================ *)
 
@@ -103,7 +108,7 @@ fun make_dummy_inner (cv0 : element_sum_t) subj = (
    list of names is only usable.  It caches the list for a class
    step=E3 or greater.  Note that the entries of non-constant
    variables and outer classes are skipped when it is processed as a
-   package. *)
+   package.  It is an error to call this with the package-root. *)
 
 fun list_elements (cooker : cooker_t) exclude_imported kp = (
     let
@@ -213,7 +218,7 @@ and gather_names_in_class (cooker : cooker_t) kp : naming_t list = (
 		end)
 	      | Redefine_Class _ => []
 	      | Redeclare_State _ => []
-	      | Element_Enumerators _ => raise Match
+	      | Element_Enumerators _ => []
 	      | Element_Equations _ => []
 	      | Element_Algorithms _ => []
 	      | Element_External _ => []
@@ -221,7 +226,7 @@ and gather_names_in_class (cooker : cooker_t) kp : naming_t list = (
 	      | Element_Import (z, tag, idxid, a, w) => (
 		let
 		    val _ = tr_find (";; gather_names_in_class import ("^
-				     (tag_to_string tag) ^")")
+				     (import_name_to_string tag idxid) ^")")
 
 		    val subj = (tag_to_subject tag)
 		    val x0 = surely (fetch_from_instance_tree subj)
@@ -359,31 +364,30 @@ fun list_component_names kp = (
 fun find_element (cooker : cooker_t) exclude_imported kp id = (
     let
 	val _ = if (class_is_body kp) then () else raise Match
+	val _ = if (step_is_at_least E3 kp) then () else raise Match
     in
-	if (body_is_root kp) then
+	if (body_is_package_root kp) then
 	    case (find_predefined_variable id) of
 		SOME dd => (
 		let
-		    val e = (global_element dd)
+		    val e = (usual_element dd)
 		    val subj1 = (predefined_reference id)
 		in
 		    SOME (Naming (id, subj1, NONE, false, e))
 		end)
 	      | NONE => (
-		case (lookup_class_in_root id) of
+		case (lookup_class_in_package_root id) of
 		    NONE => NONE
 		  | SOME (subjx, kx) => (
 		    let
 			val tag = surely (subject_to_tag subjx)
 			val dd = (EL_Class (tag_as_displaced_class tag))
-			val e = (global_element dd)
-				    (*val subjx = (class_reference_in_root v)*)
+			val e = (usual_element dd)
 		    in
 			SOME (Naming (id, subjx, NONE, false, e))
 		    end))
 	else
 	    let
-		val _ = if (step_is_at_least E3 kp) then () else raise Match
 		(*AHOAHOAHO*) fun faulting_cooker _ (_, _) = raise Match
 		val bindings = (list_elements cooker exclude_imported kp)
 	    in
@@ -407,7 +411,7 @@ fun find_name_initial_part (cooker : cooker_t) kp (id as Id s) = (
 	case (find_element cooker false kp id) of
 	    SOME binding => SOME binding
 	  | NONE => (
-	    if (body_is_root kp) then
+	    if (body_is_package_root kp) then
 		NONE
 	    else
 		let
@@ -434,15 +438,11 @@ fun find_class_loop (cooker : cooker_t) kp enclosing0_ (subjk0, k0) nn0 = (
 	[] => SOME k0
       | (s :: tt) => (
 	let
-	    (*val _ = tr_find (";; AHO find_class_loop 0")*)
-	    (*val Defclass ((_, _), x0) = d0*)
 	    val k2 = (assemble_package_if_fresh cooker E3 (subjk0, k0))
 	    val _ = (assert_match_subject subjk0 k2)
 	    val id = (Id s)
 	    (*AHOAHOAHO*) fun faulting_cooker _ (_, _) = raise Match
-	    (*val bindings = (list_elements cooker true k2)*)
 	in
-	    (*case (find_in_bindings id bindings) of*)
 	    case (find_element cooker true k2 id) of
 		NONE => raise (error_class_name_not_found (Name nn0) kp)
 	      | SOME (name as Naming (_, _, _, _, (z, r, EL_Class dx, h))) => (

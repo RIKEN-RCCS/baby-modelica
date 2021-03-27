@@ -284,16 +284,17 @@ and secure_reference ctx buildphase_ w0 = (
     case w0 of
 	Vref (_, []) => raise Match
       | Vref (NONE, _) => raise Match
-      | Vref (SOME VAR, [(Id "time", [])]) => (*AHOAHOAHO*) w0
-      | Vref (SOME VAR, [(Id "end", [])]) => (*AHOAHOAHO*) w0
       | Vref (SOME ns, rr0) => (
-	let
-	    val root = if (ns = PKG) then class_tree else instance_tree
-	    val path = (pseudo_reference_path rr0)
-	    val nodes = (secure_reference_loop ctx false path root)
-	in
+	if (reference_is_predefined_variable w0) then
 	    w0
-	end)
+	else
+	    let
+		val root = if (ns = PKG) then class_tree else instance_tree
+		val path = (pseudo_reference_path rr0)
+		val nodes = (secure_reference_loop ctx false path root)
+	    in
+		w0
+	    end)
       | Iref _ => w0
       | _ => w0)
 

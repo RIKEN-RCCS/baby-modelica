@@ -287,10 +287,6 @@ fun modifier_is_value nn = (
 	  | Mod_Value _ => true)
       | _ => false)
 
-fun predefined_reference (Id v) = Subj (VAR, [(Id v, [])])
-
-fun global_element dd = (Public, no_element_prefixes, dd, NONE)
-
 (* ================================================================ *)
 
 (*AHO*)

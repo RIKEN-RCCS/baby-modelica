@@ -168,6 +168,19 @@ val predefined_function_names = [
     "ticksInState",
     "timeInState"]
 
+fun reference_is_predefined_variable w = (
+    case w of
+	Vref (_, []) => raise Match
+      | Vref (NONE, _) => raise Match
+      | Vref (SOME VAR, [(Id "time", [])]) => true
+      | Vref (SOME VAR, [(Id "end", [])]) => true
+      | Vref (SOME ns, rr0) => false
+      | _ => raise Match)
+
+fun predefined_reference (Id v) = Subj (VAR, [(Id v, [])])
+
+fun usual_element dd = (Public, no_element_prefixes, dd, NONE)
+
 (* ================================================================ *)
 
 val error_non_integer_value = Match
@@ -635,7 +648,7 @@ and modifier_list_to_string mm = (
 fun subscript_list_to_string ss = (
     (String.concat (map (fn _ => "[]") ss)))
 
-fun body_is_root k = (
+fun body_is_package_root k = (
     case k of
 	Def_Body (mk, j, cs, (tag, n, x), cc, ee, aa, ww) => (
 	(tag = the_root_tag))
@@ -653,7 +666,7 @@ fun body_is_root k = (
 
 fun class_is_root k = (
     case k of
-	Def_Body _ => (body_is_root k)
+	Def_Body _ => (body_is_package_root k)
       | Def_Der _ => false
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
@@ -895,10 +908,10 @@ fun assign_enclosing k enclosing = (
       | Def_Refine _ => k
       | Def_Extending _ => k
       | Def_Replaced _ => k
-      | Def_Displaced (tag, enc) => (
+      | Def_Displaced (tag, enc_) => (
 	let
 	    val _ = if (enclosing <> bad_subject) then () else raise Match
-	    val _ = if (enc = bad_subject) then () else raise Match
+	    val _ = if (enc_ = bad_subject) then () else raise Match
 	in
 	    Def_Displaced (tag, enclosing)
 	end)

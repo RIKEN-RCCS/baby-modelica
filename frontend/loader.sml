@@ -14,7 +14,7 @@ sig
 
     val load_class_by_name : class_tag_t -> class_definition_t option
     val load_file : string -> class_definition_t list
-    val lookup_class_in_root :
+    val lookup_class_in_package_root :
 	id_t -> (subject_t * definition_body_t) option
     val fetch_enclosing_class : definition_body_t -> definition_body_t
     val fetch_displaced_class :
@@ -511,9 +511,9 @@ fun fetch_or_load_class_in_root (tag : class_tag_t) : class_definition_t option 
 	    SOME k => SOME k
 	  | NONE => NONE))
 
-fun lookup_class_in_root (Id v) = (
+fun lookup_class_in_package_root (Id v) = (
     let
-	val _ = tr_load_vvv (";; - lookup_class_in_root ("^ v ^")")
+	val _ = tr_load_vvv (";; - lookup_class_in_package_root ("^ v ^")")
 	val tag = (Ctag [v])
     in
 	case (fetch_or_load_class_in_root tag) of
@@ -571,16 +571,10 @@ fun fetch_displaced_class wantedstep (k : definition_body_t) = (
       | Def_Refine _ => k
       | Def_Extending _ => k
       | Def_Replaced _ => k
-      | Def_Displaced (tag, enc) => (
+      | Def_Displaced (tag, enclosing) => (
 	let
-	    (*AHO*)
-	    val _ = if (enc <> bad_subject) then () else raise Match
+	    val _ = if (enclosing <> bad_subject) then () else raise Match
 	    val k0 = (fetch_loaded_class tag)
-	    val (v, pkg) = (tag_prefix tag)
-	    val enclosing = if (enc <> bad_subject) then
-				enc
-			    else
-				(tag_to_subject pkg)
 	    val k1 = (assign_enclosing k0 enclosing)
 	in
 	    k1

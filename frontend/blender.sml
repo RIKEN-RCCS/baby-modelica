@@ -876,19 +876,20 @@ and cook_class_body main pkg (subj, k0) siblings = (
       | Def_Mock_Array _ => raise Match)
 
 (* Transforms a class at the loaded-state (step=E0) be ready for
-   finding class/variable names (step=E3), by applying modifiers after
+   finding class/variable names (step=E3).  It applies modifiers after
    resolving the classes of importing and extending (it accepts a
-   class at step=E3 or higher).  The class is given a name by a
-   subject.  A class is processed as a main/base specified by
+   class at step=E3 or higher).  The class is assigned a name as a
+   given subject.  The class is processed as a main/base specified by
    main=true/false, and as a package/instance specified by pkg=PKG/VAR
    (there are only small differences in processing).  Note that an
-   array dimension is empty, because it is processed at instantiation
-   for instances, or arrays are illegal for packages.  (*AHO*)
-   (Subscripts will be removed from here).  It reveals an intemediate
-   state (step=E1,E2) of a package so that name resolution started by
-   other classes can look in this class.  A list siblings0 holds a
-   chain of an extends-relation to check a cycle in the base class
-   hierarchy.  The passed modifiers are scoped in the environment. *)
+   array dimension is not passed, because an array dimension is
+   processed at instantiation for instances, or arrays are illegal for
+   packages.  It reveals an intemediate state (step=E1,E2) of a
+   package so that a name resolution started by other classes can look
+   in this class.  A list siblings0 holds a chain of an
+   extends-relation to check a cycle in the base class hierarchy.  The
+   passed modifiers are scoped in the environment.  It calls
+   list_elements in the end, in order to build imported classes. *)
 
 and cook_class_with_modifiers main pkg (subj, k0) mm cc aa siblings0 = (
     let
@@ -930,11 +931,9 @@ and cook_class_with_modifiers main pkg (subj, k0) mm cc aa siblings0 = (
 	val _ = (store_to_instance_tree_if packagemain subj k9)
 	val _ = (register_enumerators_for_enumeration k9)
 
-	(*AHOAHO*)
-	(*
-	val _ = if (not (kind_is_record k0)) then ()
-		else raise Match
-	*)
+	(*AHOAHOAHO*)
+	(*val cooker = assemble_package*)
+	(*val _ = (list_elements cooker false k9)*)
 
 	val _ = tr_cook_vvv (";; cook_body:"^
 			     (if main then "main" else "base")
@@ -1001,7 +1000,7 @@ and cook_imports (kp : definition_body_t) = (
 	val _ = if (class_is_body kp) then () else raise Match
 	val _ = if ((cook_step kp) = E1) then () else raise Match
     in
-	if (body_is_root kp) then
+	if (body_is_package_root kp) then
 	    kp
 	else if (class_is_enum kp) then
 	    kp
@@ -1067,7 +1066,7 @@ and cook_base pkg kp siblings (e, acc) = (
 and gather_bases main pkg kp siblings = (
     let
 	val _ = if (class_is_body kp) then () else raise Match
-	val _ = if (not (body_is_root kp)) then () else raise Match
+	val _ = if (not (body_is_package_root kp)) then () else raise Match
 	val _ = if (step_is_less E3 kp) then () else raise Match
 
 	val cooker = assemble_package
