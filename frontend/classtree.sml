@@ -178,7 +178,7 @@ fun store_to_loaded_classes overwrite (d as Defclass ((v, pkg), k)) = (
 
 fun fetch_from_loaded_classes (tag : class_tag_t) = (
     if (tag_is_root tag) then
-	SOME the_root_class_definition
+	SOME the_package_root_definition
     else
 	let
 	    val s = (tag_to_string tag)
@@ -213,7 +213,7 @@ type component_slot_t = common.component_slot_t
    instance_tree but for a separate root. *)
 
 val class_tree : instance_node_t =
-      (the_root_subject, ref the_root_class, ref [])
+      (the_package_root_subject, ref the_package_root, ref [])
 
 (* The instance_tree is rooted by the model, and stores the instances
    and their packages.  The instance_tree only stores instances at
@@ -579,7 +579,7 @@ fun unwrap_array_of_instances k = (
 fun clear_instance_tree () = (
     let
 	val (_, kx0, cx0) = class_tree
-	val _ = kx0 := the_root_class
+	val _ = kx0 := the_package_root
 	val _ = cx0 := []
 	val (_, kx1, cx1) = instance_tree
 	val _ = kx1 := Def_In_File
@@ -949,7 +949,7 @@ fun assert_enclosings_are_cooked k0 = (
 	val tag = (tag_of_body k0)
 	val (_, pkg) = (tag_prefix tag)
     in
-	if (pkg = the_root_tag) then
+	if (pkg = the_package_root_tag) then
 	    ()
 	else
 	    let

@@ -40,27 +40,29 @@ withtype instance_node_t
 
 val the_model_subject = Subj (VAR, [])
 
-(* The package-root is the unnamed-enclosing-class, where the_root_tag
-   and the_root_subject are synonymous. *)
+(* The package-root is the unnamed-enclosing-class, where
+   the_package_root_tag and the_package_root_subject are
+   synonymous. *)
 
-val the_root_subject = Subj (PKG, [])
-val the_root_tag = Ctag []
-val root_class_print_name = "(*root*)"
+val the_package_root_subject = Subj (PKG, [])
+val the_package_root_tag = Ctag []
+val the_package_root_print_name = "(*root*)"
 
-val the_root_class = Def_Body ((E5, PKG, MAIN),
-			       the_root_subject,
-			       (Package, no_class_prefixes,
-				no_component_prefixes),
-			       (the_root_tag, the_root_subject,
-				the_root_subject),
-			       NIL,
-			       [], Annotation [], Comment [])
+val the_package_root = Def_Body ((E5, PKG, MAIN),
+				 the_package_root_subject,
+				 (Package, no_class_prefixes,
+				  no_component_prefixes),
+				 (the_package_root_tag,
+				  the_package_root_subject,
+				  the_package_root_subject),
+				 NIL,
+				 [], Annotation [], Comment [])
 
-val the_root_class_definition =
-      Defclass ((Id root_class_print_name, bad_tag), the_root_class)
+val the_package_root_definition =
+      Defclass ((Id the_package_root_print_name, bad_tag), the_package_root)
 
 fun void_predefined_body x = (
-    ((Id x, the_root_tag), Def_Displaced (bad_tag, bad_subject)))
+    ((Id x, the_package_root_tag), Def_Displaced (bad_tag, bad_subject)))
 
 (* predefined_types are classes in "predefined.mo".  It needs to keep
    correspondenece to the file.  See (4.8 Predefined Types and
@@ -78,9 +80,11 @@ val predefined_types = [
     Defclass (void_predefined_body "ExternalObject"),
     Defclass (void_predefined_body "Connections")]
 
-val the_real_class = Def_Displaced (Ctag ["Real"], the_root_subject)
+val the_real_class = Def_Displaced (Ctag ["Real"],
+				    the_package_root_subject)
 
-val the_integer_class = Def_Displaced (Ctag ["Integer"], the_root_subject)
+val the_integer_class = Def_Displaced (Ctag ["Integer"],
+				       the_package_root_subject)
 
 val predefined_variables = [
     Defvar (Id "time", (Effort, Continuous, Modeless),
@@ -228,7 +232,7 @@ fun id_to_string ((Id s) : id_t) : string = s
 fun name_to_string (Name nn) : string = (
     case nn of
 	[] => "(*empty*)"
-      | [""] => (root_class_print_name)
+      | [""] => (the_package_root_print_name)
       | ss => ((String.concatWith ".") ss))
 
 fun tag_to_string (Ctag vv) = (name_to_string (Name ("" :: vv)))
@@ -651,7 +655,7 @@ fun subscript_list_to_string ss = (
 fun body_is_package_root k = (
     case k of
 	Def_Body (mk, j, cs, (tag, n, x), cc, ee, aa, ww) => (
-	(tag = the_root_tag))
+	(tag = the_package_root_tag))
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match

@@ -517,7 +517,7 @@ fun lookup_class_in_package_root (Id v) = (
 	val tag = (Ctag [v])
     in
 	case (fetch_or_load_class_in_root tag) of
-	    NONE => raise (error_name_not_found (Id v) the_root_class)
+	    NONE => raise (error_name_not_found (Id v) the_package_root)
 	  | SOME d => (
 	    let
 		val Defclass ((v_, g), k) = d
@@ -541,7 +541,7 @@ fun fetch_enclosing_class (kp : definition_body_t) = (
 	val _ = if (class_is_body kp) then () else raise Match
     in
 	if (class_is_encapsulated kp) then
-	    the_root_class
+	    the_package_root
 	else
 	    let
 		val supsubj = (enclosing_of_body kp)

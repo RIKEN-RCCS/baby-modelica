@@ -120,7 +120,7 @@ fun empty_global_function__ name = (
 		  subj,
 		  (Function false, no_class_prefixes,
 		   no_component_prefixes),
-		  (tag, the_root_subject, the_root_subject),
+		  (tag, the_package_root_subject, the_package_root_subject),
 		  NIL,
 		  [Base_List [], Base_Classes []],
 		  Annotation [], Comment [])

@@ -275,8 +275,8 @@ fun find_import_class (cooker : cooker_t) kp name = (
 	val ctx = {Scope=scope, Name=name, Mode=Seek_Export}
 	val (Name nn) = (drop_explicit_dot name)
 	val _ = if (not (null nn)) then () else raise Match
-	val rootsubj = the_root_subject
-	val root = the_root_class
+	val rootsubj = the_package_root_subject
+	val root = the_package_root
 	val enclosing = rootsubj
     in
 	(lookup_composite_loop cooker ctx enclosing (rootsubj, root) nn)
@@ -362,8 +362,8 @@ fun find_base_class (cooker : cooker_t) kp name = (
 	  | Name ("" :: tt) => (
 	    let
 		val _ = if (not (null tt)) then () else raise Match
-		val root = (the_root_subject, the_root_class)
-		val enclosing = the_root_subject
+		val root = (the_package_root_subject, the_package_root)
+		val enclosing = the_package_root_subject
 	    in
 		(lookup_composite_loop cooker ctx enclosing root tt)
 	    end)

@@ -460,8 +460,7 @@ fun insert_cardinality_variable (subj, nn) = (
 	val values = (initializer nn)
 	val dimension = (map (scoped o z_literal) dim0)
 
-	val k0 = Def_Displaced (Ctag ["Integer"], the_root_subject)
-	val k1 = (fetch_displaced_class E0 k0)
+	val k1 = (fetch_displaced_class E0 the_integer_class)
 	val q = (Effort, Constant, Modeless)
 	val k2 = Def_Refine (k1, NONE, copy_type, q, (dimension, values),
 			     NIL, Annotation [], Comment [])
@@ -1041,8 +1040,7 @@ fun insert_equations_section eqns = (
 fun insert_mixin_variable mixin = (
     let
 	val _ = if (is_mixin mixin) then () else raise Match
-	val x0 = Def_Displaced (Ctag ["Real"], the_root_subject)
-	val k0 = (fetch_displaced_class E0 x0)
+	val k0 = (fetch_displaced_class E0 the_real_class)
 	val (dim, array) = (instantiate_class (mixin, k0))
 	val _ = if (null dim) then () else raise Match
 	val k1 = (hd array)

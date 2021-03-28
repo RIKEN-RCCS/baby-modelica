@@ -152,7 +152,7 @@ fun assert_match_subject subj k = (
 fun drop_last_subscript_of_subject subj = (
     if (subj = the_model_subject) then
 	subj
-    else if (subj = the_root_subject) then
+    else if (subj = the_package_root_subject) then
 	subj
     else
 	let

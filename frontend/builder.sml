@@ -558,7 +558,7 @@ fun xfind (s : string) = (
 		   | x => x
 	val name = (Name nn1)
     in
-	case (find_class cooker the_root_class name) of
+	case (find_class cooker the_package_root name) of
 	    NONE => raise Fail ("Class ("^ s ^") not found")
 	  | SOME kx => kx
     end)
