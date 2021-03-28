@@ -110,7 +110,7 @@ and bind_in_class_element ctx binder e0 = (
 	val walk_s = (bind_in_statement kp binder)
 	fun walk_pair (c, kx) = (c, (bind_in_class ctx binder kx))
 
-	val package = (class_is_package kp)
+	val package = (class_is_non_function_package kp)
     in
 	case e0 of
 	    Import_Clause _ => raise Match
@@ -384,7 +384,7 @@ fun bind_in_instance (scanning : bool) k0 = (
 	false
     else if (class_is_enumerator_definition k0) then
 	false
-    else if ((class_is_package k0) andalso (not (kind_is_function k0))) then
+    else if (class_is_non_function_package k0) then
 	false
     else if ((not scanning) andalso (step_is_at_least E5 k0)) then
 	false

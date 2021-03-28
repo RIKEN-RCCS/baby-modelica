@@ -464,25 +464,6 @@ fun body_is_in_file k = (
       | Def_In_File => true
       | Def_Mock_Array _ => raise Match)
 
-(* Tests if a class is an enumeration (definition) or an enumerator
-   (variable).  To discriminate them further, it is a definition when
-   it is a package or a variable when it is an instance *)
-
-fun class_is_enum k = (
-    case k of
-	Def_Body ((u, f, enum), j, cs, nm, cc, ee, aa, ww) => (enum = ENUM)
-      | Def_Der _ => raise Match
-      | Def_Primitive _ => raise Match
-      | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => raise Match
-      | Def_Scoped _ => raise Match
-      | Def_Refine _ => raise Match
-      | Def_Extending _ => raise Match
-      | Def_Replaced _ => raise Match
-      | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
-      | Def_Mock_Array _ => raise Match)
-
 fun assert_class_is_body k = (
     case k of
 	Def_Body _ => ()
@@ -538,30 +519,6 @@ fun subject_and_tag_to_string (s : subject_t, ks : string) suffix = (
 fun subject_tag_to_string ((s : subject_t, k : class_tag_t) : scope_t) = (
     (subject_and_tag_to_string (s, (tag_to_string k)) ""))
 
-(* Returns an approximate class print-name. *)
-
-fun class_print_name k = (
-    case k of
-	Def_Body (mk, j, cs, (tag, c, x), cc, ee, aa, ww) =>
-	if (class_is_enum k) then
-	    ("enum ("^ (tag_to_string tag) ^")")
-	else
-	    (tag_to_string tag)
-      | Def_Der (tag, cs, n, vv, aa, ww) => (
-	"der ("^ (tag_to_string tag) ^")")
-      | Def_Primitive (p, _) => "primitive"
-      | Def_Outer_Alias (f, subj, _) => (subject_to_string subj)
-      | Def_Name n => (name_to_string n)
-      | Def_Scoped (n, s) => (
-	("("^ (name_to_string n) ^" in "^
-	 (subject_tag_to_string s) ^")"))
-      | Def_Refine (kx, v, ts, q, (ss, mm), cc, aa, ww) => (class_print_name kx)
-      | Def_Extending (_, x, kx) => (class_print_name kx)
-      | Def_Replaced (kx, _) => (class_print_name kx)
-      | Def_Displaced (tag, _) => (tag_to_string tag)
-      | Def_In_File => raise Match
-      | Def_Mock_Array _ => raise Match)
-
 (* Replaces subscripts in a subject or a reference.  It drops with
    both subscript expressions and integers. *)
 
@@ -586,71 +543,7 @@ fun pseudo_path subj = (
 	Subj (VAR, cc) => (map (fn (id, _) => id) cc)
   | _ => raise Match)
 
-fun body_name_at_step k = (
-    (class_print_name k) ^"@"^ (cook_step_to_string (cook_step k)))
-
-fun subject_body_to_string (s : subject_t, k : definition_body_t) = (
-    let
-	val suffix = (" @"^ (cook_step_to_string (cook_step k)))
-    in
-	(subject_and_tag_to_string (s, (class_print_name k)) suffix)
-    end)
-
 (* ================================================================ *)
-
-(* Tests if a class is a package, otherwise it is an instance.  Note
-   that an instance is processed as a package in early stages, but
-   this test is precise for a class stored in the instance_tree. *)
-
-fun class_is_package k = (
-    case k of
-	Def_Body ((u, f, b), j, cs, nm, cc, ee, aa, ww) => (f = PKG)
-      | Def_Der _ => false
-      | Def_Primitive _ => false
-      | Def_Outer_Alias (f, _, _) => (f = PKG)
-      | Def_Name _ => raise Match
-      | Def_Scoped _ => raise Match
-      | Def_Refine _ => raise Match
-      | Def_Extending _ => raise Match
-      | Def_Replaced _ => raise Match
-      | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
-      | Def_Mock_Array _ => raise Match)
-
-fun class_is_instance k = (not (class_is_package k))
-
-(* ================================================================ *)
-
-fun declaration_to_string (d as Defvar (v, q, k, c, a, w)) = (
-    ("("^ (id_to_string v) ^" : "^ (class_print_name k) ^")"))
-
-fun modifier_to_string m = (
-    case m of
-	Mod_Redefine (r, d, h) => (
-	case d of
-	    Defclass ((v, g), k) => (
-	    ((id_to_string v) ^"="^ (class_print_name k))))
-      | Mod_Elemental_Redefine (z, r, d, h) => (
-	case d of
-	    Defclass ((v, g), k) => (
-	    ((id_to_string v) ^"="^ (class_print_name k))))
-      | Mod_Redeclare (r, d, h) => (
-	case d of
-	    Defvar (v, q, k, c, a, w) => (
-	    ((id_to_string v) ^":"^ (class_print_name k))))
-      | Mod_Elemental_Redeclare (z, r, d, h) => (
-	case d of
-	    Defvar (v, q, k, c, a, w) => (
-	    ((id_to_string v) ^":"^ (class_print_name k))))
-      | Mod_Entry (ef, n, mm, w) => (
-	((name_to_string n) ^"="^ (modifier_list_to_string mm)))
-      | Mod_Value e0 => "value=<expr>")
-
-and modifier_list_to_string mm = (
-    "{"^ ((String.concatWith ", ") (map modifier_to_string mm)) ^"}")
-
-fun subscript_list_to_string ss = (
-    (String.concat (map (fn _ => "[]") ss)))
 
 fun body_is_package_root k = (
     case k of
@@ -802,6 +695,8 @@ fun marker_of_body k = (
       | Def_In_File => raise Match
       | Def_Mock_Array _ => raise Match)
 
+fun class_is_main k = ((marker_of_body k) <> BASE)
+
 fun subject_of_class k = (
     case k of
 	Def_Body (mk, subj, cs, nm, cc, ee, aa, ww) => (
@@ -922,10 +817,51 @@ fun assign_enclosing k enclosing = (
       | Def_In_File => raise Match
       | Def_Mock_Array _ => raise Match)
 
-fun class_is_main k = ((marker_of_body k) <> BASE)
+(* ================================================================ *)
 
-fun class_is_enumeration_definition k = (
-    (class_is_enum k) andalso (class_is_package k))
+fun kind_of_class k = (
+    case k of
+	Def_Body (mk, j, (kind, p, q), nm, cc, ee, aa, ww) => SOME kind
+      | Def_Der _ => NONE
+      | Def_Primitive _ => NONE
+      | Def_Outer_Alias _ => raise Match
+      | Def_Name _ => raise Match
+      | Def_Scoped _ => raise Match
+      | Def_Refine _ => raise Match
+      | Def_Extending _ => raise Match
+      | Def_Replaced _ => raise Match
+      | Def_Displaced _ => raise Match
+      | Def_In_File => raise Match
+      | Def_Mock_Array _ => raise Match)
+
+fun kind_is_function k = (
+    case (kind_of_class k) of
+	SOME (Function _) => true
+      | _ => false)
+
+fun kind_is_record k = (
+    case (kind_of_class k) of
+	SOME Record => true
+      | _ => false)
+
+(* Tests if a class is an enumeration (definition) or an enumerator
+   (variable).  To discriminate them further, it is a definition when
+   it is a package or a variable when it is an instance *)
+
+fun class_is_enum k = (
+    case k of
+	Def_Body ((u, f, enum), j, cs, nm, cc, ee, aa, ww) => (enum = ENUM)
+      | Def_Der _ => raise Match
+      | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
+      | Def_Name _ => raise Match
+      | Def_Scoped _ => raise Match
+      | Def_Refine _ => raise Match
+      | Def_Extending _ => raise Match
+      | Def_Replaced _ => raise Match
+      | Def_Displaced _ => raise Match
+      | Def_In_File => raise Match
+      | Def_Mock_Array _ => raise Match)
 
 (* Tests if a class is an enumerator definition in the instance_tree.
    See register_enumerators_for_enumeration. *)
@@ -1011,38 +947,6 @@ fun class_is_boolean k = (
       | Def_Primitive _ => false
       | _ => raise Match)
 
-fun kind_of_class k = (
-    case k of
-	Def_Body (mk, j, (kind, p, q), nm, cc, ee, aa, ww) => SOME kind
-      | Def_Der _ => NONE
-      | Def_Primitive _ => NONE
-      | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => raise Match
-      | Def_Scoped _ => raise Match
-      | Def_Refine _ => raise Match
-      | Def_Extending _ => raise Match
-      | Def_Replaced _ => raise Match
-      | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
-      | Def_Mock_Array _ => raise Match)
-
-(* Note functions never have instances. *)
-
-fun kind_is_function k = (
-    case (kind_of_class k) of
-	SOME (Function _) => (
-	    let
-		val _ = if (class_is_package k) then () else raise Match
-	    in
-		true
-	    end)
-      | _ => false)
-
-fun kind_is_record k = (
-    case (kind_of_class k) of
-	SOME Record => true
-      | _ => false)
-
 fun class_is_function__ k = (
     case k of
 	Def_Body ((u, f, b), j, (t, p, q), nm, cc, ee, aa, ww) => (
@@ -1060,6 +964,35 @@ fun class_is_function__ k = (
       | Def_Displaced _ => raise Match
       | Def_In_File => raise Match
       | Def_Mock_Array _ => raise Match)
+
+(* Tests if a class is a package, otherwise it is an instance.  Note
+   that an instance is processed as a package in early stages, but
+   this test is precise on a class stored in the instance_tree. *)
+
+fun class_is_package k = (
+    case k of
+	Def_Body ((u, f, b), j, cs, nm, cc, ee, aa, ww) => (f = PKG)
+      | Def_Der _ => false
+      | Def_Primitive _ => false
+      | Def_Outer_Alias (f, _, _) => (f = PKG)
+      | Def_Name _ => raise Match
+      | Def_Scoped _ => raise Match
+      | Def_Refine _ => raise Match
+      | Def_Extending _ => raise Match
+      | Def_Replaced _ => raise Match
+      | Def_Displaced _ => raise Match
+      | Def_In_File => raise Match
+      | Def_Mock_Array _ => raise Match)
+
+fun class_is_instance k = (not (class_is_package k))
+
+(* Tests if a class is a genuine (non-function) package. *)
+
+fun class_is_non_function_package k = (
+    ((class_is_package k) andalso (not (kind_is_function k))))
+
+fun class_is_enumeration_definition k = (
+    (class_is_enum k) andalso (class_is_package k))
 
 (* Tests if a class definition is not modified.  A reference in a
    package in an instance (such as "x.P1.c") can be simplified as one
@@ -1208,6 +1141,73 @@ fun class_is_encapsulated k = (
 	  | Def_In_File => raise Match
 	  | Def_Mock_Array _ => raise Match
     end)
+
+(* ================================================================ *)
+
+(* Returns an approximate class print-name. *)
+
+fun class_print_name k = (
+    case k of
+	Def_Body (mk, j, cs, (tag, c, x), cc, ee, aa, ww) =>
+	if (class_is_enum k) then
+	    ("enum ("^ (tag_to_string tag) ^")")
+	else
+	    (tag_to_string tag)
+      | Def_Der (tag, cs, n, vv, aa, ww) => (
+	"der ("^ (tag_to_string tag) ^")")
+      | Def_Primitive (p, _) => "primitive"
+      | Def_Outer_Alias (f, subj, _) => (subject_to_string subj)
+      | Def_Name n => (name_to_string n)
+      | Def_Scoped (n, s) => (
+	("("^ (name_to_string n) ^" in "^
+	 (subject_tag_to_string s) ^")"))
+      | Def_Refine (kx, v, ts, q, (ss, mm), cc, aa, ww) => (class_print_name kx)
+      | Def_Extending (_, x, kx) => (class_print_name kx)
+      | Def_Replaced (kx, _) => (class_print_name kx)
+      | Def_Displaced (tag, _) => (tag_to_string tag)
+      | Def_In_File => raise Match
+      | Def_Mock_Array _ => raise Match)
+
+fun body_name_at_step k = (
+    (class_print_name k) ^"@"^ (cook_step_to_string (cook_step k)))
+
+fun subject_body_to_string (s : subject_t, k : definition_body_t) = (
+    let
+	val suffix = (" @"^ (cook_step_to_string (cook_step k)))
+    in
+	(subject_and_tag_to_string (s, (class_print_name k)) suffix)
+    end)
+
+fun declaration_to_string (d as Defvar (v, q, k, c, a, w)) = (
+    ("("^ (id_to_string v) ^" : "^ (class_print_name k) ^")"))
+
+fun modifier_to_string m = (
+    case m of
+	Mod_Redefine (r, d, h) => (
+	case d of
+	    Defclass ((v, g), k) => (
+	    ((id_to_string v) ^"="^ (class_print_name k))))
+      | Mod_Elemental_Redefine (z, r, d, h) => (
+	case d of
+	    Defclass ((v, g), k) => (
+	    ((id_to_string v) ^"="^ (class_print_name k))))
+      | Mod_Redeclare (r, d, h) => (
+	case d of
+	    Defvar (v, q, k, c, a, w) => (
+	    ((id_to_string v) ^":"^ (class_print_name k))))
+      | Mod_Elemental_Redeclare (z, r, d, h) => (
+	case d of
+	    Defvar (v, q, k, c, a, w) => (
+	    ((id_to_string v) ^":"^ (class_print_name k))))
+      | Mod_Entry (ef, n, mm, w) => (
+	((name_to_string n) ^"="^ (modifier_list_to_string mm)))
+      | Mod_Value e0 => "value=<expr>")
+
+and modifier_list_to_string mm = (
+    "{"^ ((String.concatWith ", ") (map modifier_to_string mm)) ^"}")
+
+fun subscript_list_to_string ss = (
+    (String.concat (map (fn _ => "[]") ss)))
 
 (* ================================================================ *)
 

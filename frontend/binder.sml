@@ -147,7 +147,7 @@ fun refer_in_package kp subj rr = (
 
 fun refer_in_variable kp (d as Defvar _) subj rr = (
     let
-	val _ = if (not (class_is_package kp)) then ()
+	val _ = if (not (class_is_non_function_package kp)) then ()
 		else if (declaration_is_constant d) then ()
 		else raise error_variable_in_static_class
     in
