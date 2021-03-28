@@ -645,25 +645,20 @@ fun redeclare_state_by_modifiers ctx (z0, r0, d0, h0) (r1, d1, h1) = (
 fun redeclare_state_by_elements ctx (z0, r0, d0, h0) (z1, r1, d1, h1) = (
     (redeclare_state In_Elements ctx (z0, r0, d0, h0) (z1, r1, d1, h1)))
 
-(* Associates an initializer value w to an instance k0, and returns a
-   list of modifiers.  For a declaration C~x=w, it makes a modifier
-   x.s=w.s for each component of a class.  (It be better not to
-   decompose a class in the case of a record). *)
+(* Associates an initializer value w to the components of a class, and
+   returns a list of modifiers.  For a declaration C~x=w, it makes a
+   modifier x.s=w.s for each component of a class.  (It be better not
+   to decompose a class in the case of a record). *)
 
-fun associate_initializer kp w = (
+fun associate_initializer cc w = (
     case w of
 	NIL => []
       | _ => (
-	let
-	    val cc = (list_component_names kp)
-	    val mm = (map (fn Id s =>
-			      Mod_Entry (no_each_or_final, Name [s],
-					 [Mod_Value (Component_Ref (w, Id s))],
-					 Comment []))
-			  cc)
-	in
-	    mm
-	end))
+	(map (fn Id s =>
+		 Mod_Entry (no_each_or_final, Name [s],
+			    [Mod_Value (Component_Ref (w, Id s))],
+			    Comment []))
+	     cc)))
 
 (* Tries to associate a modifier to a class definition.  It creates a
    new class refining or attaches to an existing one.  Note that an
@@ -850,11 +845,13 @@ fun associate_to_declaration ctx (z0, r0, d0, h0) m = (
 	  | Mod_Value _ => raise Match
     end)
 
-fun dispatch_modifiers_to_class skipmain (subj, kp) mm0 = (
+fun dispatch_modifiers skipmain (subj, kp) mm0 = (
     let
 	val _ = if (class_is_body kp) then () else raise Match
-	(*val _ = if (step_is_at_least E3 kp) then () else raise Match*)
 	val _ = if ((cook_step kp) = E2) then () else raise Match
+
+	val _ = tr_cook_vvv (";; dispatch_modifiers ("^ (class_print_name kp)
+			     ^") modifiers="^ (modifier_list_to_string mm0))
 
 	fun dispatch m (e, used) = (
 	    case e of
@@ -912,7 +909,8 @@ fun dispatch_modifiers_to_class skipmain (subj, kp) mm0 = (
 		  else
 		      mm0
 	val (i, mm2) = (split_initializer_value mm1)
-	val mm3 = (associate_initializer kp i)
+	val cc = (list_component_names kp)
+	val mm3 = (associate_initializer cc i)
 	val mm4 = (merge_modifiers ctx mm2 mm3)
 	val k1 = kp
 
@@ -942,10 +940,10 @@ fun associate_modifiers k0 mm0 = (
 	val k1 = k0
 
 	val (rr0, _) = (extract_redeclares (subj, k1))
-	val (k3, rr1) = (dispatch_modifiers_to_class true (subj, k1) rr0)
+	val (k3, rr1) = (dispatch_modifiers true (subj, k1) rr0)
 	val _ = if (null rr1) then () else raise error_modifiers_remain
 
-	val (k4, mm1) = (dispatch_modifiers_to_class false (subj, k3) mm0)
+	val (k4, mm1) = (dispatch_modifiers false (subj, k3) mm0)
 	val _ = if (null mm1) then () else raise error_modifiers_remain
     in
 	k4

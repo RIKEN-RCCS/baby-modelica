@@ -47,7 +47,6 @@ val access_node = classtree.access_node
 val find_in_components = classtree.find_in_components
 
 val find_element = finder.find_element
-val find_name_initial_part = finder.find_name_initial_part
 val list_elements = finder.list_elements
 
 val assemble_instance = cooker.assemble_instance

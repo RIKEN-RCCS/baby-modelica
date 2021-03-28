@@ -230,9 +230,12 @@ and gather_names_in_class (cooker : cooker_t) kp : naming_t list = (
 
 		    val subj = (tag_to_subject tag)
 		    val x0 = surely (fetch_from_instance_tree subj)
+		    (*
 		    val (enclosing, _) = (subject_prefix subj)
 		    val x1 = (assemble_package_if_fresh cooker E3 (subj, x0))
 		    val _ = (assert_match_subject subj x1)
+		    *)
+		    val x1 = x0
 		    val nn0 = (gather_in_body_elements
 				   (list_names x1) x1)
 		    val nn1 = (List.filter binding_is_public nn0)
@@ -335,11 +338,15 @@ and look_for_inner_in_class (cooker : cooker_t) cv0 subj0 = (
 
 (* ================================================================ *)
 
-(* Lists names of components in the class. *)
+(* Lists names of components in the class.  This is called during
+   building a class at step=E2. *)
 
 fun list_component_names kp = (
     let
 	val _ = if ((cook_step kp) = E2) then () else raise Match
+
+	val _ = tr_find_vvv (";; list_component_names ("^
+			     (class_print_name kp) ^")...")
 
 	fun name (Naming (id, _, _, _, (z, r, d, h))) = (
 	    case d of
@@ -350,6 +357,9 @@ fun list_component_names kp = (
 	val bindings = (list_elements faulting_cooker false kp)
 	val (classes, states) = (List.partition binding_is_class bindings)
 	val cc = (map name states)
+
+	val _ = tr_find_vvv (";; list_component_names ("^
+			     (class_print_name kp) ^")... done")
     in
 	cc
     end)
@@ -389,7 +399,7 @@ fun find_element (cooker : cooker_t) exclude_imported kp id = (
 	else
 	    let
 		(*AHOAHOAHO*) fun faulting_cooker _ (_, _) = raise Match
-		val bindings = (list_elements cooker exclude_imported kp)
+		val bindings = (list_elements faulting_cooker exclude_imported kp)
 	    in
 		case (find_in_bindings id bindings) of
 		    SOME binding => SOME binding
@@ -443,7 +453,7 @@ fun find_class_loop (cooker : cooker_t) kp enclosing0_ (subjk0, k0) nn0 = (
 	    val id = (Id s)
 	    (*AHOAHOAHO*) fun faulting_cooker _ (_, _) = raise Match
 	in
-	    case (find_element cooker true k2 id) of
+	    case (find_element faulting_cooker true k2 id) of
 		NONE => raise (error_class_name_not_found (Name nn0) kp)
 	      | SOME (name as Naming (_, _, _, _, (z, r, EL_Class dx, h))) => (
 		let

@@ -34,6 +34,7 @@ val assert_stored_in_instance_tree = classtree.assert_stored_in_instance_tree
 val assert_package_constraints = classtree.assert_package_constraints
 val assert_enclosings_are_cooked = classtree.assert_enclosings_are_cooked
 val assemble_package_if_fresh = classtree.assemble_package_if_fresh
+val list_base_classes = classtree.list_base_classes
 
 val simplify_simple_type = simpletype.simplify_simple_type
 val insert_attributes_to_enumeration = simpletype.insert_attributes_to_enumeration
@@ -919,10 +920,11 @@ and cook_class_with_modifiers main pkg (subj, k0) mm cc aa siblings0 = (
 
 	val k1 = (prepare_for_modification main pkg (subj, k0))
 	val _ = (store_to_instance_tree_if packagemain subj k1)
-	val k2 = (cook_imports k1)
+	val k2 = (resolve_imports k1)
 	val k3 = (insert_attributes_to_enumeration k2)
 	val _ = (store_to_instance_tree_if packagemain subj k3)
 	val k4 = (gather_bases main pkg k3 siblings1)
+	val _ = (build_imported_packages k4)
 	val k5 = (associate_modifiers k4 mm)
 	val k6 = (rectify_modified_class (k5, q) (t, p) aa)
 	val k8 = (simplify_simple_type k6)
@@ -943,12 +945,12 @@ and cook_class_with_modifiers main pkg (subj, k0) mm cc aa siblings0 = (
 	k9
     end)
 
-(* Assembles classes of import-clauses.  It takes a class at
-   step=E1 and moves it to step=E2.  Note that Base_List and
-   Base_Classes may appear in elements due to early processing of an
-   extends-redeclaration which adds a base class. *)
+(* Resolves imported classes.  It takes a class at step=E1 and moves
+   it to step=E2.  Note that Base_List and Base_Classes may appear in
+   the elements due to early processing of an extends-redeclaration
+   which has added a base class. *)
 
-and cook_imports (kp : definition_body_t) = (
+and resolve_imports (kp : definition_body_t) = (
     let
 	val cooker = assemble_package
 
@@ -1001,6 +1003,45 @@ and cook_imports (kp : definition_body_t) = (
 	    kp
 	else
 	    (set_cook_step E2 (subst_body_element resolve kp))
+    end)
+
+and build_imported_packages kp = (
+    let
+	fun build_imported kp e = (
+	    case e of
+		Import_Clause _ => raise Match
+	      | Extends_Clause _ => raise Match
+	      | Element_Class _ => ()
+	      | Element_State _ => ()
+	      | Redefine_Class _ => ()
+	      | Redeclare_State _ => ()
+	      | Element_Enumerators _ => ()
+	      | Element_Equations _ => ()
+	      | Element_Algorithms _ => ()
+	      | Element_External _ => ()
+	      | Element_Annotation _ => ()
+	      | Element_Import (z, tag, idxid, a, w) => (
+		let
+		    val subj = (tag_to_subject tag)
+		    val cooker = assemble_package
+		    val x0 = surely (fetch_from_instance_tree subj)
+		    val x1 = (assemble_package_if_fresh cooker E3 (subj, x0))
+		in
+		    ()
+		end)
+	      | Element_Base _ => ()
+	      | Base_List _ => ()
+	      | Base_Classes _ => ())
+
+	fun build_imported_in_class k = (
+	    (app (build_imported k) (body_elements k)))
+
+	(*val _ = (list_component_names cooker kp)*)
+	val bases = (list_base_classes kp)
+	val classes = [kp] @ bases
+	val _ = (map build_imported_in_class classes)
+    in
+	()
     end)
 
 (* Assembles a class of an extends-clause.  It takes a class at
