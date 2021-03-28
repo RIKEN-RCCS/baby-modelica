@@ -49,7 +49,6 @@ val fetch_class_by_scope = classtree.fetch_class_by_scope
 val store_to_instance_tree = classtree.store_to_instance_tree
 val subject_to_instance_tree_path = classtree.subject_to_instance_tree_path
 
-val find_class = finder.find_class
 val find_name_initial_part = finder.find_name_initial_part
 
 val assemble_package = cooker.assemble_package
@@ -170,10 +169,9 @@ fun make_reference kp (_ : bool) w0 = (
 	    Vref (SOME PKG, (drop_dot_of_package_root PKG rr))
 	else
 	    let
-		val cooker = assemble_package
 		val subjkp = (subject_of_class kp)
 	    in
-		case (find_name_initial_part cooker kp id) of
+		case (find_name_initial_part kp id) of
 		    NONE => raise (error_variable_name_not_found id kp)
 		  | SOME (Naming (_, subj, _, _, (z, r, EL_Class dx, h))) => (
 		    let

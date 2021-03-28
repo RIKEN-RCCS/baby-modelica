@@ -14,15 +14,14 @@ sig
     type naming_t
 
     val find_class :
-	cooker_t -> (subject_t * definition_body_t) -> name_t
-	-> definition_body_t option
+	cooker_t -> definition_body_t -> name_t -> definition_body_t option
 
     val list_elements :
 	bool -> definition_body_t -> naming_t list
     val find_element :
 	bool -> definition_body_t -> id_t -> naming_t option
     val find_name_initial_part :
-	cooker_t -> definition_body_t -> id_t -> naming_t option
+	definition_body_t -> id_t -> naming_t option
     val list_component_names : definition_body_t -> id_t list
 end = struct
 
@@ -414,7 +413,7 @@ fun find_element exclude_imported kp id = (
    assumes the enclosing classes are already in step=E3 or greater.
    See find_element. *)
 
-fun find_name_initial_part (cooker : cooker_t) kp (id as Id s) = (
+fun find_name_initial_part kp (id as Id s) = (
     let
 	val _ = if (class_is_body kp) then () else raise Match
     in
@@ -428,9 +427,8 @@ fun find_name_initial_part (cooker : cooker_t) kp (id as Id s) = (
 		    val k1 = (fetch_enclosing_class kp)
 		    val _ = (assert_cooked_at_least E3 k1)
 		    val subj1_ = (subject_of_class k1)
-		    fun faulting_cooker _ (_, _) = raise Match
 		in
-		    (find_name_initial_part faulting_cooker k1 id)
+		    (find_name_initial_part k1 id)
 		end)
     end)
 
@@ -458,7 +456,6 @@ fun find_class_loop (cooker : cooker_t) kp (subjk0, k0) nn0 = (
 		let
 		    val subjx0 = (true_subject name)
 		    val Defclass ((_, _), x0) = dx
-		    (*val enclosing1_ = subjk0*)
 		in
 		    (find_class_loop cooker kp (subjx0, x0) tt)
 		end)
@@ -469,27 +466,22 @@ fun find_class_loop (cooker : cooker_t) kp (subjk0, k0) nn0 = (
 (* Looks for a class name in a class.  It processes intermediate
    classes as packages, but it does not process the one returned. *)
 
-fun find_class (cooker : cooker_t) (subjkp_, kp) nn = (
+fun find_class (cooker : cooker_t) kp nn = (
     let
 	val _ = if (step_is_at_least E3 kp) then () else raise Match
-	val _ = (assert_match_subject subjkp_ kp)
-	(*val kp = surely (fetch_from_instance_tree scope)*)
-	(*val extending = false*)
-	(*val step = if extending then E2 else E3*)
 	val subj = (subject_of_class kp)
     in
 	case nn of
 	    Name [] => raise Match
-	  | Name (s :: t) => (
-	    case (find_name_initial_part cooker kp (Id s)) of
+	  | Name (s :: tt) => (
+	    case (find_name_initial_part kp (Id s)) of
 		NONE => NONE
 	      | SOME (name as Naming (_, _, _, _, (z, r, EL_Class dx, h))) => (
 		let
 		    val subjx0 = (true_subject name)
 		    val Defclass (_, x0) = dx
-		    (*val (enclosing, _) = (subject_prefix subjx0)*)
 		in
-		    (find_class_loop cooker kp (subjx0, x0) t)
+		    (find_class_loop cooker kp (subjx0, x0) tt)
 		end)
 	      | SOME (Naming (_, _, _, _, (z, r, EL_State dx, h))) => (
 		raise (error_state_found_for_class nn kp)))

@@ -755,7 +755,7 @@ and collect_refining main pkg (subj, k0) (name1, (t1, p1, q1), mm1, cc1, aa1) si
 	    val (subj1, k1) = (fetch_class_by_scope scope)
 	    val _ = (assert_match_subject subj1 k1)
 	in
-	    case (find_class cooker (subj1, k1) name) of
+	    case (find_class cooker k1 name) of
 		NONE => raise (error_class_not_found name k1)
 	      | SOME x0 => (
 		let
