@@ -45,7 +45,6 @@ val fetch_displaced_class = loader.fetch_displaced_class
 
 val find_class = finder.find_class
 val find_element = finder.find_element
-val list_elements = finder.list_elements
 
 val find_import_class = seeker.find_import_class
 val find_base_class = seeker.find_base_class
@@ -96,11 +95,8 @@ fun fetch_element_class cooker_ (defining, id) : definition_body_t = (
 	    let
 		val kp = surely (fetch_from_instance_tree defining)
 		val _ = if (step_is_at_least E3 kp) then () else raise Match
-		(*val (id, pkg) = (tag_prefix tag)*)
 		fun faulting_cooker _ (_, _) = raise Match
-		(*val bindings = (list_elements faulting_cooker false kp)*)
 	    in
-		(*case (find_in_bindings id bindings) of*)
 		case (find_element faulting_cooker false kp id) of
 		    NONE => raise (error_name_not_found id kp)
 		  | SOME (Naming (_, _, _, _, (z, r, EL_Class dx, h))) => (

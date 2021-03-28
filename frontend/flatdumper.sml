@@ -841,6 +841,7 @@ fun dump_function s k = (
 		val pp = (kind_string t)
 		val name = (subject_to_string (subject_of_class k))
 
+		val _ = (assert_cooked_at_least E3 k)
 		fun faulting_cooker _ (_, _) = raise Match
 		val bindings = (list_elements faulting_cooker true k)
 		val (_, states) =

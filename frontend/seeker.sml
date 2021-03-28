@@ -35,7 +35,6 @@ val lookup_class_in_package_root = loader.lookup_class_in_package_root
 val fetch_enclosing_class = loader.fetch_enclosing_class
 
 val find_element = finder.find_element
-val list_elements = finder.list_elements
 
 datatype seek_mode_t = Seek_Export | Seek_Base
 type seek_context_t = {Scope : scope_t, Name : name_t, Mode : seek_mode_t}
@@ -190,10 +189,9 @@ fun lookup_in_main_and_bases (cooker : cooker_t) ctx kp id = (
 	      | NONE => raise (error_name_not_found id kp)
 	else if (step_is_at_least E3 kp) then
 	    let
-		(*val bindings = (list_elements cooker true kp)*)
+	        (*AHOAHOAHO*) fun faulting_cooker _ (_, _) = raise Match
 	    in
-		(*case (find_in_bindings id bindings) of*)
-		case (find_element cooker true kp id) of
+		case (find_element faulting_cooker true kp id) of
 		    NONE => raise (error_name_not_found id kp)
 		  | SOME (Naming (_, subj, _, _, (z, r, EL_Class dx, h))) => (
 		    let

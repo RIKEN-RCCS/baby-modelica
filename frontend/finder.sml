@@ -225,8 +225,8 @@ and gather_names_in_class (cooker : cooker_t) kp : naming_t list = (
 	      | Element_Annotation _ => []
 	      | Element_Import (z, tag, idxid, a, w) => (
 		let
-		    val _ = tr_find (";; gather_names_in_class import ("^
-				     (import_name_to_string tag idxid) ^")")
+		    val _ = tr_find_vvv (";; gather_names_in_class import ("^
+					 (import_name_to_string tag idxid) ^")")
 
 		    val subj = (tag_to_subject tag)
 		    val x0 = surely (fetch_from_instance_tree subj)
@@ -325,7 +325,9 @@ and look_for_inner_in_class (cooker : cooker_t) cv0 subj0 = (
 	val kp = surely (fetch_from_instance_tree subj0)
 	val _ = if (class_is_instance kp) then () else raise Match
 	val _ = (assert_match_subject subj0 kp)
-	val bindings = (list_elements cooker true kp)
+	val _ = (assert_cooked_at_least E3 kp)
+	fun faulting_cooker _ (_, _) = raise Match
+	val bindings = (list_elements faulting_cooker true kp)
     in
 	case (List.find (inner id) bindings) of
 	    NONE => NONE
@@ -417,8 +419,9 @@ fun find_element (cooker : cooker_t) exclude_imported kp id = (
 fun find_name_initial_part (cooker : cooker_t) kp (id as Id s) = (
     let
 	val _ = if (class_is_body kp) then () else raise Match
+	(*AHOAHOAHO*) fun faulting_cooker _ (_, _) = raise Match
     in
-	case (find_element cooker false kp id) of
+	case (find_element faulting_cooker false kp id) of
 	    SOME binding => SOME binding
 	  | NONE => (
 	    if (body_is_package_root kp) then
@@ -443,7 +446,7 @@ fun true_subject (Naming (_, subj, inner, _, e)) = (
 	NONE => subj
       | SOME subjx => subjx)
 
-fun find_class_loop (cooker : cooker_t) kp enclosing0_ (subjk0, k0) nn0 = (
+fun find_class_loop (cooker : cooker_t) kp (subjk0, k0) nn0 = (
     case nn0 of
 	[] => SOME k0
       | (s :: tt) => (
@@ -459,9 +462,9 @@ fun find_class_loop (cooker : cooker_t) kp enclosing0_ (subjk0, k0) nn0 = (
 		let
 		    val subjx0 = (true_subject name)
 		    val Defclass ((_, _), x0) = dx
-		    val enclosing1_ = subjk0
+		    (*val enclosing1_ = subjk0*)
 		in
-		    (find_class_loop cooker kp enclosing1_ (subjx0, x0) tt)
+		    (find_class_loop cooker kp (subjx0, x0) tt)
 		end)
 	      | SOME (Naming (_, _, _, _, (z, r, EL_State d, h))) => (
 		raise (error_state_found_for_class (Name nn0) kp))
@@ -488,9 +491,9 @@ fun find_class (cooker : cooker_t) (subjkp_, kp) nn = (
 		let
 		    val subjx0 = (true_subject name)
 		    val Defclass (_, x0) = dx
-		    val (enclosing, _) = (subject_prefix subjx0)
+		    (*val (enclosing, _) = (subject_prefix subjx0)*)
 		in
-		    (find_class_loop cooker kp enclosing (subjx0, x0) t)
+		    (find_class_loop cooker kp (subjx0, x0) t)
 		end)
 	      | SOME (Naming (_, _, _, _, (z, r, EL_State dx, h))) => (
 		raise (error_state_found_for_class nn kp)))

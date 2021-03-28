@@ -21,7 +21,6 @@ fun tr_conn (s : string) = if true then (print (s ^"\n")) else ()
 fun tr_conn_vvv (s : string) = if false then (print (s ^"\n")) else ()
 
 val find_element = finder.find_element
-val list_elements = finder.list_elements
 
 val instance_tree = classtree.instance_tree
 val traverse_tree = classtree.traverse_tree
@@ -247,12 +246,10 @@ fun find_flow_variable (subj, side) = (
 fun connector_is_overdetermined subj = (
     let
 	val kp = surely (fetch_from_instance_tree subj)
-	fun cooker u_ (subj_, k_) = raise Match
 	val id = Id "equalityConstraint"
-	(*val bindings = (list_elements cooker true kp)*)
+	(*AHOAHOAHO*) fun faulting_cooker _ (_, _) = raise Match
     in
-	(*case (find_in_bindings id bindings) of*)
-	case (find_element cooker true kp id) of
+	case (find_element faulting_cooker true kp id) of
 	    NONE => false
 	  | SOME (Naming (_, _, _, _, (z, r, EL_Class dx, h))) => true
 	  | SOME (Naming (_, _, _, _, (z, r, EL_State dx, h))) => false

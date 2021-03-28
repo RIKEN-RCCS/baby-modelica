@@ -368,12 +368,8 @@ and instantiate_element_by_name kp id = (
     let
 	val cooker = assemble_package
 	val subj = (subject_of_class kp)
-	(*val package = (class_is_package kp)*)
 	(*fun faulting_cooker _ (_, _) = raise Match*)
-	(*val bindings = (list_elements faulting_cooker true kp)*)
     in
-	(*case (find_in_bindings id bindings) of*)
-	(*case (find_name_initial_part cooker kp id) of*)
 	case (find_element cooker true kp id) of
 	    NONE => raise (error_name_not_found id kp)
 	  | SOME binding => (
@@ -513,8 +509,10 @@ fun traverse_with_instantiation k0 = (
 	    ()
 	else
 	    let
-		val cooker = assemble_package
-		val bindings = (list_elements cooker true k0)
+		(*val cooker = assemble_package*)
+		val _ = (assert_cooked_at_least E3 k0)
+		fun faulting_cooker _ (_, _) = raise Match
+		val bindings = (list_elements faulting_cooker true k0)
 		val (classes, states) =
 		      (List.partition binding_is_class bindings)
 		val _ = (app assert_inner_outer_condition states)
