@@ -366,11 +366,9 @@ and check_reference_subscripts__ (Slot (v, dim, nodes, dummy)) ss = (
 
 and instantiate_element_by_name kp id = (
     let
-	val cooker = assemble_package
 	val subj = (subject_of_class kp)
-	(*fun faulting_cooker _ (_, _) = raise Match*)
     in
-	case (find_element cooker true kp id) of
+	case (find_element true kp id) of
 	    NONE => raise (error_name_not_found id kp)
 	  | SOME binding => (
 	    let
@@ -509,10 +507,8 @@ fun traverse_with_instantiation k0 = (
 	    ()
 	else
 	    let
-		(*val cooker = assemble_package*)
 		val _ = (assert_cooked_at_least E3 k0)
-		fun faulting_cooker _ (_, _) = raise Match
-		val bindings = (list_elements faulting_cooker true k0)
+		val bindings = (list_elements true k0)
 		val (classes, states) =
 		      (List.partition binding_is_class bindings)
 		val _ = (app assert_inner_outer_condition states)

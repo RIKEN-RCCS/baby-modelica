@@ -95,9 +95,8 @@ fun fetch_element_class cooker_ (defining, id) : definition_body_t = (
 	    let
 		val kp = surely (fetch_from_instance_tree defining)
 		val _ = if (step_is_at_least E3 kp) then () else raise Match
-		fun faulting_cooker _ (_, _) = raise Match
 	    in
-		case (find_element faulting_cooker false kp id) of
+		case (find_element false kp id) of
 		    NONE => raise (error_name_not_found id kp)
 		  | SOME (Naming (_, _, _, _, (z, r, EL_Class dx, h))) => (
 		    let

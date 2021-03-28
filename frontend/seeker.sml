@@ -189,9 +189,8 @@ fun lookup_in_main_and_bases (cooker : cooker_t) ctx kp id = (
 	      | NONE => raise (error_name_not_found id kp)
 	else if (step_is_at_least E3 kp) then
 	    let
-	        (*AHOAHOAHO*) fun faulting_cooker _ (_, _) = raise Match
 	    in
-		case (find_element faulting_cooker true kp id) of
+		case (find_element true kp id) of
 		    NONE => raise (error_name_not_found id kp)
 		  | SOME (Naming (_, subj, _, _, (z, r, EL_Class dx, h))) => (
 		    let

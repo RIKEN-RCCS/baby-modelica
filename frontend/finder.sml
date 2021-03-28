@@ -16,11 +16,11 @@ sig
     val find_class :
 	cooker_t -> (subject_t * definition_body_t) -> name_t
 	-> definition_body_t option
-    val list_elements :
-	cooker_t -> bool -> definition_body_t -> naming_t list
 
+    val list_elements :
+	bool -> definition_body_t -> naming_t list
     val find_element :
-	cooker_t -> bool -> definition_body_t -> id_t -> naming_t option
+	bool -> definition_body_t -> id_t -> naming_t option
     val find_name_initial_part :
 	cooker_t -> definition_body_t -> id_t -> naming_t option
     val list_component_names : definition_body_t -> id_t list
@@ -104,15 +104,18 @@ fun make_dummy_inner (cv0 : element_sum_t) subj = (
    base classes.  It incorporates the inner/outer relation.  It can be
    called with both main and base classes.  A returned list is
    complete for a class at step=E3 or greater.  Yet, it may be called
-   with a class at step=E2 before applying modifiers, but then the
-   list of names is only usable.  It caches the list for a class
-   step=E3 or greater.  Note that the entries of non-constant
-   variables and outer classes are skipped when it is processed as a
-   package.  It is an error to call this with the package-root. *)
+   with a class at step=E2 (from list_component_names) before applying
+   modifiers, but then the list of names is only usable.  It caches
+   the list for a class step=E3 or greater.  Note that the entries of
+   non-constant variables and outer classes are skipped when it is
+   processed as a package.  It is an error to call this with the
+   package-root. *)
 
-fun list_elements (cooker : cooker_t) exclude_imported kp = (
+fun list_elements exclude_imported kp = (
     let
 	(*val _ = tr_find (";; list_elements ("^ (class_print_name kp) ^")")*)
+	val _ = if (class_is_body kp) then () else raise Match
+	val _ = if (step_is_at_least E2 kp) then () else raise Match
 
 	fun filter bb = (
 	    if (not exclude_imported) then
@@ -120,17 +123,15 @@ fun list_elements (cooker : cooker_t) exclude_imported kp = (
 	    else
 		(List.filter (not o binding_is_imported) bb))
 
-	val _ = if (class_is_body kp) then () else raise Match
-	val _ = if (step_is_at_least E2 kp) then () else raise Match
-
 	val caching = (step_is_at_least E3 kp)
 	val subj = (subject_of_class kp)
 	val tag = (innate_tag kp)
 	val key = ((subject_to_string subj) ^"@"^ (tag_to_string tag))
+	fun faulting_cooker _ (_, _) = raise Match
     in
 	if (not caching) then
 	    let
-		val bb = (gather_names_in_class cooker kp)
+		val bb = (gather_names_in_class faulting_cooker kp)
 	    in
 		(filter bb)
 	    end
@@ -139,7 +140,7 @@ fun list_elements (cooker : cooker_t) exclude_imported kp = (
 		SOME bb => (filter bb)
 	      | NONE => (
 		let
-		    val bb = (gather_names_in_class cooker kp)
+		    val bb = (gather_names_in_class faulting_cooker kp)
 		    val _ = (HashTable.insert class_bindings (key, bb))
 		in
 		    (filter bb)
@@ -326,8 +327,7 @@ and look_for_inner_in_class (cooker : cooker_t) cv0 subj0 = (
 	val _ = if (class_is_instance kp) then () else raise Match
 	val _ = (assert_match_subject subj0 kp)
 	val _ = (assert_cooked_at_least E3 kp)
-	fun faulting_cooker _ (_, _) = raise Match
-	val bindings = (list_elements faulting_cooker true kp)
+	val bindings = (list_elements true kp)
     in
 	case (List.find (inner id) bindings) of
 	    NONE => NONE
@@ -355,8 +355,7 @@ fun list_component_names kp = (
 		EL_Class _ => raise Match
 	      | EL_State (Defvar (_, q, k, c, a, w)) => id)
 
-	fun faulting_cooker _ (_, _) = raise Match
-	val bindings = (list_elements faulting_cooker false kp)
+	val bindings = (list_elements false kp)
 	val (classes, states) = (List.partition binding_is_class bindings)
 	val cc = (map name states)
 
@@ -373,7 +372,7 @@ fun list_component_names kp = (
    variable/class as it is declared/defined (that is, it is not
    cooked). *)
 
-fun find_element (cooker : cooker_t) exclude_imported kp id = (
+fun find_element exclude_imported kp id = (
     let
 	val _ = if (class_is_body kp) then () else raise Match
 	val _ = if (step_is_at_least E3 kp) then () else raise Match
@@ -400,8 +399,7 @@ fun find_element (cooker : cooker_t) exclude_imported kp id = (
 		    end))
 	else
 	    let
-		(*AHOAHOAHO*) fun faulting_cooker _ (_, _) = raise Match
-		val bindings = (list_elements faulting_cooker exclude_imported kp)
+		val bindings = (list_elements exclude_imported kp)
 	    in
 		case (find_in_bindings id bindings) of
 		    SOME binding => SOME binding
@@ -419,9 +417,8 @@ fun find_element (cooker : cooker_t) exclude_imported kp id = (
 fun find_name_initial_part (cooker : cooker_t) kp (id as Id s) = (
     let
 	val _ = if (class_is_body kp) then () else raise Match
-	(*AHOAHOAHO*) fun faulting_cooker _ (_, _) = raise Match
     in
-	case (find_element faulting_cooker false kp id) of
+	case (find_element false kp id) of
 	    SOME binding => SOME binding
 	  | NONE => (
 	    if (body_is_package_root kp) then
@@ -454,9 +451,8 @@ fun find_class_loop (cooker : cooker_t) kp (subjk0, k0) nn0 = (
 	    val k2 = (assemble_package_if_fresh cooker E3 (subjk0, k0))
 	    val _ = (assert_match_subject subjk0 k2)
 	    val id = (Id s)
-	    (*AHOAHOAHO*) fun faulting_cooker _ (_, _) = raise Match
 	in
-	    case (find_element faulting_cooker true k2 id) of
+	    case (find_element true k2 id) of
 		NONE => raise (error_class_name_not_found (Name nn0) kp)
 	      | SOME (name as Naming (_, _, _, _, (z, r, EL_Class dx, h))) => (
 		let

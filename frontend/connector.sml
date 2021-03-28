@@ -247,9 +247,8 @@ fun connector_is_overdetermined subj = (
     let
 	val kp = surely (fetch_from_instance_tree subj)
 	val id = Id "equalityConstraint"
-	(*AHOAHOAHO*) fun faulting_cooker _ (_, _) = raise Match
     in
-	case (find_element faulting_cooker true kp id) of
+	case (find_element true kp id) of
 	    NONE => false
 	  | SOME (Naming (_, _, _, _, (z, r, EL_Class dx, h))) => true
 	  | SOME (Naming (_, _, _, _, (z, r, EL_State dx, h))) => false
