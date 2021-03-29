@@ -687,8 +687,9 @@ fun record_inner_outer outer inner = (
 (* Inserts an alias instance to record an inner-outer matching in the
    class_tree/instance_tree.  An outer reference will be substituted
    by an inner reference, but it is delayed until processing
-   connectors (connectors need to distinguish internal connections).
-   It temporarily instantiates an outer reference as an alias. *)
+   connectors.  It is because the place where a connector is declared
+   matters to distinguish the side of a connector.  It temporarily
+   instantiates an outer reference as an alias. *)
 
 fun instantiate_outer_alias var outer inner = (
     let

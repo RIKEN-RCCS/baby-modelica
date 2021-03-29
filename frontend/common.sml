@@ -836,7 +836,7 @@ fun kind_of_class k = (
 
 fun kind_is_function k = (
     case (kind_of_class k) of
-	SOME (Function _) => true
+	SOME (Function pure) => true
       | _ => false)
 
 fun kind_is_record k = (
@@ -946,24 +946,6 @@ fun class_is_boolean k = (
       | Def_Der _ => false
       | Def_Primitive _ => false
       | _ => raise Match)
-
-fun class_is_function__ k = (
-    case k of
-	Def_Body ((u, f, b), j, (t, p, q), nm, cc, ee, aa, ww) => (
-	case t of
-	    Function pure => (true, pure)
-	  | _ => (false, false))
-      | Def_Der _ => (false, false)
-      | Def_Primitive _ => (false, false)
-      | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => raise Match
-      | Def_Scoped _ => raise Match
-      | Def_Refine _ => raise Match
-      | Def_Extending _ => raise Match
-      | Def_Replaced _ => raise Match
-      | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
-      | Def_Mock_Array _ => raise Match)
 
 (* Tests if a class is a package, otherwise it is an instance.  Note
    that an instance is processed as a package in early stages, but

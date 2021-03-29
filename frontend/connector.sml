@@ -50,7 +50,7 @@ val explicitize_range = folder.explicitize_range
 val bind_in_scoped_expression = binder.bind_in_scoped_expression
 
 val instantiate_class = builder.instantiate_class
-val traverse_with_instantiation = builder.traverse_with_instantiation
+val instantiate_components = builder.instantiate_components
 
 val bind_in_instance = postbinder.bind_in_instance
 
@@ -638,7 +638,7 @@ fun expand_connector pairs = (
 	val k0 = (select_record_class sidex classes)
 	val subsubj = (compose_subject subj id [])
 	val (dim, array) = (make_record_instances subsubj dim k0)
-	val _ = (app traverse_with_instantiation array)
+	val _ = (app instantiate_components array)
     in
 	(dim, array)
     end)

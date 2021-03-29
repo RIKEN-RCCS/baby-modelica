@@ -3440,10 +3440,12 @@ like C~Language.
 
 %%%%%%%%%%%%%%%%
 
-\subsection{Functions}\label{sec:functions}.
+\subsection{Functions}\label{sec:functions}
 
 A function is a function in a usual sense.  A function as a class_kind
-is described in Section~\ref{sec:class-kinds}.
+is described in Section~\ref{sec:class-kinds}.  A function is
+syntactically a package, and it is not instantiated.  It contains
+variables that are inputs and outputs.
 
 Arguments to a function are simple_types, records (including
 connectors, operator_records) and arrays of them, and functions.
@@ -4721,45 +4723,46 @@ and in Fluid/Interfaces.mo:
 
 \subsection{Limitations and general remarks}
 
-%%%%%%%%%%%%%%%%
-
 \begin{itemize}
 
-\item The_implementation is written in SML~'97 (Standard ML).  The
-code is developed mainly with Poly/ML (on SunOS~5.11/amd64), but it
-may work with SML/NJ or MLton.  Sometimes the code is twisted because
-SML does not allow forward references of names.
+\item The_frontend is written in SML~'97 (Standard ML).  The code is
+developed mainly with Poly/ML (on SunOS~5.11/amd64), but it may work
+with SML/NJ or MLton.  Sometimes the code is twisted because SML does
+not allow forward references of names.
 
-\item The_implementation uses a modified BYACC parser generator (not
+\item The_frontend uses a modified BYACC parser generator (not
 ml-yacc), which can be obtained separately.
 
 \item The file coding is ASCII, although it is defined as UTF-8 in
 \specref{13.2.2}.
 
-\item Error checking/reporting is none.  The parser records no source
-line number information.  No information is provided for errors in a
-model.
+\item Error checking/reporting is none.  The parser does not record
+source line number information.  No information is provided for errors
+in a model.
 
 \item Constant folding is very weak.  Folding constants at
 translation-time is mandatory for array dimensions.
 
-\item The_implementation may be confused by the uses of characters
+\item The_frontend may be confused by the uses of characters
 "{\tt{}.}" and "{\tt{}@}" in names in a model.  It internally uses
 them to separate identifiers.
 
-\item The_implementation treats $\mathbf{class}$ as a synonym of
+\item The_frontend treats $\mathbf{class}$ as a synonym of
 $\mathbf{model}$, that follows the old definition.
 
-\item The_implementation does not implement $\mathbf{pure}$
-expressions and errs on the uses of them.
+\item The_frontend does not implement $\mathbf{pure}$ expressions and
+errs on uses of them.
 
 \item It does not parse the {\it{}Synchronous Language\/} and
 {\it{}State Machines}.
 
+\item It does not handle overdetermined connectors with
+{\it{}equalityConstraint}.
+
 \item Internal errors (assertions) raise the Match exception.  But,
 other errors are often synonyms of the Match exception.
 
-\item The_implementation does not check the representable values of
+\item The_frontend does not check the representable values of
 {Integer}.  Escpecially, {Integer\_inf} may raise the Overflow
 exception.  The definition of {ModelicaServices.Integer\_inf} in
 MSL~3.2.3 is in 32~bits, and it is no problem for 64~bit SML

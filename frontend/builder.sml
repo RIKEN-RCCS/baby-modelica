@@ -16,8 +16,7 @@ sig
 	subject_t * definition_body_t -> int list * definition_body_t list
     val secure_reference :
 	definition_body_t -> bool -> expression_t -> expression_t
-
-    val traverse_with_instantiation : definition_body_t -> unit
+    val instantiate_components : definition_body_t -> unit
 
     val xreset : unit -> unit
     val xload : string -> class_definition_t
@@ -156,14 +155,6 @@ and instantiate_with_dimension (subj, k0) = (
 			     (subject_print_string subj) ^" : "^
 			     (class_print_name k0) ^")...")
 
-	(*AHO*)
-	(*
-	val xxx = Subj (VAR, [(Id "tank", []),
-			      (Id "portsData", [1]),
-			      (Id "diameter", [])])
-	val _ = if (subj <> xxx) then () else raise Match
-	*)
-
 	val k1 = (assemble_instance (subj, k0))
     in
 	case k1 of
@@ -274,7 +265,7 @@ and secure_reference_in_expression ctx buildphase_ w0 = (
    the class_tree/instance_tree.  It makes all array elements
    accessible and thus ignores array subscripts (and it can be done
    without folding constants).  It does not secure inside an
-   expandable connector (because it can contain undeclared elements).
+   expandable connector because it can contain undeclared elements.
    At each step, it descends a part of a reference in the tree.  The
    next part can be a package, a constant, or an instance, where it is
    an instance only when the current node is an instance. *)
@@ -489,7 +480,7 @@ fun call_if_component__ kp f (Naming (v, subsubj, _, _, (z, r, dd, h))) = (
    in the components.  It skips ones already created, which are
    possibly created during determination of array dimensions. *)
 
-fun traverse_with_instantiation k0 = (
+fun instantiate_components k0 = (
     let
 	fun instantiate kp binding = (
 	    case binding of
@@ -514,7 +505,7 @@ fun traverse_with_instantiation k0 = (
 		val _ = (app assert_inner_outer_condition states)
 		val instances = (List.concat (map (instantiate k0) states))
 	    in
-		(app traverse_with_instantiation instances)
+		(app instantiate_components instances)
 	    end
     end)
 
@@ -568,14 +559,13 @@ fun xbuild s = (
 	val subj = the_model_subject
 	val k0 = (xfind s)
 	val (dim, array) = (instantiate_class (subj, k0))
-	val _ = if (null dim) then () else raise Match
-	val _ = if ((length array) = 1) then () else raise Match
+	val _ = if (null dim) then () else raise error_model_is_array
+	val _ = if ((length array) = 1) then () else raise error_model_is_array
 	val k3 = (hd array)
-	val v = Id ""
-	val q = no_component_prefixes
-	val var = Defvar (v, q, k3, NONE, Annotation [], Comment [])
-	val _ = (assert_subject_is_not_array subj)
-	val _ = (traverse_with_instantiation k3)
+	(*val v = Id ""*)
+	(*val q = no_component_prefixes*)
+	(*val var = Defvar (v, q, k3, NONE, Annotation [], Comment [])*)
+	val _ = (instantiate_components k3)
     in
 	()
     end)

@@ -133,6 +133,20 @@ fun extend_reference subj rr1 = (
 	    Vref (SOME ns, (prefix @ rr1))
 	end))
 
+(* Appends a variable reference similarily to extend_reference except
+   when it is a local variable. *)
+
+fun extend_reference_for_function kp subj rr = (
+    let
+	val (name0, _) = (subject_prefix subj)
+	val name1 = (subject_of_class kp)
+    in
+	if (name0 = name1) then
+	    Vref (SOME VAR, rr)
+	else
+	    (extend_reference subj rr)
+    end)
+
 (* Makes a reference in a class.  The first part of a path matches to
    a resolved class.  The name postfix needs to be secured as a proper
    reference. *)
@@ -143,7 +157,8 @@ fun refer_in_package kp subj rr = (
       | (id, []) :: _ => (extend_reference subj rr)
       | _ => raise error_subscripts_to_package)
 
-(* Makes a reference in a variable. *)
+(* Makes a reference in a variable.  A variable name is included both
+   in the tail of a subject and in the head of a reference path. *)
 
 fun refer_in_variable kp (d as Defvar _) subj rr = (
     let
@@ -151,9 +166,14 @@ fun refer_in_variable kp (d as Defvar _) subj rr = (
 		else if (declaration_is_constant d) then ()
 		else raise error_variable_in_static_class
     in
-	case rr of
-	    [] => raise Match
-	  | _ => (extend_reference subj rr)
+	if (not (kind_is_function kp)) then
+	    case rr of
+		[] => raise Match
+	      | _ => (extend_reference subj rr)
+	else
+	    case rr of
+		[] => raise Match
+	      | _ => (extend_reference_for_function kp subj rr)
     end)
 
 (* Resolves a variable reference in the given package/instance.  It is

@@ -1,8 +1,8 @@
 (* postbinder.sml -*-Coding: us-ascii-unix;-*- *)
 (* Copyright (C) 2018-2021 RIKEN R-CCS *)
 
-(* NAME RESOLVER, SECOND PART.  Second resolving resolves a variable
-   reference in equations/algorithms sections. *)
+(* NAME RESOLVER, SECOND PART.  The second part resolves variable
+   references in equations/algorithms sections. *)
 
 structure postbinder :
 sig
@@ -420,9 +420,8 @@ fun bind_in_instance (scanning : bool) k0 = (
 
 (* Calls the variable resolving procedure on packages/instances in the
    trees.  It returns true if some are processed.  It skips classes
-   that are named but are not used as packages (which have the
-   step=E0).  It accesses the components after processing the
-   class. *)
+   that are named but are not used as packages (which have step=E0).
+   It accesses the components after processing the class. *)
 
 fun bind_in_instances_loop (scanning : bool) node0 = (
     let
@@ -440,11 +439,11 @@ fun bind_in_instances_loop (scanning : bool) node0 = (
 	(List.exists (fn x => x) (changes0 :: changes1))
     end)
 
-(* Binds variables in the model.  It repeatedly calls the binding
+(* Resolves variables in the model.  It repeatedly calls the binding
    procedure until settled, because values and equations accessed may
    introduce new references.  Although all variables has been created
-   in the building phase, constants may still be introduced and
-   scanning in the instance_tree is necessary. *)
+   in the building phase, constants may still be introduced and it is
+   necessary to scan the instance_tree. *)
 
 fun bind_in_model () = (
     let
