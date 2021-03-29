@@ -3467,14 +3467,17 @@ input formal parameters, or given by constant or parameter
 expressions, or by expressions containing combinations of
 those...\end{qquote}
 
-\subsubsection*{(?) Local variables}
+\subsubsection*{Local variables}
 
-(?) An input/output or local variable declaration does not accept
-general form of modifiers.  It accepts only initializers (by $=$).
+An input/output or local variable declaration accepts general form of
+modifiers as well as initializers by =-sign.
 
 \begin{qquote} (\specref{12.2}\/) $\bullet$\,A formal parameter or
 local variable may be initialized through a binding (=) of a default
 value in its declaration, ...\end{qquote}
+
+Local variables (non-input/output ones) need be declared in the
+protected section.
 
 \subsubsection*{(?) Restriction}
 
