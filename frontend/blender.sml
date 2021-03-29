@@ -1,10 +1,10 @@
 (* blender.sml -*-Coding: us-ascii-unix;-*- *)
 (* Copyright (C) 2018-2021 RIKEN R-CCS *)
 
-(* CLASS BUILDER.  This collects base classes and applies
+(* BASE CLASS COLLECTOR.  This collects base classes and applies
    modifiers. *)
 
-structure cooker :
+structure blender :
 sig
     type subject_t
     type cook_step_t

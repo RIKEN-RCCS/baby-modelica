@@ -98,7 +98,8 @@ datatype predefined_operator_t
    class copying.  It is with an array dimension which is null for a
    scalar component.  Instances refers to instances, and also it
    internally refers to a function.  Iref is an iterator variable
-   reference.  Cref is a connector reference with the side
+   reference.  Lref is a parameter in a function.  It is introduced
+   during binding.  Cref is a connector reference with its side
    information.  Connector references are introduced to the arguments
    to connect-equations (and the cardinality-operator) during binding.
    Others, Array_fill, Array_diagonal, etc. are predefined
@@ -131,6 +132,7 @@ datatype expression_t
     | Component_Ref of expression_t * id_t
     | Instances of int list * subject_t list
     | Iref of id_t
+    | Lref of component_and_subscript_t list * subject_t
     | Cref of expression_t * (*outside*) bool
     | Array_fill of expression_t * expression_t
     | Array_diagonal of expression_t

@@ -51,7 +51,7 @@ val subject_to_instance_tree_path = classtree.subject_to_instance_tree_path
 
 val find_name_initial_part = finder.find_name_initial_part
 
-val assemble_package = cooker.assemble_package
+val assemble_package = blender.assemble_package
 
 val obtain_array_dimension = operator.obtain_array_dimension
 
@@ -136,13 +136,13 @@ fun extend_reference subj rr1 = (
 (* Appends a variable reference similarily to extend_reference except
    when it is a local variable. *)
 
-fun extend_reference_for_function kp subj rr = (
+fun make_reference_in_function kp subj rr = (
     let
 	val (name0, _) = (subject_prefix subj)
 	val name1 = (subject_of_class kp)
     in
 	if (name0 = name1) then
-	    Vref (SOME VAR, rr)
+	    Lref (rr, name1)
 	else
 	    (extend_reference subj rr)
     end)
@@ -166,14 +166,13 @@ fun refer_in_variable kp (d as Defvar _) subj rr = (
 		else if (declaration_is_constant d) then ()
 		else raise error_variable_in_static_class
     in
-	if (not (kind_is_function kp)) then
-	    case rr of
-		[] => raise Match
-	      | _ => (extend_reference subj rr)
-	else
-	    case rr of
-		[] => raise Match
-	      | _ => (extend_reference_for_function kp subj rr)
+	case rr of
+	    [] => raise Match
+	  | _ => (
+	    if (not (kind_is_function kp)) then
+		(extend_reference subj rr)
+	    else
+		(make_reference_in_function kp subj rr))
     end)
 
 (* Resolves a variable reference in the given package/instance.  It is
@@ -359,6 +358,7 @@ and bind_in_expression ctx buildphase binder w0 = (
 	  (*| Instance _ => w0*)
 	  | Instances _ => w0
 	  | Iref _ => w0
+	  | Lref _ => w0
 	  | Cref _ => w0
 	  | Array_fill (e, s) => (
 	    Array_fill ((walk_x e), (walk_x s)))

@@ -3444,15 +3444,42 @@ like C~Language.
 
 A function is a function in a usual sense.  A function as a class_kind
 is described in Section~\ref{sec:class-kinds}.  A function is
-syntactically a package, and it is not instantiated.  It contains
-variables that are inputs and outputs.
+syntactically a package, and no instance is created.  It contains
+variables that are inputs and outputs, although it is a package.
 
 Arguments to a function are simple_types, records (including
 connectors, operator_records) and arrays of them, and functions.
 
-\begin{qquote} (\specref{12.2}\/) $\bullet$ A function may only
+\begin{qquote} (\specref{12.2}\/) $\bullet$\,A function may only
 contain components of the restricted classes type, record, operator
 record, and function; i.e. no model or block components.\end{qquote}
+
+\subsubsection*{(?) Array dimensions}
+
+A dimension of an array variable in a function can be a runtime value.
+A part of a dimension of a type defined elsewhere is a
+translation-time constant.
+
+\begin{qquote} (\specref{12.2}\/) $\bullet$\,The dimension sizes not
+declared with (:) of each array result or array local variable [i.e.,
+a non-input components] of a function must be either given by the
+input formal parameters, or given by constant or parameter
+expressions, or by expressions containing combinations of
+those...\end{qquote}
+
+\subsubsection*{(?) Local variables}
+
+(?) An input/output or local variable declaration does not accept
+general form of modifiers.  It accepts only initializers (by $=$).
+
+\begin{qquote} (\specref{12.2}\/) $\bullet$\,A formal parameter or
+local variable may be initialized through a binding (=) of a default
+value in its declaration, ...\end{qquote}
+
+\subsubsection*{(?) Restriction}
+
+\begin{qquote} (\specref{12.2}\/) $\bullet$\,A function may not be used
+in connections...\end{qquote}
 
 \subsubsection*{(?) No results}
 

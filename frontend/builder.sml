@@ -17,6 +17,7 @@ sig
     val secure_reference :
 	definition_body_t -> bool -> expression_t -> expression_t
     val instantiate_components : definition_body_t -> unit
+    val instantiate_function_components : definition_body_t -> unit
 
     val xreset : unit -> unit
     val xload : string -> class_definition_t
@@ -48,8 +49,9 @@ val find_in_components = classtree.find_in_components
 val find_element = finder.find_element
 val list_elements = finder.list_elements
 
-val assemble_instance = cooker.assemble_instance
-val assemble_package = cooker.assemble_package
+val assemble_instance = blender.assemble_instance
+val assemble_package = blender.assemble_package
+
 val commute_modifier_over_subscript = refiner.commute_modifier_over_subscript
 
 val walk_in_expression = walker.walk_in_expression
@@ -409,7 +411,7 @@ and instantiate_named_element kp binding = (
 	end)
       | Naming (id, subj, NONE, _, (z, r, EL_State dx, h)) => (
 	let
-	    val package = (class_is_package kp)
+	    val package = (class_is_non_function_package kp)
 	    val _ = if ((not package) orelse (declaration_is_constant dx))
 		    then () else raise error_non_constant_in_package
 	    val Defvar (_, q, k0, c0, aa, ww) = dx
@@ -480,7 +482,7 @@ fun call_if_component__ kp f (Naming (v, subsubj, _, _, (z, r, dd, h))) = (
    in the components.  It skips ones already created, which are
    possibly created during determination of array dimensions. *)
 
-fun instantiate_components k0 = (
+fun instantiate_components kp = (
     let
 	fun instantiate kp binding = (
 	    case binding of
@@ -492,22 +494,84 @@ fun instantiate_components k0 = (
 		    array
 		end))
     in
-	if (class_is_outer_alias k0) then
+	if (class_is_outer_alias kp) then
 	    ()
-	else if (class_is_simple_type k0) then
+	else if (class_is_simple_type kp) then
 	    ()
 	else
 	    let
-		val _ = (assert_cooked_at_least E3 k0)
-		val bindings = (list_elements true k0)
+		val _ = (assert_cooked_at_least E3 kp)
+		val bindings = (list_elements true kp)
 		val (classes, states) =
 		      (List.partition binding_is_class bindings)
 		val _ = (app assert_inner_outer_condition states)
-		val instances = (List.concat (map (instantiate k0) states))
+		val instances = (List.concat (map (instantiate kp) states))
 	    in
 		(app instantiate_components instances)
 	    end
     end)
+
+(* ================================================================ *)
+
+(*
+fun strip_dimension k0 = (
+    case k0 of
+	Def_Body _ => ([], [], k0)
+      | Def_Der _ => raise Match
+      | Def_Refine (x0, v, ts0, q0, (ss0, mm0), cc0, aa0, ww0) => (
+	let
+	    val k1 = Def_Refine (x0, v, ts0, q0, ([], []), cc0, aa0, ww0)
+	in
+	    ([], [], k1)
+	end)
+      | _ => raise Match)
+*)
+
+(* Instantiates the input/output variables of a function.  It is not
+   an instantiation but is similar to instantiate_components.  It
+   leaves array dimensions because they can be non-constants. *)
+
+fun instantiate_function_components kp = ()
+
+(*
+fun instantiate_function_components kp = (
+    let
+	fun instantiate binding = (
+	    case binding of
+		Naming (_, _, _, _, (z, r, EL_Class _, h)) => raise Match
+	      | Naming (id, subj, inner, _, (z, r, EL_State dx, h)) => (
+		case (fetch_from_instance_tree subj) of
+		    SOME kx => ()
+		  | NONE => (
+		    let
+			val Defvar (_, q, k0, c0, aa, ww) = dx
+			val _ = if (c0 = NIL) then () else raise Match
+			val (ss, mm, k1) = (strip_dimension k0)
+			val k2 = Def_Refine (k1, NONE, copy_type, q,
+					     ([], []), NIL, aa, ww)
+			val (dim, array) = (instantiate_class (subj, k2))
+		    in
+			()
+		    end)))
+    in
+	if (class_is_outer_alias kp) then
+	    ()
+	else if (class_is_simple_type kp) then
+	    ()
+	else if (not (kind_is_function kp)) then
+	    ()
+	else
+	    let
+		val _ = (assert_cooked_at_least E3 kp)
+		val bindings = (list_elements true kp)
+		val (_, states) =
+		      (List.partition binding_is_class bindings)
+		val instances = (List.concat (map instantiate states))
+	    in
+		(app instantiate_components instances)
+	    end
+    end)
+*)
 
 (* ================================================================ *)
 

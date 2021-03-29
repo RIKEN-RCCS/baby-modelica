@@ -35,9 +35,15 @@ val traverse_tree = classtree.traverse_tree
 val substitute_outer_reference = classtree.substitute_outer_reference
 val access_node = classtree.access_node
 
+val walk_in_class = walker.walk_in_class
+val walk_in_expression = walker.walk_in_expression
+val walk_in_equation = walker.walk_in_equation
+val walk_in_statement = walker.walk_in_statement
+val substitute_expression = walker.substitute_expression
+
 val find_class = finder.find_class
 
-val assemble_package = cooker.assemble_package
+val assemble_package = blender.assemble_package
 
 val make_reference = binder.make_reference
 (*val bind_in_class = binder.bind_in_class*)
@@ -46,13 +52,8 @@ val bind_in_expression = binder.bind_in_expression
 val discern_connector_component = binder.discern_connector_component
 val make_iterator_binder = binder.make_iterator_binder
 
-val walk_in_class = walker.walk_in_class
-val walk_in_expression = walker.walk_in_expression
-val walk_in_equation = walker.walk_in_equation
-val walk_in_statement = walker.walk_in_statement
-val substitute_expression = walker.substitute_expression
-
 val secure_reference = builder.secure_reference
+val instantiate_function_components = builder.instantiate_function_components
 
 fun tr_bind (s : string) = if true then (print (s ^"\n")) else ()
 
@@ -401,20 +402,8 @@ fun bind_in_instance (scanning : bool) k0 = (
 	    val _ = (store_to_instance_tree subj k1)
 	    val _ = (secure_reference_in_class k1)
 	    val _ = (secure_record_class k1)
+	    val _ = (instantiate_function_components k1)
 	in
-	    (*
-	    if ((kind_is_record k1) andalso (class_is_instance k1)) then
-		let
-		    val record = (class_name_of_instance k1)
-		    val var = (subject_as_reference record)
-		    val ctx = k1
-		    val _ = (secure_reference ctx false var)
-		in
-		    true
-		end
-	    else
-		true
-	    *)
 	    true
 	end)
 
