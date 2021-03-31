@@ -47,6 +47,7 @@ use "folder.sml" ;
 use "binder.sml" ;
 use "builder.sml" ;
 
+use "function.sml" ;
 use "postbinder.sml" ;
 use "syntaxer.sml" ;
 use "connector.sml" ;

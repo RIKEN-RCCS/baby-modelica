@@ -17,7 +17,6 @@ sig
     val secure_reference :
 	definition_body_t -> bool -> expression_t -> expression_t
     val instantiate_components : definition_body_t -> unit
-    val instantiate_function_components : definition_body_t -> unit
 
     val xreset : unit -> unit
     val xload : string -> class_definition_t
@@ -415,68 +414,6 @@ fun instantiate_components kp = (
 		(app instantiate_components instances)
 	    end
     end)
-
-(* ================================================================ *)
-
-(*
-fun strip_dimension__ k0 = (
-    case k0 of
-	Def_Body _ => ([], [], k0)
-      | Def_Der _ => raise Match
-      | Def_Refine (x0, v, ts0, q0, (ss0, mm0), cc0, aa0, ww0) => (
-	let
-	    val k1 = Def_Refine (x0, v, ts0, q0, ([], []), cc0, aa0, ww0)
-	in
-	    ([], [], k1)
-	end)
-      | _ => raise Match)
-*)
-
-(* Instantiates the input/output variables of a function.  It is not
-   an instantiation but is similar to instantiate_components.  It
-   leaves array dimensions because they can be non-constants. *)
-
-fun instantiate_function_components kp = ()
-
-(*
-fun instantiate_function_components__ kp = (
-    let
-	fun instantiate binding = (
-	    case binding of
-		Naming (_, _, _, _, (z, r, EL_Class _, h)) => raise Match
-	      | Naming (id, subj, inner, _, (z, r, EL_State dx, h)) => (
-		case (fetch_from_instance_tree subj) of
-		    SOME kx => ()
-		  | NONE => (
-		    let
-			val Defvar (_, q, k0, c0, aa, ww) = dx
-			val _ = if (c0 = NIL) then () else raise Match
-			val (ss, mm, k1) = (strip_dimension k0)
-			val k2 = Def_Refine (k1, NONE, copy_type, q,
-					     ([], []), NIL, aa, ww)
-			val (dim, array) = (instantiate_class (subj, k2))
-		    in
-			()
-		    end)))
-    in
-	if (class_is_outer_alias kp) then
-	    ()
-	else if (class_is_simple_type kp) then
-	    ()
-	else if (not (kind_is_function kp)) then
-	    ()
-	else
-	    let
-		val _ = (assert_cooked_at_least E3 kp)
-		val bindings = (list_elements true kp)
-		val (_, states) =
-		      (List.partition binding_is_class bindings)
-		val instances = (List.concat (map instantiate states))
-	    in
-		(app instantiate_components instances)
-	    end
-    end)
-*)
 
 (* ================================================================ *)
 

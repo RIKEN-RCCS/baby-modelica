@@ -608,10 +608,10 @@ fun identify_class_name subj = (
 
 (* Processes a class as a package (non-instance).  It is frequently
    used as a callback "cooker" during lookups, and it is called via
-   assemble_package_if_fresh.  It is called with wantedstep with E0
-   for a class searched in for an imported class, E2 for a class
-   searched in for a base class, and E3 for usual processing.  It
-   ensures a class is stored in the instance_tree. *)
+   assemble_package_if_fresh.  It stores a package in the
+   class_tree/instance_tree and reveals intermediate steps.  It is
+   called with wantedstep=E0 for a class in which an imported class is
+   searched for, E2 for a base class, and E3 for an element class. *)
 
 fun assemble_package wantedstep (subj, k0) = (
     let
@@ -637,8 +637,6 @@ fun assemble_package wantedstep (subj, k0) = (
 	    case (cook_step k2) of
 		E0 => (
 		let
-		    (*val (enclosing, _) = (subject_prefix subj)*)
-		    (*val k3 = (assign_enclosing k2 enclosing)*)
 		    val k4 = (cook_class_binary PKG (subj, k2))
 		in
 		    k4
@@ -662,8 +660,10 @@ fun assemble_package wantedstep (subj, k0) = (
 	      | E5 => raise Match
     end)
 
-(* Processes a class as an instance.  A class is wrapped by a
-   Def_Refine to pass component-prefixes to the instance. *)
+(* Processes a class as an instance.  It does not store an instance in
+   the instance_tree.  A returned class is a Def_Body or a Def_Refine
+   when it is an array.  In the case of a Def_Refine, some modifiers
+   remain not applied. *)
 
 and assemble_instance (subj, k0) = (
     let
@@ -704,7 +704,7 @@ and cook_class_refining main pkg (subj, k0) siblings = (
 	k1
     end)
 
-(* Gathers modifiers of the class until a definition body is found.
+(* Gathers modifiers to the class until a definition body is found.
    It is called with empty modifiers at the start.  Note the ordering
    of merging modifiers, because the passed modifiers are more recent
    and appended to the tail. *)
@@ -881,10 +881,10 @@ and cook_class_body main pkg (subj, k0) siblings = (
    passed, because an array dimension is processed at instantiation
    for instances, or arrays are illegal for packages.  It reveals an
    intemediate state (step=E1,E2) of a package so that a name
-   resolution started by other classes can look in this class.  A list
-   siblings0 holds a chain of an extends-relation to check a cycle in
-   the base class hierarchy.  The passed modifiers are scoped in the
-   environment.  *)
+   resolution started by other classes can search in this class.  A
+   list siblings0 holds a chain of an extends-relation to check a
+   cycle in the base class hierarchy.  The passed modifiers are scoped
+   in the environment.  *)
 
 and cook_class_with_modifiers main pkg (subj, k0) mm cc aa siblings0 = (
     let

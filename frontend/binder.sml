@@ -1,7 +1,7 @@
 (* binder.sml -*-Coding: us-ascii-unix;-*- *)
 (* Copyright (C) 2018-2021 RIKEN R-CCS *)
 
-(* NAME RESOLVER, FIRST PART.  Name resolving attaches a prefix to a
+(* A NAME RESOLVER, FIRST PART.  Name resolving attaches a prefix to a
    variable reference to make it a full composite reference. *)
 
 (*AHO*) (* NO BINDING IN ANNOTATIONS. *)

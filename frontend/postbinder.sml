@@ -53,7 +53,7 @@ val discern_connector_component = binder.discern_connector_component
 val make_iterator_binder = binder.make_iterator_binder
 
 val secure_reference = builder.secure_reference
-val instantiate_function_components = builder.instantiate_function_components
+val resolve_function_components = function.resolve_function_components
 
 fun tr_bind (s : string) = if true then (print (s ^"\n")) else ()
 
@@ -402,7 +402,7 @@ fun bind_in_instance (scanning : bool) k0 = (
 	    val _ = (store_to_instance_tree subj k1)
 	    val _ = (secure_reference_in_class k1)
 	    val _ = (secure_record_class k1)
-	    val _ = (instantiate_function_components k1)
+	    val _ = (resolve_function_components k1)
 	in
 	    true
 	end)
