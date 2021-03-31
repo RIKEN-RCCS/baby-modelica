@@ -42,7 +42,7 @@ val subject_to_instance_tree_path = classtree.subject_to_instance_tree_path
 val component_is_outer_alias = classtree.component_is_outer_alias
 val component_is_expandable = classtree.component_is_expandable
 val dereference_outer_alias = classtree.dereference_outer_alias
-val instantiate_outer_alias = classtree.instantiate_outer_alias
+val insert_outer_alias = classtree.insert_outer_alias
 val access_node = classtree.access_node
 val find_in_components = classtree.find_in_components
 
@@ -138,7 +138,7 @@ fun assemble_package_if_package (subj, k0) = (
 (* Instantiates a class.  It repeatedly calls assemble_instance until
    an array dimension is settled.  Repeated calls are needed because
    assemble_instance may return a half-modified class when it has an
-   array dimension, because assemble_instance cannot fold constants by
+   array dimension, as assemble_instance cannot fold constants by
    itself. *)
 
 fun instantiate_class (subj, k0) = (
@@ -182,8 +182,6 @@ and instantiate_with_dimension (subj, k0) = (
 		val k2 = Def_Refine (x0, v, ts0, q0, ([], []), cc0, aa0, ww0)
 		val f = (instantiate_at_index (subj, k2) mm0)
 		val dimarraylist = (fill_dimension f [] dim1)
-		(*val arraylist = (map #2 dimarraylist)*)
-		(*val dimlist = (map #1 dimarraylist)*)
 		val (dimlist, arraylist) = (ListPair.unzip dimarraylist)
 		val array = (List.concat arraylist)
 		val size = (array_size dim1)
@@ -237,7 +235,7 @@ and settle_dimension kp ss mm = (
 		    raise error_non_constant_array_dimension
 	end)
 
-(* Tries to fold constants to a literal value.  Folding constants
+(* Tries to fold a constant to a literal value.  Folding constants
    needs to be step-by-step, because resolving new variables is
    necessary at each step. *)
 
@@ -306,11 +304,14 @@ and secure_reference_loop ctx (retrying : bool) path0 node0 = (
 		if (retrying) then
 		    raise error_component_not_found
 		else
-		    let
-			val (dim, array) = (instantiate_element_by_name kp id)
-		    in
-			(secure_reference_loop ctx true path0 node0)
-		    end)
+		    case (find_element true kp id) of
+			NONE => raise (error_name_not_found id kp)
+		      | SOME binding => (
+			let
+			    val (dim, array) = (instantiate_element kp binding)
+			in
+			    (secure_reference_loop ctx true path0 node0)
+			end))
 	      | SOME (slot as Slot (_, dim, nodes, dummy)) => (
 		if (component_is_outer_alias slot) then
 		    let
@@ -325,51 +326,7 @@ and secure_reference_loop ctx (retrying : bool) path0 node0 = (
 			 (map (secure_reference_loop ctx false path1) nodes)))
 	end))
 
-(* Checks an access is proper about scalar or array.  It is an error
-   an access to a scalar instance has subscripts. *)
-
-and check_reference_subscripts__ (Slot (v, dim, nodes, dummy)) ss = (
-    case (dim, nodes) of
-	([], []) => raise Match
-      | ([], [(_, kx, _)]) => (
-	let
-	    val kp = (! kx)
-	    val package = (class_is_package kp)
-	in
-	    if (null ss) then
-		()
-	    else if (package) then
-		raise error_subscripts_to_package
-	    else
-		raise error_subscripts_to_scalar
-	end)
-      | ([], _) => raise Match
-      | (_, []) => (
-	if (null ss) then () else raise error_access_to_empty_array)
-      | (_, (_, kx, _) :: _) => (
-	let
-	    val kp = (! kx)
-	    val package = (class_is_package kp)
-	    val _ = if (not package) then () else raise Match
-	in
-	    ()
-	end))
-
 (* Instantiates a named entry (package/instance) in a class. *)
-
-and instantiate_element_by_name kp id = (
-    let
-	val subj = (subject_of_class kp)
-    in
-	case (find_element true kp id) of
-	    NONE => raise (error_name_not_found id kp)
-	  | SOME binding => (
-	    let
-		val (dim, array) = (instantiate_element kp binding)
-	    in
-		(dim, array)
-	    end)
-    end)
 
 and instantiate_element kp binding = (
     let
@@ -388,7 +345,7 @@ and instantiate_element kp binding = (
 		let
 		    val kx = surely (fetch_from_instance_tree truesubj)
 		    val var = if (class_is_package kx) then PKG else VAR
-		    val k0 = (instantiate_outer_alias var subj truesubj)
+		    val k0 = (insert_outer_alias var subj truesubj)
 		in
 		    ([], [k0])
 		end)
@@ -426,58 +383,6 @@ and instantiate_named_element kp binding = (
 
 (* ================================================================ *)
 
-(* Secures a class referenced by a subject.  This is used to assemble
-   a referenced package.  It returns a single class because it is a
-   package. *)
-
-fun secure_package_subject__ ctx subj = (
-    let
-	val Subj (tree, cc) = subj
-	val root = if (tree = PKG) then class_tree else instance_tree
-	(*val path = (map (fn (id, ss) => (id, [])) cc)*)
-	val path = (pseudo_reference_path cc)
-	val buildphase = false
-	val nodes = (secure_reference_loop ctx false path root)
-    in
-	case nodes of
-	    [node] => (
-	    let
-		val (subj_, kx, cx) = node
-		val k0 = (! kx)
-	    in
-		k0
-	    end)
-	  | _ => raise Match
-    end)
-
-(* ================================================================ *)
-
-(* Calls a function on a binding when it is a component.  It skips a
-   binding of a variable which has inner-outer matching, because it is
-   usually already processed.  It is used to traverse the component
-   variables. *)
-
-fun call_if_component__ kp f (Naming (v, subsubj, _, _, (z, r, dd, h))) = (
-    case dd of
-	EL_Class dx => ()
-      | EL_State dx => (
-	let
-	    (*val Defvar (v, q, kx, c, a, w) = dx*)
-	    val subj0 = (subject_of_class kp)
-	    val subcomponent = (test_subcomponent subsubj (subj0, v))
-
-	    val _ = if ((not ((#Outer r) andalso (not (#Inner r))))
-			orelse (not subcomponent)) then () else raise Match
-
-	    val _ = tr_tree_vvv (";; component-variable ("^
-				 (subject_print_string subsubj) ^")")
-	in
-	    if (subcomponent) then
-		ignore (f (subsubj, dx))
-	    else
-		()
-	end))
-
 (* Instantiates the components of a class, then repeats instantiating
    in the components.  It skips ones already created, which are
    possibly created during determination of array dimensions. *)
@@ -514,7 +419,7 @@ fun instantiate_components kp = (
 (* ================================================================ *)
 
 (*
-fun strip_dimension k0 = (
+fun strip_dimension__ k0 = (
     case k0 of
 	Def_Body _ => ([], [], k0)
       | Def_Der _ => raise Match
@@ -534,7 +439,7 @@ fun strip_dimension k0 = (
 fun instantiate_function_components kp = ()
 
 (*
-fun instantiate_function_components kp = (
+fun instantiate_function_components__ kp = (
     let
 	fun instantiate binding = (
 	    case binding of

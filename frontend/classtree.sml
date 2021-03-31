@@ -41,7 +41,7 @@ sig
     val store_to_instance_tree :
 	subject_t -> definition_body_t -> definition_body_t
 
-    val instantiate_outer_alias :
+    val insert_outer_alias :
 	instantiation_t -> subject_t -> subject_t -> definition_body_t
     val substitute_outer_reference : expression_t -> expression_t
 
@@ -685,13 +685,12 @@ fun record_inner_outer outer inner = (
     end)
 
 (* Inserts an alias instance to record an inner-outer matching in the
-   class_tree/instance_tree.  An outer reference will be substituted
-   by an inner reference, but it is delayed until processing
-   connectors.  It is because the place where a connector is declared
-   matters to distinguish the side of a connector.  It temporarily
-   instantiates an outer reference as an alias. *)
+   instance_tree.  An outer reference will be substituted by an inner
+   reference, but it is delayed until processing connectors.  It is
+   because the place where a connector is declared matters in
+   distinguishing the side of a connector. *)
 
-fun instantiate_outer_alias var outer inner = (
+fun insert_outer_alias var outer inner = (
     let
 	val _ = (assert_inner_outer (outer, inner))
 	val k = Def_Outer_Alias (var, outer, inner)
