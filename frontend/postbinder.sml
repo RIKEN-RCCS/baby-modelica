@@ -242,6 +242,7 @@ and bind_in_constraint kp binder (r : constraint_t) = (
 	  | Def_Der _ => raise Match
 	  | Def_Primitive _ => raise Match
 	  | Def_Outer_Alias _ => raise Match
+	  | Def_Argument _ => raise Match
 	  | Def_Named cn => (
 	    case (find_class cooker kp cn) of
 		NONE => raise (error_class_not_found cn kp)

@@ -191,6 +191,7 @@ fun fetch_from_loaded_classes (tag : class_tag_t) = (
 		  | Def_Der _ => raise Match
 		  | Def_Primitive _ => raise Match
 		  | Def_Outer_Alias _ => raise Match
+		  | Def_Argument _ => raise Match
 		  | Def_Named _ => raise Match
 		  | Def_Scoped _ => raise Match
 		  | Def_Refine _ => raise Match

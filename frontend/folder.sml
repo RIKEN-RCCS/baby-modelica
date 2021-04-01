@@ -314,6 +314,7 @@ fun fold_expression ctx oneshot env w0 = (
 		    NONE => raise Match
 		  | SOME (_, NIL) => w0
 		  | SOME (_, x) => x)
+	  | Lref _ => w0
 	  | Cref (x0, b) => (
 	    let
 		val x1 = (walk_x x0)

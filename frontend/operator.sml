@@ -251,6 +251,7 @@ fun obtain_array_dimension w : int list * bool = (
       | Instances ([], _) => raise Match
       | Instances (dim, subjs) => (dim, true)
       | Iref v => raise NOTYET
+      | Lref _ => ([], false)
       | Cref _ => raise Match
       | Array_fill (e, n) => (
 	if (not (expression_is_literal n)) then
@@ -619,6 +620,7 @@ fun fold_pseudo_split w0 = (
 		(subarray_of_instances index (dim, array, NONE))
 	    end)
 	  | Iref v => raise error_split_to_scalar
+	  | Lref _ => raise Match
 	  | Cref _ => raise Match
 	  | Array_fill _ => w0
 	  | Array_diagonal _ => w0)

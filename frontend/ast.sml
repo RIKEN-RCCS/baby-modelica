@@ -320,16 +320,16 @@ and type_marker_t = ENUM | MAIN | BASE | SIMP
    definition.  Def_Body and Def_Der represent the classes after
    syntaxing.  Def_Primitive is primitive types.  Def_Outer_Alias is a
    record left in the instance_tree to map an outer reference to an
-   inner.  Def_Argument represents a function (input/output) parameter
-   which wraps a Def_Body to attach information as a parameter.
-   Def_Named specifies a class name in the language.  Def_Scoped
-   replaces Def_Named by attaching scope information.  Def_Refine
-   represents class and variable modifications, on subscripts or
-   modifiers in a class definition, an extends-clause, and a variable
-   declaration.  Def_Refine holds component_prefixes but it usually
-   only uses a type_prefix part.  The entire component_prefixes are
-   needed at instantiation.  An optional subject records a class name
-   when it is given a name.  Its field abbreviation is:
+   inner.  Def_Argument represents a local variable in a function and
+   wraps a Def_Body to attach information.  Def_Named specifies a
+   class name in the language.  Def_Scoped replaces Def_Named by
+   attaching scope information.  Def_Refine represents class and
+   variable modifications, on subscripts or modifiers in a class
+   definition, an extends-clause, and a variable declaration.
+   Def_Refine holds component_prefixes but it usually only uses a
+   type_prefix part.  The entire component_prefixes are needed at
+   instantiation.  An optional subject records a class name when it is
+   given a name.  Its field abbreviation is:
    Def_Refine(k,rn,q,(ss,mm),cc,aa,ww).  Def_Extending represents an
    extends-redeclaration.  It is a pair of a base with modifiers and a
    body.  The boolean slot is an extended-flag indicating a base class
@@ -688,6 +688,7 @@ fun set_class_prefixes (t1, p1) (Defclass ((v, g), k0)) = (
 		end)
 	      | Def_Primitive _ => raise Match
 	      | Def_Outer_Alias _ => raise Match
+	      | Def_Argument _ => raise Match
 	      | Def_Named _ => raise Match
 	      | Def_Scoped _ => raise Match
 	      | Def_Refine (kx, v, ts0, q, (ss, mm), cc, aa, ww) => (
@@ -721,6 +722,7 @@ fun set_class_final (Defclass ((v, g), k0)) = (
 		Def_Der (c, (t, (fix p), q), n, vv, aa, ww))
 	      | Def_Primitive _ => raise Match
 	      | Def_Outer_Alias _ => raise Match
+	      | Def_Argument _ => raise Match
 	      | Def_Named _ => raise Match
 	      | Def_Scoped _ => raise Match
 	      | Def_Refine (kx, v, (t, p), q, (ss, mm), cc, aa, ww) => (

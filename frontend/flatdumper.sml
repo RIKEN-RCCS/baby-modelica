@@ -353,6 +353,7 @@ fun expression_to_string assoc w = (
 		    ("(Instance ["^ ds ^"] "^ (subject_to_string subj) ^")"))
 	    end)*)
 	  | Iref v => (id_to_string v)
+	  | Lref (rr, j) => (reference_path_to_string rr)
 	  | Cref (e, b) => (expression_to_string assoc e)
 	  | Array_fill (e, n) => (
 	    let
