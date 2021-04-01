@@ -23,7 +23,6 @@ type binder_t = expression_t -> expression_t
 
 val class_tree = classtree.class_tree
 val instance_tree = classtree.instance_tree
-val fetch_class_by_scope = classtree.fetch_class_by_scope
 val store_to_instance_tree = classtree.store_to_instance_tree
 val assert_stored_in_instance_tree = classtree.assert_stored_in_instance_tree
 val unwrap_array_of_instances = classtree.unwrap_array_of_instances
@@ -41,6 +40,7 @@ val list_elements = finder.list_elements
 val assemble_instance = blender.assemble_instance
 val assemble_package = blender.assemble_package
 
+val merge_modifiers = refiner.merge_modifiers
 val commute_modifier_over_subscript = refiner.commute_modifier_over_subscript
 
 val walk_in_expression = walker.walk_in_expression
@@ -56,46 +56,52 @@ fun tr_build_vvv (s : string) = if false then (print (s ^"\n")) else ()
 
 fun strip_dimension k0 = (
     case k0 of
-	Def_Body _ => ([], [], k0)
+	Def_Body _ => (k0, [], [])
       | Def_Der _ => raise Match
-      | Def_Refine (x0, v, ts0, q0, (ss0, mm0), cc0, aa0, ww0) => (
+      | Def_Refine (kx, v, ts, q, (ss, mm), cc, aa, ww) => (
 	let
-	    val k1 = Def_Refine (x0, v, ts0, q0, ([], []), cc0, aa0, ww0)
+	    val k1 = Def_Refine (kx, v, ts, q, ([], []), cc, aa, ww)
 	in
-	    ([], [], k1)
+	    (k1, ss, mm)
 	end)
+      | Def_Scoped _ => (k0, [], [])
       | _ => raise Match)
 
 (* Resolves references in the input/output variables of a function.
-   It is similar to instantiate_components but differs.  It rewrites
-   component declarations in a class.  It leaves array dimensions of a
-   component because they are non-constants. *)
+   It is similar to instantiate_components but differs.  It leaves
+   array dimensions of a component because they are non-constants. *)
 
 fun resolve_function_components kp = (
     let
-	fun instantiate binding = (
+	fun resolve binding = (
 	    case binding of
 		Naming (_, _, _, _, (z, r, EL_Class _, h)) => raise Match
 	      | Naming (id, subj, inner, _, (z, r, EL_State dx, h)) => (
-		case (fetch_from_instance_tree subj) of
-		    SOME kx => ()
-		  | NONE => (
-		    let
-			val Defvar (_, q, k0, c0, aa, ww) = dx
-			val _ = if (isSome c0) then () else raise Match
-			val (ss, mm, k1) = (strip_dimension k0)
-			val k2 = Def_Refine (k1, NONE, copy_type, q,
-					     ([], []), NIL, aa, ww)
-			(*val (dim, array) = (instantiate_class (subj, k2))*)
-		    in
-			()
-		    end)))
+		let
+		    val Defvar (_, q, k0, cc, aa, ww) = dx
+		    val _ = if (not (isSome (fetch_from_instance_tree subj)))
+			    then () else raise Match
+		    val _ = if (not (isSome inner)) then () else raise Match
+		    val _ = if (not (isSome cc)) then () else raise Match
+		    val (k1, ss1, mm1) = (strip_dimension k0)
+		    val k3 = (assemble_instance (subj, k1))
+		    val (k4, ss0, mm0) = (strip_dimension k3)
+		    val ctx = k0
+		    val ssx = (merge_subscripts ss0 ss1)
+		    val mmx = (merge_modifiers ctx mm1 mm0)
+		    val k5 = Def_Argument (k4, (ssx, mmx), aa, ww)
+		    val _ = (store_to_instance_tree subj k5)
+		in
+		    ()
+		end))
+
+	val kx = (body_of_argument kp)
     in
-	if (class_is_outer_alias kp) then
+	if (class_is_outer_alias kx) then
 	    ()
-	else if (class_is_simple_type kp) then
+	else if (class_is_simple_type kx) then
 	    ()
-	else if (not (kind_is_function kp)) then
+	else if (not (kind_is_function kx)) then
 	    ()
 	else
 	    let
@@ -104,7 +110,7 @@ fun resolve_function_components kp = (
 		val (_, states) =
 		      (List.partition binding_is_class bindings)
 	    in
-		(app instantiate states)
+		(app resolve states)
 	    end
     end)
 

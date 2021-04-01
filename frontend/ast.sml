@@ -36,11 +36,11 @@ datatype class_tag_t = Ctag of string list
 
 datatype subject_t = Subj of instantiation_t * (id_t * int list) list
 
-(* part_name_t names a main/base part of a class.  A subject specifies
-   a main class, and a tag specifies a base part of it.  A part_name
-   is often used as a scope. *)
+(* scope_t names a main/base part of a class.  It is a pair of a
+   subject and a class tag.  A subject specifies a main class, and a
+   tag specifies a base part of it.  A scope_t is often used as a
+   scope. *)
 
-type part_name_t = subject_t * class_tag_t
 type scope_t = subject_t * class_tag_t
 
 (* Real (R) or integer (Z). *)
@@ -98,12 +98,12 @@ datatype predefined_operator_t
    class copying.  It is with an array dimension which is null for a
    scalar component.  Instances refers to instances, and also it
    internally refers to a function.  Iref is an iterator variable
-   reference.  Lref is a parameter in a function.  It is introduced
-   during binding.  Cref is a connector reference with its side
-   information.  Connector references are introduced to the arguments
-   to connect-equations (and the cardinality-operator) during binding.
-   Others, Array_fill, Array_diagonal, etc. are predefined
-   functions. *)
+   reference.  Lref is a local (input/output) parameter reference in a
+   function.  It is introduced during binding.  Cref is a connector
+   reference with its side information.  Connector references are
+   introduced to the arguments to connect-equations (and the
+   cardinality-operator) during binding.  Others, Array_fill,
+   Array_diagonal, etc. are predefined functions. *)
 
 datatype expression_t
     = NIL
@@ -143,7 +143,7 @@ and component_and_subscript_t = id_t * expression_t list
 
 datatype visibility_t = Protected | Public
 
-datatype analogical_t = Flow | Stream | Effort
+datatype analogical_mode_t = Flow | Stream | Effort
 
 (* Variability is related by inclusion.  Constant is the smallest.
    Continuous means unconstrained, and thus declaring continuous
@@ -151,9 +151,7 @@ datatype analogical_t = Flow | Stream | Effort
 
 datatype variability_t = Constant | Parameter | Discrete | Continuous
 
-(* (Modeless may better be Acausal). *)
-
-datatype input_or_output_t = Input | Output | Modeless
+datatype input_or_output_t = Input | Output | Acausal
 
 type each_or_final_t = {Each : bool, Final : bool}
 
@@ -167,7 +165,7 @@ type class_prefixes_t
      = {Final : bool, Encapsulated : bool, Partial : bool}
 
 type component_prefixes_t
-     = (analogical_t * variability_t * input_or_output_t)
+     = (analogical_mode_t * variability_t * input_or_output_t)
 
 type element_prefixes_t
      = {Final : bool, Replaceable : bool, Inner : bool, Outer : bool}
@@ -322,30 +320,34 @@ and type_marker_t = ENUM | MAIN | BASE | SIMP
    definition.  Def_Body and Def_Der represent the classes after
    syntaxing.  Def_Primitive is primitive types.  Def_Outer_Alias is a
    record left in the instance_tree to map an outer reference to an
-   inner.  Def_Name specifies a class name in the language.
-   Def_Scoped replaces Def_Name by attaching scope information.
-   Def_Refine represents class modifications, either from a short
-   class definition or from an extends-clause.  Def_Refine holds
-   component_prefixes but it usually only uses a type_prefix part.
-   The entire component_prefixes are needed at instantiation.  Its
-   field abbreviation is: Def_Refine(k,t,q,(ss,mm),cc,aa,ww).
-   Def_Extending represents an extends-redeclaration.  It is a pair of
-   a base with modifiers and a body.  The boolean slot is an
-   extended-flag indicating a base class is set, and it is true when
-   it replaces a replaceable.  It is used only for checking purpose.
-   Def_Replaced is introduced by a redeclaration, and holds an
-   original definition for information.  The first slot is the new
-   definition.  Def_Primitive represents a value of a simple-type and
-   holds its value.  Def_Displaced is a tag left in place of a class
-   definition, where all class definitions are moved out of a class.
-   The subject slot indicates an enclosing class.  It is necessary
-   because an enclosing class changes when it is modified.
-   Def_In_File indicates that a class is yet to be loaded from a file.
-   It is only placed in the loaded_classes table.  Such entries are
-   created for file/directory entries when a "package.mo" is loaded.
-   It is a pair of an outer reference and a matching inner reference.
-   Def_Mock_Array is temporarily used to represent an array of
-   instances, which is created on accessing the instance_tree. *)
+   inner.  Def_Argument represents a function (input/output) parameter
+   which wraps a Def_Body to attach information as a parameter.
+   Def_Named specifies a class name in the language.  Def_Scoped
+   replaces Def_Named by attaching scope information.  Def_Refine
+   represents class and variable modifications, on subscripts or
+   modifiers in a class definition, an extends-clause, and a variable
+   declaration.  Def_Refine holds component_prefixes but it usually
+   only uses a type_prefix part.  The entire component_prefixes are
+   needed at instantiation.  An optional subject records a class name
+   when it is given a name.  Its field abbreviation is:
+   Def_Refine(k,rn,q,(ss,mm),cc,aa,ww).  Def_Extending represents an
+   extends-redeclaration.  It is a pair of a base with modifiers and a
+   body.  The boolean slot is an extended-flag indicating a base class
+   is set, and it is true when it replaces a replaceable.  It is used
+   only for checking purpose.  Def_Replaced is introduced by a
+   redeclaration, and holds an original definition for information.
+   The first slot is the new definition.  Def_Primitive represents a
+   value of a simple-type and holds its value.  Def_Displaced is a tag
+   left in place of a class definition, where all class definitions
+   are moved out of a class.  The subject slot indicates an enclosing
+   class.  It is necessary because an enclosing class changes when it
+   is modified.  Def_In_File indicates that a class is yet to be
+   loaded from a file.  It is only placed in the loaded_classes table.
+   Such entries are created for file/directory entries when a
+   "package.mo" is loaded.  It is a pair of an outer reference and a
+   matching inner reference.  Def_Mock_Array is temporarily used to
+   represent an array of instances, which is created on accessing the
+   instance_tree. *)
 
 and definition_body_t
     = Def_Body of
@@ -360,7 +362,10 @@ and definition_body_t
     | Def_Primitive of
       (primitive_type_t * (*value*) expression_t)
     | Def_Outer_Alias of instantiation_t * subject_t * subject_t
-    | Def_Name of name_t
+    | Def_Argument of
+      (definition_body_t * (subscripts_t * modifier_t list)
+       * annotation_t * comment_t)
+    | Def_Named of name_t
     | Def_Scoped of (name_t * scope_t)
     | Def_Refine of
       (definition_body_t
@@ -542,7 +547,7 @@ datatype vs_t
     | VS_CONSTRAINT of constraint_no_comment_t
     | VS_COMPONENT_PREFIX of component_prefixes_t
     | VS_COMPONENT_TYPE_SPECIFIER of component_type_specifier_t
-    | VS_TYPE_FLOW_OR_STREAM of analogical_t
+    | VS_TYPE_FLOW_OR_STREAM of analogical_mode_t
     | VS_TYPE_INPUT_OR_OUTPUT of input_or_output_t
     | VS_TYPE_VARIABILITY of variability_t
     | VS_LANGUAGE of string
@@ -557,7 +562,7 @@ val no_element_prefixes : element_prefixes_t
     = {Final=false, Replaceable=false, Inner=false, Outer=false}
 
 val no_component_prefixes : component_prefixes_t
-    = (Effort, Continuous, Modeless)
+    = (Effort, Continuous, Acausal)
 
 val bad_tag = Ctag [""]
 val bad_subject = Subj (PKG, [(Id "", [])])
@@ -683,7 +688,7 @@ fun set_class_prefixes (t1, p1) (Defclass ((v, g), k0)) = (
 		end)
 	      | Def_Primitive _ => raise Match
 	      | Def_Outer_Alias _ => raise Match
-	      | Def_Name _ => raise Match
+	      | Def_Named _ => raise Match
 	      | Def_Scoped _ => raise Match
 	      | Def_Refine (kx, v, ts0, q, (ss, mm), cc, aa, ww) => (
 		let
@@ -716,7 +721,7 @@ fun set_class_final (Defclass ((v, g), k0)) = (
 		Def_Der (c, (t, (fix p), q), n, vv, aa, ww))
 	      | Def_Primitive _ => raise Match
 	      | Def_Outer_Alias _ => raise Match
-	      | Def_Name _ => raise Match
+	      | Def_Named _ => raise Match
 	      | Def_Scoped _ => raise Match
 	      | Def_Refine (kx, v, (t, p), q, (ss, mm), cc, aa, ww) => (
 		Def_Refine (kx, v, (t, (fix p)), q, (ss, mm), cc, aa, ww))
@@ -742,9 +747,9 @@ fun make_component_clause
     let
 	val ssx = (merge_subscripts ss0 ss1)
 	val k0 = if ((null ssx) andalso (null mm)) then
-		     Def_Name n
+		     Def_Named n
 		 else
-		     Def_Refine (Def_Name n, NONE, copy_type,
+		     Def_Refine (Def_Named n, NONE, copy_type,
 				 no_component_prefixes,
 				 (ssx, mm), NIL, Annotation [], Comment [])
     in

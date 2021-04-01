@@ -45,7 +45,7 @@ type ctx_t = {k : definition_body_t}
 
 val class_tree = classtree.class_tree
 val instance_tree = classtree.instance_tree
-val fetch_class_by_scope = classtree.fetch_class_by_scope
+val fetch_class_by_part = classtree.fetch_class_by_part
 val store_to_instance_tree = classtree.store_to_instance_tree
 val subject_to_instance_tree_path = classtree.subject_to_instance_tree_path
 
@@ -271,11 +271,12 @@ and bind_in_expression ctx buildphase binder w0 = (
 	  | Otherwise => Otherwise
 	  | Scoped (e, scope) => (
 	    let
-		val (subj1, k1) = (fetch_class_by_scope scope)
-		val _ = (assert_match_subject subj1 k1)
-		val _ = if (step_is_at_least E3 k1) then () else raise Match
-		val binder1 = (make_reference k1 buildphase)
-		val newctx = {k = k1}
+		val (subj1, k1) = (fetch_class_by_part scope)
+		val k2 = (body_of_argument k1)
+		val _ = (assert_match_subject subj1 k2)
+		val _ = if (step_is_at_least E3 k2) then () else raise Match
+		val binder1 = (make_reference k2 buildphase)
+		val newctx = {k = k2}
 		val walk_x1 = (bind_in_expression newctx buildphase binder1)
 	    in
 		(walk_x1 e)

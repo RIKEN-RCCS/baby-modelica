@@ -27,7 +27,6 @@ type binder_t = binder.binder_t
 
 val class_tree = classtree.class_tree
 val instance_tree = classtree.instance_tree
-val fetch_class_by_scope = classtree.fetch_class_by_scope
 val store_to_instance_tree = classtree.store_to_instance_tree
 val fetch_from_instance_tree = classtree.fetch_from_instance_tree
 val component_is_outer_alias = classtree.component_is_outer_alias
@@ -67,17 +66,17 @@ fun tr_bind (s : string) = if true then (print (s ^"\n")) else ()
    the main or its bases. *)
 
 fun bind_in_class ctx binder k0 = (
-    if (class_is_simple_type k0) then
-	let
-	    val buildphase = false
-	    val k1 = (bind_in_simple_type buildphase binder k0)
-	    val _ = (assert_cook_step E5 k1)
-	in
-	    k1
-	end
-    else
-	case k0 of
-	    Def_Body (mk, j, cs, nm, cc0, ee0, aa, ww) => (
+    case k0 of
+	Def_Body (mk, j, cs, nm, cc0, ee0, aa, ww) => (
+	if (class_is_simple_type k0) then
+	    let
+		val buildphase = false
+		val k1 = (bind_in_simple_type buildphase binder k0)
+		val _ = (assert_cook_step E5 k1)
+	    in
+		k1
+	    end
+	else
 	    let
 		val _ = if (step_is_at_least E3 k0) then () else raise Match
 		(*val ctx = {k = kp}*)
@@ -92,17 +91,28 @@ fun bind_in_class ctx binder k0 = (
 	    in
 		k2
 	    end)
-	  | Def_Der _ => raise Match
-	  | Def_Primitive _ => raise Match
-	  | Def_Outer_Alias _ => raise Match
-	  | Def_Name _ => raise Match
-	  | Def_Scoped _ => raise Match
-	  | Def_Refine _ => raise Match
-	  | Def_Extending _ => raise Match
-	  | Def_Replaced _ => raise Match
-	  | Def_Displaced _ => raise Match
-	  | Def_In_File => raise Match
-	  | Def_Mock_Array _ => raise Match)
+      | Def_Der _ => raise Match
+      | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
+      | Def_Argument (x0, (ss0, mm0), aa, ww) => (
+	let
+	    val {k = kp} = ctx
+	    val walk_x = (bind_in_expression ctx false binder)
+	    val walk_m = (bind_in_modifier kp binder)
+	    val x1 = (bind_in_class ctx binder x0)
+	    val ss1 = (map walk_x ss0)
+	    val mm1 = (map walk_m mm0)
+	in
+	    Def_Argument (x1, (ss1, mm1), aa, ww)
+	end)
+      | Def_Named _ => raise Match
+      | Def_Scoped _ => raise Match
+      | Def_Refine _ => raise Match
+      | Def_Extending _ => raise Match
+      | Def_Replaced _ => raise Match
+      | Def_Displaced _ => raise Match
+      | Def_In_File => raise Match
+      | Def_Mock_Array _ => raise Match)
 
 and bind_in_class_element ctx binder e0 = (
     let
@@ -232,7 +242,7 @@ and bind_in_constraint kp binder (r : constraint_t) = (
 	  | Def_Der _ => raise Match
 	  | Def_Primitive _ => raise Match
 	  | Def_Outer_Alias _ => raise Match
-	  | Def_Name cn => (
+	  | Def_Named cn => (
 	    case (find_class cooker kp cn) of
 		NONE => raise (error_class_not_found cn kp)
 	      | SOME k1 => (
@@ -361,17 +371,21 @@ fun secure_reference_in_class kp = (
    record definition is needed (unlike other instances). *)
 
 fun secure_record_class kp = (
-    if ((kind_is_record kp) andalso (class_is_instance kp)) then
-	let
-	    val record = (class_name_of_instance kp)
-	    val w = (subject_as_reference record)
-	    val ctx = kp
-	    val _ = (secure_reference ctx false w)
-	in
+    let
+	val kx = (body_of_argument kp)
+    in
+	if ((kind_is_record kx) andalso (class_is_instance kx)) then
+	    let
+		val record = (class_name_of_instance kx)
+		val w = (subject_as_reference record)
+		val ctx = kp
+		val _ = (secure_reference ctx false w)
+	    in
+		()
+	    end
+	else
 	    ()
-	end
-    else
-	())
+    end)
 
 (* Resolves variable references in an instance and a function.  It
    returns true if some instances/functions are processed, so that it
@@ -383,7 +397,7 @@ fun secure_record_class kp = (
 fun bind_in_instance (scanning : bool) k0 = (
     if (class_is_outer_alias k0) then
 	false
-    else if (class_is_enumerator_definition k0) then
+    else if (class_is_enumerator k0) then
 	false
     else if (class_is_non_function_package k0) then
 	false
@@ -418,7 +432,6 @@ fun bind_in_instances_loop (scanning : bool) node0 = (
 	val changes0 = (bind_in_instance scanning kp)
 	(* ACCESS AGAIN. *)
 	val (_, components) = (access_node E5 true node0)
-
 	val changes1
 	    = (List.concat
 		   (map (fn (Slot (v, dim, nodes, dummy)) =>

@@ -451,19 +451,20 @@ long_class_specifier
 		    let
 			val k0 = (make_predefinition_body MAIN $4
 				  (Annotation []) (Comment $3))
-			val base = (Def_Name (Name [$2]), [])
+			val base = (Def_Named (Name [$2]), [])
 		    in
 			Defclass ((Id $2, bad_tag),
 				  Def_Extending (false, base, k0))
 		    end}
-	| EXTENDS IDENT class_modification string_comment composition END IDENT {
+	| EXTENDS IDENT class_modification string_comment
+		composition END IDENT {
 		if (not ($2 = $7)) then
 		    (syntax_error "END does not match")
 		else
 		    let
 			val k0 = (make_predefinition_body MAIN $5
 				  (Annotation []) (Comment $4))
-			val base = (Def_Name (Name [$2]), $3)
+			val base = (Def_Named (Name [$2]), $3)
 		    in
 			Defclass ((Id $2, bad_tag),
 				  Def_Extending (false, base, k0))
@@ -500,7 +501,7 @@ short_class_specifier
 		end}
 	| IDENT "=" base_prefix type_specifier comment {
 		let
-		    val k = Def_Name $4
+		    val k = Def_Named $4
 		    val (aa, ww) = $5
 		in
 		    Defclass ((Id $1, bad_tag),
@@ -508,7 +509,7 @@ short_class_specifier
 		end}
 	| IDENT "=" base_prefix type_specifier class_modification comment {
 		let
-		    val k = Def_Name $4
+		    val k = Def_Named $4
 		    val (aa, ww) = $6
 		in
 		    Defclass ((Id $1, bad_tag),
@@ -516,15 +517,16 @@ short_class_specifier
 		end}
 	| IDENT "=" base_prefix type_specifier array_subscripts comment {
 		let
-		    val k = Def_Name $4
+		    val k = Def_Named $4
 		    val (aa, ww) = $6
 		in
 		    Defclass ((Id $1, bad_tag),
 			      (make_short_predefinition k $3 ($5, []) aa ww))
 		end}
-	| IDENT "=" base_prefix type_specifier array_subscripts class_modification comment {
+	| IDENT "=" base_prefix type_specifier array_subscripts
+		class_modification comment {
 		let
-		    val k = Def_Name $4
+		    val k = Def_Named $4
 		    val (aa, ww) = $7
 		in
 		    Defclass ((Id $1, bad_tag),
@@ -554,7 +556,7 @@ ident_list_
 
 base_prefix
 	: /*empty*/ {
-		Modeless}
+		Acausal}
 	| INPUT {
 		Input}
 	| OUTPUT {
@@ -674,7 +676,8 @@ element
 		    else
 			(map (fn c => Element_State (Public, r, c, h)) $4)
 		end}
-	| redeclare_ element_prefix_ REPLACEABLE component_clause constraining_clause comment {
+	| redeclare_ element_prefix_ REPLACEABLE component_clause
+		constraining_clause comment {
 		let
 		    val r = (set_element_prefix_replaceable $2)
 		    val (t, m) = $5
@@ -705,7 +708,8 @@ element
 		    else
 			[Element_Class (Public, r, $4, h)]
 		end}
-	| redeclare_ element_prefix_ REPLACEABLE class_definition constraining_clause comment {
+	| redeclare_ element_prefix_ REPLACEABLE class_definition
+		constraining_clause comment {
 		let
 		    val r = (set_element_prefix_replaceable $2)
 		    val (t, m) = $5
@@ -811,9 +815,9 @@ extends_clause
 
 constraining_clause
 	: CONSTRAINEDBY type_specifier {
-		(Def_Name $2, [])}
+		(Def_Named $2, [])}
 	| CONSTRAINEDBY type_specifier class_modification {
-		(Def_Name $2, $3)}
+		(Def_Named $2, $3)}
 	;
 
 /* B.2.4 Component Clause */
@@ -1108,7 +1112,8 @@ statement_body_
 		St_Assign ($1, $3, Annotation [], Comment [])}
 	| component_reference function_call_args {
 		St_Call ([], $1, $2, Annotation [], Comment [])}
-	| "(" output_expression_list ")" DEF component_reference function_call_args {
+	| "(" output_expression_list ")" DEF component_reference
+		function_call_args {
 		St_Call ($2, $5, $6, Annotation [], Comment [])}
 	| BREAK {
 		St_Break (Annotation [], Comment [])}

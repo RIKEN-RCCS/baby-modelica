@@ -208,7 +208,7 @@ fun simplify_simple_type (k0 : definition_body_t) = (
 	      | Def_Der _ => raise Match
 	      | Def_Primitive _ => raise Match
 	      | Def_Outer_Alias _ => raise Match
-	      | Def_Name _ => raise Match
+	      | Def_Named _ => raise Match
 	      | Def_Scoped (Name n, (subjx, tag)) => (
 		let
 		    val _ = if (subj = subjx) then () else raise Match
@@ -304,7 +304,7 @@ fun simplify_simple_type (k0 : definition_body_t) = (
 	  | Def_Der _ => raise Match
 	  | Def_Primitive _ => raise Match
 	  | Def_Outer_Alias _ => raise Match
-	  | Def_Name _ => raise Match
+	  | Def_Named _ => raise Match
 	  | Def_Scoped _ => raise Match
 	  | Def_Refine _ => raise Match
 	  | Def_Extending _ => raise Match
@@ -354,7 +354,7 @@ fun enumeration_attributes kp = (
 	fun declare name variability ty = (
 	    let
 		val declaration
-		    = Defvar (Id name, (Effort, variability, Modeless),
+		    = Defvar (Id name, (Effort, variability, Acausal),
 			      ty, NONE, Annotation [], Comment [])
 	    in
 		(Public, no_element_prefixes, declaration, NONE)
@@ -389,7 +389,7 @@ fun insert_attributes_to_enumeration k0 = (
       | Def_Der _ => k0
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => raise Match
+      | Def_Named _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
       | Def_Extending _ => raise Match
@@ -446,7 +446,8 @@ fun type_of_simple_type k = (
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => raise Match
+      | Def_Argument (kx, sm, aa, ww) => (type_of_simple_type kx)
+      | Def_Named _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
       | Def_Extending _ => raise Match

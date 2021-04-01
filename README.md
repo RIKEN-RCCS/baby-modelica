@@ -74,7 +74,6 @@ valOf (classtree.xfetch1 "tank") ;
 valOf (classtree.xfetch1 "wall.G") ;
 valOf (classtree.xfetch1 "") ;
 valOf (classtree.xfetch1 ".Modelica") ;
-......
 ```
 
 ## Verbosity settings in PolyML

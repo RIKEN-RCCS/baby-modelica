@@ -119,7 +119,7 @@ and record_class_body pkg (d0 as Defclass _) = (
     let
 	fun name_of_extends_redeclaration (x, m) = (
 	    case x of
-		Def_Name n => (
+		Def_Named n => (
 		case n of
 		    Name [] => raise Match
 		  | Name [s] => Id s
@@ -203,7 +203,7 @@ and record_class_body pkg (d0 as Defclass _) = (
 	    end)
 	  | Def_Primitive _ => raise Match
 	  | Def_Outer_Alias _ => raise Match
-	  | Def_Name _ => (
+	  | Def_Named _ => (
 	    Defclass ((id, pkg), k0))
 	  | Def_Scoped _ => raise Match
 	  | Def_Refine (kx, NONE, ts, q, (ss, mm), cc, aa, ww) => (
@@ -287,7 +287,7 @@ and insert_package_directory_entries (pkg : class_tag_t) (path : string) = (
 	      | Def_Der _ => false
 	      | Def_Primitive _ => raise Match
 	      | Def_Outer_Alias _ => raise Match
-	      | Def_Name _ => false
+	      | Def_Named _ => false
 	      | Def_Scoped _ => raise Match
 	      | Def_Refine _ => false
 	      | Def_Extending _ => raise Match
@@ -370,7 +370,7 @@ and insert_package_directory_entries (pkg : class_tag_t) (path : string) = (
 	      | Def_Der _ => raise Match
 	      | Def_Primitive _ => raise Match
 	      | Def_Outer_Alias _ => raise Match
-	      | Def_Name _ => raise Match
+	      | Def_Named _ => raise Match
 	      | Def_Scoped _ => raise Match
 	      | Def_Refine _ => raise Match
 	      | Def_Extending _ => raise Match
@@ -484,7 +484,7 @@ fun load_displaced_body (k : definition_body_t) = (
       | Def_Der _ => k
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => k
+      | Def_Named _ => k
       | Def_Scoped _ => raise Match
       | Def_Refine _ => k
       | Def_Extending _ => raise Match
@@ -566,7 +566,7 @@ fun fetch_displaced_class wantedstep (k : definition_body_t) = (
       | Def_Der _ => k
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => k
+      | Def_Named _ => k
       | Def_Scoped _ => k
       | Def_Refine _ => k
       | Def_Extending _ => k

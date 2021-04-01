@@ -144,7 +144,7 @@ fun record_of_connect k = (
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => raise Match
+      | Def_Named _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
       | Def_Extending _ => raise Match
@@ -161,7 +161,7 @@ fun unmark_expandable_connector k = (
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => raise Match
+      | Def_Named _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
       | Def_Extending _ => raise Match
@@ -170,18 +170,19 @@ fun unmark_expandable_connector k = (
       | Def_In_File => raise Match
       | Def_Mock_Array _ => raise Match)
 
-fun connect_rule_marker k = (
+fun connect_mode_marker k = (
     case k of
-	Def_Body (mk, j, (t, p, (efs, _, _)), nm, cc, ee, aa, ww) => efs
+	Def_Body (mk, j, (t, p, (mode, _, _)), nm, cc, ee, aa, ww) => mode
+      | Def_Argument (kx, sm, aa, ww) => (connect_mode_marker kx)
       | _ => raise error_connector_is_not_record)
 
-fun marked_as_effort k = ((connect_rule_marker k) = Effort)
+fun marked_as_effort k = ((connect_mode_marker k) = Effort)
 
-fun marked_as_flow k = ((connect_rule_marker k) = Flow)
+fun marked_as_flow k = ((connect_mode_marker k) = Flow)
 
-fun marked_as_stream k = ((connect_rule_marker k) = Stream)
+fun marked_as_stream k = ((connect_mode_marker k) = Stream)
 
-fun rule_of_variable k = (connect_rule_marker k)
+fun rule_of_variable k = (connect_mode_marker k)
 
 (* Lists component names of a record.  It errs if a record is an array
    of records. *)
@@ -275,7 +276,7 @@ fun instance_is_enabled k = (
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => raise Match
+      | Def_Named _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
       | Def_Extending _ => raise Match
@@ -321,7 +322,8 @@ fun enable_instance enable0 k0 = (
 	      | Def_Der _ => raise Match
 	      | Def_Primitive _ => raise Match
 	      | Def_Outer_Alias _ => raise Match
-	      | Def_Name _ => raise Match
+	      | Def_Argument _ => true
+	      | Def_Named _ => raise Match
 	      | Def_Scoped _ => raise Match
 	      | Def_Refine _ => raise Match
 	      | Def_Extending _ => raise Match
@@ -461,7 +463,7 @@ fun insert_cardinality_variable (subj, nn) = (
 	val dimension = (map (scoped o z_literal) dim0)
 
 	val k1 = (fetch_displaced_class E0 the_integer_class)
-	val q = (Effort, Constant, Modeless)
+	val q = (Effort, Constant, Acausal)
 	val k2 = Def_Refine (k1, NONE, copy_type, q, (dimension, values),
 			     NIL, Annotation [], Comment [])
 	val (dim1, array1) = (instantiate_class (variable, k2))
@@ -616,7 +618,7 @@ fun select_record_class sidex classes = (
 fun make_record_instances subj dim0 k0 = (
     let
 	val dim1 = (map z_literal dim0)
-	val q = (Effort, Continuous, Modeless)
+	val q = (Effort, Continuous, Acausal)
 	val k1 = Def_Refine (k0, NONE, copy_type, q,
 			     (dim1, []), NIL, Annotation [], Comment [])
 	val (dim, array) = (instantiate_class (subj, k1))

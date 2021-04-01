@@ -25,7 +25,7 @@ val instance_tree = classtree.instance_tree
 val fetch_from_loaded_classes = classtree.fetch_from_loaded_classes
 val fetch_from_instance_tree = classtree.fetch_from_instance_tree
 val store_to_instance_tree = classtree.store_to_instance_tree
-val fetch_class_by_scope = classtree.fetch_class_by_scope
+val fetch_class_by_part = classtree.fetch_class_by_part
 val list_base_names = classtree.list_base_names
 val extract_base_classes = classtree.extract_base_classes
 val extract_base_elements = classtree.extract_base_elements
@@ -173,9 +173,9 @@ fun assert_modifiers_are_scoped mm = (
 	      | Def_Der _ => raise Match
 	      | Def_Primitive _ => raise Match
 	      | Def_Outer_Alias _ => raise Match
-	      | Def_Name _ => raise Match
+	      | Def_Named _ => raise Match
 	      | Def_Scoped _ => true
-	      | Def_Refine (kx, v, ts, q, (ssx, mmx), cc, aa, ww) => (
+	      | Def_Refine (kx, v_, ts_, q_, (ssx, mmx), cc, aa, ww) => (
 		let
 		    val c0 = (List.all test_expression_is_scoped ssx)
 		    val c1 = (List.all test_modifier_is_scoped mmx)
@@ -287,7 +287,7 @@ fun record_defining_class (subj, k0) = (
 	      | Def_Der _ => k0
 	      | Def_Primitive _ => raise Match
 	      | Def_Outer_Alias _ => raise Match
-	      | Def_Name _ => k0
+	      | Def_Named _ => k0
 	      | Def_Scoped _ => k0
 	      | Def_Refine (x0, v, ts, q, (ss, mm), cc, aa, ww) => (
 		let
@@ -415,7 +415,7 @@ and closure_class (scope : scope_t) k0 = (
       | Def_Der _ => k0
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
-      | Def_Name n => Def_Scoped (n, scope)
+      | Def_Named n => Def_Scoped (n, scope)
       | Def_Scoped _ => raise Match
       | Def_Refine (x0, v, ts, q, (ss0, mm0), cc, aa, ww) => (
 	let
@@ -550,7 +550,7 @@ fun prepare_for_modification main pkg (subj, k0) = (
 	  | Def_Der _ => raise Match
 	  | Def_Primitive _ => raise Match
 	  | Def_Outer_Alias _ => raise Match
-	  | Def_Name _ => raise Match
+	  | Def_Named _ => raise Match
 	  | Def_Scoped _ => raise Match
 	  | Def_Refine _ => raise Match
 	  | Def_Extending _ => raise Match
@@ -748,21 +748,22 @@ and collect_refining main pkg (subj, k0) (name1, (t1, p1, q1), mm1, cc1, aa1) si
 	end)
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => raise Match
+      | Def_Named _ => raise Match
       | Def_Scoped (name, scope) => (
 	let
 	    val cooker = assemble_package
-	    val (subj1, k1) = (fetch_class_by_scope scope)
-	    val _ = (assert_match_subject subj1 k1)
+	    val (subj1, k1) = (fetch_class_by_part scope)
+	    val k2 = (body_of_argument k1)
+	    val _ = (assert_match_subject subj1 k2)
 	in
-	    case (find_class cooker k1 name) of
-		NONE => raise (error_class_not_found name k1)
+	    case (find_class cooker k2 name) of
+		NONE => raise (error_class_not_found name k2)
 	      | SOME x0 => (
 		let
 		    val _ = tr_cook_vvv (";; collect_refining find ("^
 					 (class_print_name x0)
 					 ^") in ("^
-					 (subject_body_to_string (subj1, k1))
+					 (subject_body_to_string (subj1, k2))
 					 ^")")
 		in
 		    (collect_refining
@@ -852,7 +853,7 @@ and cook_class_body main pkg (subj, k0) siblings = (
 	end)
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => raise Match
+      | Def_Named _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine (k1, v, ts, q, (ss, mm), cc, aa, ww) => (
 	if (not (null ss)) then

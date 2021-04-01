@@ -386,10 +386,9 @@ fun collect_variables root = (
 		let
 		    val subj = (subject_of_class kp)
 		in
-		    if (class_is_outer_alias kp) then
-			(* THIS WILL BE REMOVED. *)
+		    if (class_is_enumerator kp) then
 			acc
-		    else if (class_is_enumerator_definition kp) then
+		    else if (class_is_argument kp) then
 			acc
 		    else if (class_is_package kp) then
 			acc
@@ -397,6 +396,8 @@ fun collect_variables root = (
 			acc
 		    else if (class_is_simple_type kp) then
 			let
+			    val _ = if (not (class_is_outer_alias kp)) then ()
+				    else raise Match
 			    val _ = if (step_is_at_least E5 kp) then ()
 				    else raise Match
 			in
@@ -415,15 +416,16 @@ fun collect_variables root = (
 fun collect_enumerations root = (
     let
 	fun collect (kp, acc) = (
-	    if (class_is_outer_alias kp) then
-		(* THIS WILL BE REMOVED. *)
+	    if (class_is_enumerator kp) then
 		acc
-	    else if (class_is_enumerator_definition kp) then
+	    else if (class_is_argument kp) then
 		acc
 	    else if (step_is_less E3 kp) then
 		acc
 	    else if (class_is_enumeration_definition kp) then
 		let
+		    val _ = if (not (class_is_outer_alias kp)) then ()
+			    else raise Match
 		    val _ = if ((cook_step kp) = E3) then () else raise Match
 		in
 		    acc @ [kp]
@@ -440,15 +442,16 @@ fun collect_enumerations root = (
 fun collect_records root = (
     let
 	fun collect (kp, acc) = (
-	    if (class_is_outer_alias kp) then
-		(* THIS WILL BE REMOVED. *)
+	    if (class_is_enumerator kp) then
 		acc
-	    else if (class_is_enumerator_definition kp) then
+	    else if (class_is_argument kp) then
 		acc
 	    else if (step_is_less E3 kp) then
 		acc
 	    else if (class_is_record_definition kp) then
 		let
+		    val _ = if (not (class_is_outer_alias kp)) then ()
+			    else raise Match
 		    val _ = if ((cook_step kp) = E3) then () else raise Match
 		in
 		    acc @ [kp]
@@ -471,15 +474,16 @@ fun collect_functions root = (
 	      | _ => raise Match)
 
 	fun collect (kp, acc) = (
-	    if (class_is_outer_alias kp) then
-		(* THIS WILL BE REMOVED. *)
+	    if (class_is_enumerator kp) then
 		acc
-	    else if (class_is_enumerator_definition kp) then
+	    else if (class_is_argument kp) then
 		acc
 	    else if (step_is_less E3 kp) then
 		acc
 	    else if ((kind_is_function kp) andalso (not (partial kp))) then
 		let
+		    val _ = if (not (class_is_outer_alias kp)) then ()
+			    else raise Match
 		    val _ = if (step_is_at_least E3 kp) then ()
 			    else raise Match
 		in
@@ -528,11 +532,12 @@ fun collect_equations initial () = (
 	(* Include equations in simple-types. *)
 
 	fun collect (kp, acc) = (
-	    if (class_is_outer_alias kp) then
-		(* THIS WILL BE REMOVED. *)
+	    if (class_is_argument kp) then
 		acc
 	    else
 		let
+		    val _ = if (not (class_is_outer_alias kp)) then ()
+			    else raise Match
 		    val (bases, _) = (extract_base_classes false kp)
 		    val subj = (subject_of_class kp)
 		    val tag = (tag_of_body kp)
@@ -564,7 +569,7 @@ val predefined_type_names = [
     "ExternalObject",
     "Connections"]
 
-fun declaraton_of_real k = (
+fun declaraton_of_real modifiers k = (
     let
 	fun quote x = (expression_to_string 0 x)
 
@@ -633,10 +638,12 @@ fun declaraton_of_real k = (
 					       stateselect_default)]))
 			  ^")")
 		val ns = (subject_to_string subj)
+		val _ = if (not ((value_ <> NIL) andalso (modifiers <> "")))
+			then () else raise Match
 		val xs = if (value_ <> NIL) then
 			     "= "^ (quote value_)
 			 else
-			     ""
+			     modifiers
 		val ss = ((String.concatWith
 			       " "
 			       (List.filter (fn x => (x <> ""))
@@ -648,7 +655,12 @@ fun declaraton_of_real k = (
 	  | Def_Der _ => ""
 	  | Def_Primitive _ => raise Match
 	  | Def_Outer_Alias _ => raise Match
-	  | Def_Name _ => raise Match
+	  | Def_Argument (kx, (ss, mm), aa, ww) => (
+	    if (null ss) andalso (null mm) then
+		(declaraton_of_real "" kx)
+	    else
+		(declaraton_of_real "(...)" kx))
+	  | Def_Named _ => raise Match
 	  | Def_Scoped _ => raise Match
 	  | Def_Refine _ => raise Match
 	  | Def_Extending _ => raise Match
@@ -658,7 +670,7 @@ fun declaraton_of_real k = (
 	  | Def_Mock_Array _ => raise Match
     end)
 
-fun declaraton_of_integer k = (
+fun declaraton_of_integer modifiers k = (
     let
 	fun quote x = (expression_to_string 0 x)
 
@@ -725,7 +737,12 @@ fun declaraton_of_integer k = (
 	  | Def_Der _ => ""
 	  | Def_Primitive _ => raise Match
 	  | Def_Outer_Alias _ => raise Match
-	  | Def_Name _ => raise Match
+	  | Def_Argument (kx, (ss, mm), aa, ww) => (
+	    if (null ss) andalso (null mm) then
+		(declaraton_of_integer "" kx)
+	    else
+		(declaraton_of_integer "(...)" kx))
+	  | Def_Named _ => raise Match
 	  | Def_Scoped _ => raise Match
 	  | Def_Refine _ => raise Match
 	  | Def_Extending _ => raise Match
@@ -738,8 +755,8 @@ fun declaraton_of_integer k = (
 fun dump_variable s k = (
     let
 	val sx = case (type_of_simple_type k) of
-		     P_Number R => (declaraton_of_real k)
-		   | P_Number Z => (declaraton_of_integer k)
+		     P_Number R => (declaraton_of_real "" k)
+		   | P_Number Z => (declaraton_of_integer "" k)
 		   | P_Boolean => ""
 		   | P_String => ""
 		   | P_Enum tag =>  ""
@@ -824,7 +841,7 @@ fun dump_predefined s k = (
     end)
 
 (*(Function false, {Encapsulated = false, Final = false, Partial = false},*)
-(*(Effort, Continuous, Modeless)*)
+(*(Effort, Continuous, Acausal)*)
 
 fun dump_function s k = (
     let

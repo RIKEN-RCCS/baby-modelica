@@ -47,7 +47,6 @@ val instance_tree = classtree.instance_tree
 val fetch_from_loaded_classes = classtree.fetch_from_loaded_classes
 val fetch_from_instance_tree = classtree.fetch_from_instance_tree
 val store_to_instance_tree = classtree.store_to_instance_tree
-val fetch_class_by_scope = classtree.fetch_class_by_scope
 val list_base_names = classtree.list_base_names
 val extract_base_classes = classtree.extract_base_classes
 val extract_base_elements = classtree.extract_base_elements
@@ -258,7 +257,7 @@ fun merge_type_prefixes (t0, p0) (t1, p1) = (
 
 (* Merges input/output to component_prefixes.  It only merges when
    nothing is specified already.  Note that Effort, Continuous, and
-   Modeless are used as unspecified. *)
+   Acausal are used as unspecified. *)
 
 fun merge_component_prefixes (a0, v0, y0) (a1, v1, y1) = (
     let
@@ -282,12 +281,12 @@ fun merge_component_prefixes (a0, v0, y0) (a1, v1, y1) = (
 		raise error_incompatible_variability)
 
 	fun merge_modality y0 y1 = (
-	    if (y1 = Modeless) then
+	    if (y1 = Acausal) then
 		y0
 	    else
 		case (y0, y1) of
-		    (_, Modeless) => y0
-		  | (Modeless, _) => y1
+		    (_, Acausal) => y0
+		  | (Acausal, _) => y1
 		  | (Input, Input) => Input
 		  | (Output, Output) => Output
 		  | _ => raise error_incompatible_mode)
@@ -317,7 +316,7 @@ fun make_refining_class_choose_order reverse k0 mm1 cc1 aa1 ww1 = (
 	      | Def_Der _ => raise (error_modifiers_to_der mm1)
 	      | Def_Primitive _ => raise Match
 	      | Def_Outer_Alias _ => raise Match
-	      | Def_Name _ => raise Match
+	      | Def_Named _ => raise Match
 	      | Def_Scoped _ => kx
 	      | Def_Refine (x0, v, ts, q, (ss0, mm0), cc0, aa0, ww0) => (
 		let
@@ -363,7 +362,7 @@ fun assert_class_is_good_to_dispatch k = (
       | Def_Der _ => ()
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => raise Match
+      | Def_Named _ => raise Match
       | Def_Scoped _ => ()
       | Def_Refine _ => ()
       | Def_Extending _ => ()
@@ -378,7 +377,7 @@ fun assert_class_is_good_to_modify k = (
       | Def_Der _ => ()
       | Def_Primitive _ => ()
       | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => raise Match
+      | Def_Named _ => raise Match
       | Def_Scoped _ => ()
       | Def_Refine _ => ()
       | Def_Extending _ => ()
@@ -457,7 +456,7 @@ fun switch_class_for_redeclaration state ctx k0 k1 = (
       | Def_Der _ => k1
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => raise Match
+      | Def_Named _ => raise Match
       | Def_Scoped _ => k1
       | Def_Refine (kx, v, ts, q, (ss, mm), cc, aa, ww) => (
 	let
@@ -534,7 +533,7 @@ fun attach_modifiers_to_body ctx k0 mm1 = (
 		Def_Primitive (p, e)))
 	  | _ => raise Match)
       | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => (
+      | Def_Named _ => (
 	Def_Refine (k0, NONE, copy_type, no_component_prefixes, ([], mm1),
 		    NIL, Annotation [], Comment []))
       | Def_Scoped _ => (
@@ -967,7 +966,7 @@ fun record_class_renaming k0 = (
 	      | Def_Der _ => (renaming subsubj k0)
 	      | Def_Primitive _ => raise Match
 	      | Def_Outer_Alias _ => raise Match
-	      | Def_Name _ => raise Match
+	      | Def_Named _ => raise Match
 	      | Def_Scoped _ => raise Match
 	      | Def_Refine (x0, v_, ts, q, (ss, mm), cc, aa, ww) => (
 		let
@@ -1052,7 +1051,7 @@ fun rectify_modified_class (k0, q1) (t1, p1) aa1 = (
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
-      | Def_Name _ => raise Match
+      | Def_Named _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match
       | Def_Extending _ => raise Match

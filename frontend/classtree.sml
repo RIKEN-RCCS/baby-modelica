@@ -73,7 +73,7 @@ sig
 
     val fetch_base_class :
 	exn -> subject_t * class_tag_t -> definition_body_t
-    val fetch_class_by_scope :
+    val fetch_class_by_part :
 	subject_t * class_tag_t -> subject_t * definition_body_t
 
     val fetch_instance_tree_node : subject_t -> instance_node_t option
@@ -191,7 +191,7 @@ fun fetch_from_loaded_classes (tag : class_tag_t) = (
 		  | Def_Der _ => raise Match
 		  | Def_Primitive _ => raise Match
 		  | Def_Outer_Alias _ => raise Match
-		  | Def_Name _ => raise Match
+		  | Def_Named _ => raise Match
 		  | Def_Scoped _ => raise Match
 		  | Def_Refine _ => raise Match
 		  | Def_Extending _ => raise Match
@@ -550,7 +550,9 @@ fun store_to_instance_tree subj kp = (
 		  | Def_Primitive (_ , e) => raise Match
 		  | Def_Outer_Alias _ => (
 		    (store_scalar upnode node id (subj, kp)))
-		  | Def_Name _ => raise Match
+		  | Def_Argument _ => (
+		    (store_scalar upnode node id (subj, kp)))
+		  | Def_Named _ => raise Match
 		  | Def_Scoped _ => raise Match
 		  | Def_Refine _ => (
 		    (store_scalar upnode node id (subj, kp)))
@@ -911,7 +913,7 @@ fun fetch_base_class ex (subj, tag) = (
       | SOME kx => (
 	surely (seek_declaring_class ex kx tag)))
 
-fun fetch_class_by_scope (subj, tag) = (
+fun fetch_class_by_part (subj, tag) = (
     let
 	val ex = Match
 	val k0 = (fetch_base_class ex (subj, tag))
