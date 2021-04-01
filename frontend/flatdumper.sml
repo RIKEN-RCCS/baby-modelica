@@ -723,10 +723,12 @@ fun declaraton_of_integer modifiers k = (
 				     (opt_slot "fixed" fixed_ fixed_default)]))
 			  ^")")
 		val ns = (subject_to_string subj)
+		val _ = if (not ((value_ <> NIL) andalso (modifiers <> "")))
+			then () else raise Match
 		val xs = if (value_ <> NIL) then
 			     "= "^ (quote value_)
 			 else
-			     ""
+			     modifiers
 		val ss = ((String.concatWith
 			       " "
 			       (List.filter (fn x => (x <> ""))

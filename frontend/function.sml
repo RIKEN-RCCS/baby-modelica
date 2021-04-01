@@ -97,14 +97,14 @@ fun resolve_function_components kp = (
 
 	val kx = (body_of_argument kp)
     in
-	if (class_is_outer_alias kx) then
-	    ()
-	else if (class_is_simple_type kx) then
+	if (class_is_simple_type kx) then
 	    ()
 	else if (not (kind_is_function kx)) then
 	    ()
 	else
 	    let
+		val _ = if (not (class_is_outer_alias kx)) then ()
+			else raise Match
 		val _ = (assert_cooked_at_least E3 kp)
 		val bindings = (list_elements true kp)
 		val (_, states) =
