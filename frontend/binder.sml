@@ -25,7 +25,7 @@ sig
 	ctx_t -> bool -> binder_t -> (id_t * expression_t) list
 	-> (binder_t * (id_t * expression_t) list)
 
-    val bind_in_value :
+    val bind_in_value__ :
 	ctx_t -> bool -> definition_body_t -> definition_body_t
     val bind_in_scoped_expression :
 	bool -> definition_body_t -> expression_t -> expression_t
@@ -427,13 +427,13 @@ and bind_in_simple_type_element buildphase kp e0 = (
 
 and bind_in_primitive_type buildphase k0 = (
 	case k0 of
-	    Def_Primitive (t, x0) => (
+	    Def_Primitive (t, x0, va) => (
 	    let
 		fun binder w = raise error_undefined_variable
 		val walk_x = (bind_in_expression {k = k0} buildphase binder)
 		val x1 = (walk_x x0)
 	    in
-		Def_Primitive (t, x1)
+		Def_Primitive (t, x1, va)
 	    end)
 	  | _ => raise Match)
 
@@ -447,11 +447,11 @@ and bind_in_primitive_type buildphase k0 = (
    sets step=E4 early then finally sets step=E5, to detect
    re-entering. *)
 
-fun bind_in_value ctx buildphase k0 = (
+fun bind_in_value__ ctx buildphase k0 = (
     case k0 of
 	Def_Mock_Array (dim, array0, dummy) => (
 	let
-	    val array1 = (map (bind_in_value ctx buildphase) array0)
+	    val array1 = (map (bind_in_value__ ctx buildphase) array0)
 	in
 	    Def_Mock_Array (dim, array1, dummy)
 	end)
@@ -460,7 +460,7 @@ fun bind_in_value ctx buildphase k0 = (
 	    val _ = if (step_is_at_least E3 k0) then () else raise Match
 	in
 	    if (not buildphase) then
-		(bind_in_value_declaration ctx buildphase k0)
+		(bind_in_value_declaration__ ctx buildphase k0)
 	    else if (step_is_at_least E5 k0) then
 		k0
 	    else if (step_is_at_least E4 k0) then
@@ -474,26 +474,24 @@ fun bind_in_value ctx buildphase k0 = (
 		    val subj = (subject_of_class k0)
 		    val k1 = (set_cook_step E4 k0)
 		    val _ = (store_to_instance_tree subj k1)
-		    val k2 = (bind_in_value_declaration ctx buildphase k1)
+		    val k2 = (bind_in_value_declaration__ ctx buildphase k1)
 		in
 		    k2
 		end
 	end)
       | Def_Der _ => k0
-      | Def_Primitive (P_Enum tag_, L_Enum (tag, v)) => k0
+      | Def_Primitive (P_Enum _, L_Enum _, _) => k0
       | Def_Primitive _ => raise Match
       | _ => raise Match)
 
-and bind_in_value_declaration ctx buildphase k0 = (
+and bind_in_value_declaration__ ctx buildphase k0 = (
     case k0 of
 	Def_Body _ => (
 	if (not (class_is_simple_type k0)) then
 	    k0
 	else
 	    let
-		(*val attributes = (not buildphase)*)
-		val subj = (subject_of_class k0)
-		val binder = fn x => raise Match
+		fun binder _ = raise Match
 		val k2 = (bind_in_simple_type buildphase binder k0)
 	    in
 		k2

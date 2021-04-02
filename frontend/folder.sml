@@ -74,8 +74,8 @@ fun make_explicit_array dim0 vv0 = (
 
 (* ================================================================ *)
 
-fun make_primitive_type name v = (
-    Def_Primitive (name, v))
+fun make_primitive_type__ name v = (
+    Def_Primitive (name, v, Continuous))
 
 fun primitive_type_is_number p = (
     case p of
@@ -144,7 +144,7 @@ fun value_of_instance w0 kp = (
 		(make_explicit_array dim vv)
 	end)
       | Def_Der _ => w0
-      | Def_Primitive (P_Enum tag_, L_Enum (tag, v)) => L_Enum (tag, v)
+      | Def_Primitive (P_Enum _, L_Enum (tag, v), _) => L_Enum (tag, v)
       | Def_Primitive _ => raise Match
       | _ => raise Match)
 

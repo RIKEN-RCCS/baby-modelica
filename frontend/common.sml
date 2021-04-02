@@ -752,7 +752,7 @@ fun subject_of_class k = (
 	    subj
 	end)
       | Def_Der _ => raise Match
-      | Def_Primitive (P_Enum tag0, L_Enum (tag1, v)) => (
+      | Def_Primitive (P_Enum tag0, L_Enum (tag1, v), _) => (
 	let
 	    val _ = if (tag0 = tag1) then () else raise Match
 	    val subj = (tag_to_subject (qualify_name (v, tag1)))
@@ -924,7 +924,7 @@ fun class_is_enumerator k = (
     case k of
 	Def_Body _ => false
       | Def_Der _ => false
-      | Def_Primitive (P_Enum tag_, L_Enum (tag, v)) => true
+      | Def_Primitive (P_Enum _, L_Enum (tag, v), _) => true
       | Def_Primitive _ => false
       | Def_Outer_Alias _ => false
       | Def_Argument (kx, sm, aa, ww) => (class_is_enumerator kx)
@@ -1201,7 +1201,7 @@ fun class_print_name k = (
 	    (tag_to_string tag)
       | Def_Der (tag, cs, n, vv, aa, ww) => (
 	"der ("^ (tag_to_string tag) ^")")
-      | Def_Primitive (p, _) => "primitive"
+      | Def_Primitive _ => "primitive"
       | Def_Outer_Alias (f, subj, _) => (subject_to_string subj)
       | Def_Argument (kx, (ss, mm), aa, ww) => (class_print_name kx)
       | Def_Named n => (name_to_string n)

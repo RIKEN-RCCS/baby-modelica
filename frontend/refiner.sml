@@ -524,7 +524,7 @@ fun attach_modifiers_to_body ctx k0 mm1 = (
     case k0 of
 	Def_Body _ => raise Match
       | Def_Der _ => raise Match
-      | Def_Primitive (p, v) => (
+      | Def_Primitive (ty, v, va) => (
 	case mm1 of
 	    [m] => (
 	    case m of
@@ -534,7 +534,7 @@ fun attach_modifiers_to_body ctx k0 mm1 = (
 	      | Mod_Elemental_Redeclare _ => raise Match
 	      | Mod_Entry _ => raise Match
 	      | Mod_Value e => (
-		Def_Primitive (p, e)))
+		Def_Primitive (ty, e, va)))
 	  | _ => raise Match)
       | Def_Outer_Alias _ => raise Match
       | Def_Argument _ => raise Match

@@ -236,11 +236,10 @@ datatype cook_step_t = E0 | E1 | E2 | E3 | E4 | E5
 
 datatype redeclaration_source_t = In_Modifiers | In_Elements
 
-(* primitive_type_t is stored in Def_Primitive.  Each corresponds to a
-   simple-type.  Even the simple-types have structures, that is, they
-   have attributes.  The attributes of them are described by the
-   corresponding primitive types.  Note that the primitive types also
-   represent values in constant folding. *)
+(* primitive_type_t is a key stored in a Def_Primitive.  Each
+   primitive type corresponds to a simple-type.  Simple-types differ
+   from primitive types in that they have structures.  Primitive types
+   also represent values in constant folding. *)
 
 datatype primitive_type_t
     = P_Number of number_type_t
@@ -357,7 +356,7 @@ and definition_body_t
       (class_tag_t * class_specifier_t
        * name_t * id_t list * annotation_t * comment_t)
     | Def_Primitive of
-      (primitive_type_t * (*value*) expression_t)
+      (primitive_type_t * (*value*) expression_t * variability_t)
     | Def_Outer_Alias of instantiation_t * subject_t * subject_t
     | Def_Argument of
       (definition_body_t * (subscripts_t * modifier_t list)

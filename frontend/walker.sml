@@ -523,18 +523,18 @@ and walk_in_simple_type_element (vamp : 'a vamper_t) (e0, acc0) = (
 
 and walk_in_primitive_type (vamp : 'a vamper_t) (k0, acc0) = (
     case k0 of
-	Def_Primitive (ty, x0) => (
+	Def_Primitive (ty, x0, va) => (
 	let
 	    val walk_x = (walk_in_expression_by_vamper vamp)
 	    val (x1, acc1) = (walk_x (x0, acc0))
-	    val k1 = Def_Primitive (ty, x1)
+	    val k1 = Def_Primitive (ty, x1, va)
 	in
 	    (k1, acc1)
 	end)
       | _ => raise Match
     (*
     case k0 of
-	Def_Primitive (ty, x0) => (
+	Def_Primitive (ty, x0, va) => (
 	let
 	    val {vamp_q, vamp_s} = vamp
 	    val dummy0 = Eq_Eq ((x0, NIL), Annotation [], Comment [])
@@ -543,7 +543,7 @@ and walk_in_primitive_type (vamp : 'a vamper_t) (k0, acc0) = (
 	    case dummy1 of
 		Eq_Eq ((x1, _), _, _) => (
 		let
-		    val k1 = Def_Primitive (ty, x1)
+		    val k1 = Def_Primitive (ty, x1, va)
 		in
 		    (k1, acc1)
 		end)

@@ -546,9 +546,9 @@ fun store_to_instance_tree subj kp = (
 		    (store_scalar upnode node id (subj, kp)))
 		  | Def_Der _ => (
 		    (store_scalar upnode node id (subj, kp)))
-		  | Def_Primitive (P_Enum _ , e) => (
+		  | Def_Primitive (P_Enum _ , e, _) => (
 		    (store_scalar upnode node id (subj, kp)))
-		  | Def_Primitive (_ , e) => raise Match
+		  | Def_Primitive (_ , e, _) => raise Match
 		  | Def_Outer_Alias _ => (
 		    (store_scalar upnode node id (subj, kp)))
 		  | Def_Argument _ => (
