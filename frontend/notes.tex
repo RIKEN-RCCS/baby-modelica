@@ -1744,13 +1744,12 @@ class/variable. \end{QRULE}
 An outer prefixes an identifier, and an inner prefixes a class
 definition or a variable declaration.
 
-\begin{QFACT} (?) An inner-outer relation on classes does not extend
-outward to lexically enclosing classes. \end{QFACT}
-
-In the following example, the model class is $M$.  The outer $P.X$
-is defined in a package $P$ and it cannot have an inner-outer
-relation.  Note the hierarchies are $M\owns{}P.B$ and $P>P.B$ ($\owns$
-for component embedding, $>$ for lexical enclosing).
+\begin{QFACT} An inner-outer relation on classes does not extend
+outward to lexically enclosing classes.\end{QFACT}
+%%%%
+In the following example, the model class is $M$.  The outer $P.X$ is
+defined in a package $P$ and it cannot have an inner-outer relation.
+In this case, a model $P$ works as a package to a model $P.B$.
 %%%%
 \begin{quote}
 \begin{lstlisting}[aboveskip=-\baselineskip]

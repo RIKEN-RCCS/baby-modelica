@@ -308,46 +308,43 @@ and class_definition_t
 
 and type_marker_t = ENUM | MAIN | BASE | SIMP
 
-(* Def_Body, Def_Der, and Def_Primitive are the only proper classes
-   that appear after syntactic processing.  Def_Body is a class
-   definition.  The subject slot is an identifier which is set when it
-   is associated to a package/instance (it is chiefly used for
-   information).  The name 3-tuple is name information.  The first
-   class-tag slot is an original name of a body.  The second slot is a
-   class name after potential renaming (for an instance).  The third
-   slot is an enclosing class (for a package).  Field abbreviation is:
-   Def_Body(mk,j,cs,nm,cc,ee,aa,ww).  Def_Der is a derivative
-   definition.  Def_Body and Def_Der represent the classes after
-   syntaxing.  Def_Primitive is primitive types.  Def_Outer_Alias is a
-   record left in the instance_tree to map an outer reference to an
-   inner.  Def_Argument represents a local variable in a function and
-   wraps a Def_Body to attach information.  Def_Named specifies a
-   class name in the language.  Def_Scoped replaces Def_Named by
-   attaching scope information.  Def_Refine represents class and
-   variable modifications, on subscripts or modifiers in a class
-   definition, an extends-clause, and a variable declaration.
-   Def_Refine holds component_prefixes but it usually only uses a
-   type_prefix part.  The entire component_prefixes are needed at
-   instantiation.  An optional subject records a class name when it is
-   given a name.  Its field abbreviation is:
-   Def_Refine(k,rn,q,(ss,mm),cc,aa,ww).  Def_Extending represents an
-   extends-redeclaration.  It is a pair of a base with modifiers and a
-   body.  The boolean slot is an extended-flag indicating a base class
-   is set, and it is true when it replaces a replaceable.  It is used
-   only for checking purpose.  Def_Replaced is introduced by a
-   redeclaration, and holds an original definition for information.
-   The first slot is the new definition.  Def_Primitive represents a
-   value of a simple-type and holds its value.  Def_Displaced is a tag
-   left in place of a class definition, where all class definitions
-   are moved out of a class.  The subject slot indicates an enclosing
-   class.  It is necessary because an enclosing class changes when it
-   is modified.  Def_In_File indicates that a class is yet to be
-   loaded from a file.  It is only placed in the loaded_classes table.
-   Such entries are created for file/directory entries when a
-   "package.mo" is loaded.  It is a pair of an outer reference and a
-   matching inner reference.  Def_Mock_Array is temporarily used to
-   represent an array of instances, which is created on accessing the
-   instance_tree. *)
+(* Def_Body, Def_Der, Def_Primitive, and Def_Argument are the only
+   classes that appear after syntactic processing.  Def_Body is a
+   class definition.  The subject slot is a unique name which is set
+   when it is associated to a package/instance.  The name 3-tuple is
+   name information.  The first class-tag slot is an original name of
+   a body.  The second slot is a class name after potential renaming.
+   The third slot is an enclosing class (of a package).  Field
+   abbreviation is: Def_Body(mk,j,cs,nm,cc,ee,aa,ww).  Def_Der is a
+   derivative definition.  Def_Body and Def_Der represent classes
+   after syntaxing.  Def_Primitive represents a primitive type.
+   Def_Outer_Alias is a record left in the instance_tree to map an
+   outer reference to an inner.  It is a pair of an outer reference
+   and a matching inner reference.  Def_Argument represents an
+   input/output/local variable in a function and wraps a Def_Body to
+   attach some information.  Def_Named specifies a class name in the
+   language.  Def_Scoped replaces a Def_Named by attaching scope
+   information.  Def_Refine represents modifications and subscripts to
+   a class and a variable.  Def_Refine holds component_prefixes but it
+   usually only uses a type_prefix part.  The entire
+   component_prefixes are needed at instantiation.  An optional
+   subject records a class name when it is given.  Its field
+   abbreviation is: Def_Refine(k,rn,q,(ss,mm),cc,aa,ww).
+   Def_Extending represents an extends-redeclaration.  It is a pair of
+   a base with modifiers and a body.  The boolean slot is an
+   extended-marker indicating a base class is set, and it is true when
+   it replaces a replaceable.  It is used for checking purpose.
+   Def_Replaced is introduced by a redeclaration, and holds an
+   original definition for information.  The first slot is the new
+   definition.  Def_Displaced is a tag left in place of a class
+   definition, where all class definitions are removed out of a class.
+   The subject slot indicates an enclosing class.  It is necessary
+   because an enclosing class changes when it is modified.
+   Def_In_File indicates that a class is yet to be loaded from a file.
+   It is only placed in the loaded_classes table.  Such entries are
+   created for file/directory entries when a "package.mo" is loaded.
+   Def_Mock_Array is temporarily used to represent an array of
+   instances, which is created on accessing the instance_tree. *)
 
 and definition_body_t
     = Def_Body of

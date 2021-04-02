@@ -5,11 +5,7 @@
 
 structure function :
 sig
-    type class_definition_t
     type definition_body_t
-    type expression_t
-    type subject_t
-    type ctx_t
 
     val resolve_function_components : definition_body_t -> unit
 end = struct
@@ -18,21 +14,8 @@ open ast
 open plain
 open small1
 
-type ctx_t = {k : definition_body_t}
-type binder_t = expression_t -> expression_t
-
-val class_tree = classtree.class_tree
-val instance_tree = classtree.instance_tree
+val fetch_from_instance_tree = classtree.fetch_from_instance_tree
 val store_to_instance_tree = classtree.store_to_instance_tree
-val assert_stored_in_instance_tree = classtree.assert_stored_in_instance_tree
-val unwrap_array_of_instances = classtree.unwrap_array_of_instances
-val subject_to_instance_tree_path = classtree.subject_to_instance_tree_path
-val component_is_outer_alias = classtree.component_is_outer_alias
-val component_is_expandable = classtree.component_is_expandable
-val dereference_outer_alias = classtree.dereference_outer_alias
-val insert_outer_alias = classtree.insert_outer_alias
-val access_node = classtree.access_node
-val find_in_components = classtree.find_in_components
 
 val find_element = finder.find_element
 val list_elements = finder.list_elements

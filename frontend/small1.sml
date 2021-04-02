@@ -10,8 +10,6 @@ open ast
 open message
 open small0
 
-val fetch_from_instance_tree = classtree.fetch_from_instance_tree
-
 fun extend_subject subj cc = (
     case cc of
 	[] => raise Match

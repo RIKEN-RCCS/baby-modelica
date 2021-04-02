@@ -46,6 +46,8 @@ open expression
 fun tr_expr (s : string) = if true then (print (s ^"\n")) else ()
 fun tr_expr_vvv (s : string) = if false then (print (s ^"\n")) else ()
 
+val fetch_from_instance_tree = classtree.fetch_from_instance_tree
+
 val take_enumarator_element = simpletype.take_enumarator_element
 
 val expression_is_literal = expression.expression_is_literal

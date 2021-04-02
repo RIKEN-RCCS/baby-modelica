@@ -27,6 +27,8 @@ open ast
 open small1
 open expression
 
+val fetch_from_instance_tree = classtree.fetch_from_instance_tree
+
 val simple_type_attribute = simpletype.simple_type_attribute
 
 val simplify_ite = walker.simplify_ite

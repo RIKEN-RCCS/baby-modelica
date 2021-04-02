@@ -33,6 +33,7 @@ type binder_t = expression_t -> expression_t
 
 val class_tree = classtree.class_tree
 val instance_tree = classtree.instance_tree
+val fetch_from_instance_tree = classtree.fetch_from_instance_tree
 val store_to_instance_tree = classtree.store_to_instance_tree
 val assert_stored_in_instance_tree = classtree.assert_stored_in_instance_tree
 val unwrap_array_of_instances = classtree.unwrap_array_of_instances

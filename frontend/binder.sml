@@ -45,8 +45,9 @@ type ctx_t = {k : definition_body_t}
 
 val class_tree = classtree.class_tree
 val instance_tree = classtree.instance_tree
-val fetch_class_by_part = classtree.fetch_class_by_part
+val fetch_from_instance_tree = classtree.fetch_from_instance_tree
 val store_to_instance_tree = classtree.store_to_instance_tree
+val fetch_class_by_part = classtree.fetch_class_by_part
 val subject_to_instance_tree_path = classtree.subject_to_instance_tree_path
 
 val find_name_initial_part = finder.find_name_initial_part
