@@ -191,11 +191,9 @@ fun assert_modifiers_are_scoped mm = (
 	      | Def_In_File => raise Match
 	      | Def_Mock_Array _ => raise Match)
 
-	and test_redeclare_is_scoped (Defvar (v, q, d, c, a, w)) = (
+	and test_redeclare_is_scoped (Defvar (v, kx)) = (
 	    let
-		val _ = if (c = NONE) then ()
-			else raise error_condition_in_modifiers
-		val c0 = (test_body_is_scoped d)
+		val c0 = (test_body_is_scoped kx)
 	    in
 		c0
 	    end)
@@ -378,15 +376,12 @@ and closure_definition (scope : scope_t) (kp as Defclass ((v, g), k0)) = (
 	Defclass ((v, g), k1)
     end)
 
-and closure_declaration modifier (scope : scope_t) (Defvar (v, q, k0, c0, a0, w)) = (
+and closure_declaration modifier (scope : scope_t) dx = (
     let
-	val _ = if (not modifier orelse c0 = NONE)
-		then () else raise error_condition_in_modifiers
+	val Defvar (v, k0) = dx
 	val k1 = (closure_class scope k0)
-	val c1 = (Option.map (closure_expression scope) c0)
-	val a1 = (closure_annotation scope a0)
     in
-	Defvar (v, q, k1, c1, a1, w)
+	Defvar (v, k1)
     end)
 
 and closure_constraint (scope : scope_t) (k0, mm0, a0, w) = (
@@ -420,12 +415,13 @@ and closure_class (scope : scope_t) k0 = (
       | Def_Argument _ => raise Match
       | Def_Named n => Def_Scoped (n, scope)
       | Def_Scoped _ => raise Match
-      | Def_Refine (x0, v, ts, q, (ss0, mm0), cc, aa, ww) => (
+      | Def_Refine (x0, v, ts, q, (ss0, mm0), cc0, aa, ww) => (
 	let
 	    val x1 = (closure_class scope x0)
 	    val ss1 = (map (closure_expression scope) ss0)
 	    val mm1 = (map (closure_modifier scope) mm0)
-	    val k1 = Def_Refine (x1, v, ts, q, (ss1, mm1), cc, aa, ww)
+	    val cc1 = (closure_expression scope cc0)
+	    val k1 = Def_Refine (x1, v, ts, q, (ss1, mm1), cc1, aa, ww)
 	in
 	    k1
 	end)

@@ -87,10 +87,8 @@ val the_integer_class = Def_Displaced (Ctag ["Integer"],
 				       the_package_root_subject)
 
 val predefined_variables = [
-    Defvar (Id "time", (Effort, Continuous, Acausal),
-	    the_real_class, NONE, Annotation [], Comment []),
-    Defvar (Id "end", (Effort, Continuous, Acausal),
-	    the_integer_class, NONE, Annotation [], Comment [])]
+    Defvar (Id "time", the_real_class),
+    Defvar (Id "end", the_integer_class)]
 
 val predefined_function_names = [
     "abs",
@@ -631,7 +629,7 @@ fun variability_order v = (
 fun name_of_element_union cv = (
     case cv of
 	EL_Class (Defclass ((v, _), _)) => v
-      | EL_State (Defvar (v, _, _, _, _, _)) => v)
+      | EL_State (Defvar (v, _)) => v)
 
 (*val name_of_naming = name_of_element_union*)
 
@@ -1226,7 +1224,7 @@ fun subject_body_to_string (s : subject_t, k : definition_body_t) = (
 	(subject_and_tag_to_string (s, (class_print_name k)) suffix)
     end)
 
-fun declaration_to_string (d as Defvar (v, q, k, c, a, w)) = (
+fun declaration_to_string (d as Defvar (v, k)) = (
     ("("^ (id_to_string v) ^" : "^ (class_print_name k) ^")"))
 
 fun modifier_to_string m = (
@@ -1241,11 +1239,11 @@ fun modifier_to_string m = (
 	    ((id_to_string v) ^"="^ (class_print_name k))))
       | Mod_Redeclare (r, d, h) => (
 	case d of
-	    Defvar (v, q, k, c, a, w) => (
+	    Defvar (v, k) => (
 	    ((id_to_string v) ^":"^ (class_print_name k))))
       | Mod_Elemental_Redeclare (z, r, d, h) => (
 	case d of
-	    Defvar (v, q, k, c, a, w) => (
+	    Defvar (v, k) => (
 	    ((id_to_string v) ^":"^ (class_print_name k))))
       | Mod_Entry (ef, n, mm, w) => (
 	((name_to_string n) ^"="^ (modifier_list_to_string mm)))

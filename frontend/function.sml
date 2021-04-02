@@ -61,18 +61,17 @@ fun resolve_function_components kp = (
 		Naming (_, _, _, _, (z, r, EL_Class _, h)) => raise Match
 	      | Naming (id, subj, inner, _, (z, r, EL_State dx, h)) => (
 		let
-		    val Defvar (_, q, k0, cc, aa, ww) = dx
+		    val Defvar (_, k0) = dx
 		    val _ = if (not (isSome (fetch_from_instance_tree subj)))
 			    then () else raise Match
 		    val _ = if (not (isSome inner)) then () else raise Match
-		    val _ = if (not (isSome cc)) then () else raise Match
 		    val (k1, ss1, mm1) = (strip_dimension k0)
 		    val k3 = (assemble_instance (subj, k1))
 		    val (k4, ss0, mm0) = (strip_dimension k3)
 		    val ctx = k0
 		    val ssx = (merge_subscripts ss0 ss1)
 		    val mmx = (merge_modifiers ctx mm1 mm0)
-		    val k5 = Def_Argument (k4, (ssx, mmx), aa, ww)
+		    val k5 = Def_Argument (k4, (ssx, mmx), Annotation [], Comment [])
 		    val _ = (store_to_instance_tree subj k5)
 		in
 		    ()

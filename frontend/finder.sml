@@ -190,7 +190,7 @@ and gather_names_in_class (cooker : cooker_t) kp : naming_t list = (
 		end)
 	      | Element_State (z, r, d, h) => (
 		let
-		    val Defvar (v, _, _, _, _, _) = d
+		    val Defvar (v, _) = d
 		    val subjkp = (subject_of_class kp)
 		    val subj = (compose_subject subjkp v [])
 		in
@@ -352,7 +352,7 @@ fun list_component_names kp = (
 	fun name (Naming (id, _, _, _, (z, r, d, h))) = (
 	    case d of
 		EL_Class _ => raise Match
-	      | EL_State (Defvar (_, q, k, c, a, w)) => id)
+	      | EL_State (Defvar (_, k)) => id)
 
 	val bindings = (list_elements false kp)
 	val (classes, states) = (List.partition binding_is_class bindings)

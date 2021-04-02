@@ -377,4 +377,6 @@ val error_conditional_is_not_determined = Match
 
 val error_model_is_array = Match
 
+val error_conditional_on_redeclared_state = Match
+
 end

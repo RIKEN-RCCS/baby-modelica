@@ -370,11 +370,8 @@ and instantiate_named_element kp binding = (
 	    val package = (class_is_non_function_package kp)
 	    val _ = if ((not package) orelse (declaration_is_constant dx))
 		    then () else raise error_non_constant_in_package
-	    val Defvar (_, q, k0, c0, aa, ww) = dx
-	    val cc1 = (getOpt (c0, NIL))
-	    val k1 = Def_Refine (k0, NONE, copy_type, q,
-				 ([], []), cc1, aa, ww)
-	    val (dim, array) = (instantiate_class (subj, k1))
+	    val Defvar (_, k0) = dx
+	    val (dim, array) = (instantiate_class (subj, k0))
 	in
 	    (dim, array)
 	end)

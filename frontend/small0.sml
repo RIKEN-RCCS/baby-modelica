@@ -54,7 +54,7 @@ fun tag_as_name tag = (
       | Ctag [] => raise Match
       | Ctag nn => Name ("" :: nn))
 
-fun declaration_id (Defvar (v, _, _, _, _, _)) = v
+fun declaration_id (Defvar (v, _)) = v
 
 fun same_class k0 k1 = (
     (tag_of_definition k0) = (tag_of_definition k1))
@@ -346,8 +346,22 @@ fun binding_is_class (Naming (_, _, _, _, (z, r, dx, h))) = (
    package after modifier applications, so it is not necessary to
    check the class definition (k) when it is not processed yet. *)
 
-fun declaration_is_constant (Defvar (v, (fs, vc, io), k, c, a, w)) = (
-    (vc = Constant orelse vc = Parameter))
+fun declaration_is_constant (Defvar (v, k)) = (
+    case k of
+	Def_Body _ => raise Match
+      | Def_Der _ => false
+      | Def_Primitive _ => false
+      | Def_Outer_Alias _ => raise Match
+      | Def_Argument _ => raise Match
+      | Def_Named _ => raise Match
+      | Def_Scoped _ => raise Match
+      | Def_Refine (kx, v, ts, (fs, vc, io), (ss, mm), cc, aa, ww) => (
+	(vc = Constant orelse vc = Parameter))
+      | Def_Extending _ => raise Match
+      | Def_Replaced _ => raise Match
+      | Def_Displaced _ => raise Match
+      | Def_In_File => raise Match
+      | Def_Mock_Array _ => raise Match)
 
 (* Tests if the class is proper for variable declaration form. *)
 

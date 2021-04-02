@@ -400,13 +400,13 @@ and bind_in_simple_type_element buildphase kp e0 = (
       | Element_State (z, r, d0, h) => (
 	let
 	    (*val attributes = not buildphase*)
-	    val Defvar (v, q, k0, c, a, w) = d0
+	    val Defvar (v, k0) = d0
 	    val _ = if (class_is_primitive k0) then () else raise Match
 	in
 	    if ((not buildphase) orelse (v = Id "value")) then
 		let
 		    val k1 = (bind_in_primitive_type buildphase k0)
-		    val dx = Defvar (v, q, k1, c, a, w)
+		    val dx = Defvar (v, k1)
 		in
 		    Element_State (z, r, dx, h)
 		end

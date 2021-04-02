@@ -285,22 +285,26 @@ and statement_t
 		  * annotation_t * comment_t)
     (*| St_Comment of (annotation_t * comment_t)*)
 
-(* variable_declaration is a tuple of ID and a class definition.  An
-   optional expression exists for a condition declaration.  An
-   array-subscripts part in the declaration is moved in the class
-   definition.  The fields abbreviation is: Defvar(v,q,k,c,a,w). *)
+(* variable_declaration is a tuple of ID and a class definition.  Its
+   body is always a Def_Refine (or a Def_Primitive for the attributes
+   of simple-types).  Component prefixes, array-subscripts, and a
+   conditional in the declaration are moved in a Def_Refine. *)
 
+and variable_declaration_t
+    = Defvar of (id_t * definition_body_t)
+
+(*
 and variable_declaration_t
     = Defvar of (id_t * component_prefixes_t
 		 * definition_body_t
 		 * expression_t option
 		 * annotation_t * comment_t)
+*)
 
 (* class_definition is used to refer to a class.  A class-specifier in
    the syntax is a class-definition with a null class-prefixes.  The
    second name field is an enclosing class, which is added at a
-   supplementary step in parsing.  The fields abbreviation is:
-   Defclass((v,g),k). *)
+   supplementary step in parsing. *)
 
 and class_definition_t
     = Defclass of ((id_t * class_tag_t) * definition_body_t)
@@ -477,8 +481,8 @@ and constraint_t = (definition_body_t * modifier_t list
 
 and enum_list_t = (id_t * annotation_t * comment_t) list
 
-type binding_element_t = (visibility_t * element_prefixes_t
-			  * element_sum_t * constraint_t option)
+type naming_element_t = (visibility_t * element_prefixes_t
+			 * element_sum_t * constraint_t option)
 
 (* An entry of an element list (definitions/declarations).  It is
    stored in the class_bindings table.  The identifier slot is a
@@ -488,7 +492,7 @@ type binding_element_t = (visibility_t * element_prefixes_t
 
 datatype naming_t
     = Naming of (id_t * subject_t * subject_t option * (*imported*) bool
-		 * binding_element_t)
+		 * naming_element_t)
 
 (* ================================================================ *)
 
@@ -744,14 +748,11 @@ fun make_component_clause
 	((v, ss1, mm, cc, aa, ww) : declaration_with_subscripts_t) = (
     let
 	val ssx = (merge_subscripts ss0 ss1)
-	val k0 = if ((null ssx) andalso (null mm)) then
-		     Def_Named n
-		 else
-		     Def_Refine (Def_Named n, NONE, copy_type,
-				 no_component_prefixes,
-				 (ssx, mm), NIL, Annotation [], Comment [])
+	val ccx = (getOpt (cc, NIL))
+	val k0 = Def_Refine (Def_Named n, NONE, copy_type, q,
+			     (ssx, mm), ccx, aa, ww)
     in
-	Defvar (v, q, k0, cc, aa, ww)
+	Defvar (v, k0)
     end)
 
 fun attach_comment_to_equation q (aa, ww) = (

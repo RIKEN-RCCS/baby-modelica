@@ -302,9 +302,9 @@ fun walk_in_modifier walk_x ((m0 : modifier_t), acc0) = (
 	    end)
 	  | Mod_Redeclare (r, d0, h0) => (
 	    let
-		val Defvar (v, q, k0, c, aa, ww) = d0
+		val Defvar (v, k0) = d0
 		val (k1, acc1) = (walk_k (k0, acc0))
-		val d1 = Defvar (v, q, k1, c, aa, ww)
+		val d1 = Defvar (v, k1)
 		val (h1, acc2) = (walk_in_x_option walk_h (h0, acc1))
 		val m1 = Mod_Redeclare (r, d1, h1)
 	    in
@@ -312,9 +312,9 @@ fun walk_in_modifier walk_x ((m0 : modifier_t), acc0) = (
 	    end)
 	  | Mod_Elemental_Redeclare (z, r, d0, h0) => (
 	    let
-		val Defvar (v, q, k0, c, aa, ww) = d0
+		val Defvar (v, k0) = d0
 		val (k1, acc1) = (walk_k (k0, acc0))
-		val d1 = Defvar (v, q, k1, c, aa, ww)
+		val d1 = Defvar (v, k1)
 		val (h1, acc2) = (walk_in_x_option walk_h (h0, acc1))
 		val m1 = Mod_Elemental_Redeclare (z, r, d1, h1)
 	    in
@@ -501,10 +501,10 @@ and walk_in_simple_type_element (vamp : 'a vamper_t) (e0, acc0) = (
       | Element_Class _ => (e0, acc0)
       | Element_State (z, r, d0, h) => (
 	let
-	    val Defvar (v, q, k0, c, aa, ww) = d0
+	    val Defvar (v, k0) = d0
 	    val _ = if (class_is_primitive k0) then () else raise Match
 	    val (k1, acc1) = (walk_in_primitive_type vamp (k0, acc0))
-	    val d1 = Defvar (v, q, k1, c, aa, ww)
+	    val d1 = Defvar (v, k1)
 	    val e1 = Element_State (z, r, d1, h)
 	in
 	    (e1, acc1)

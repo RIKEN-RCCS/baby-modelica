@@ -197,19 +197,19 @@ and bind_in_modifier kp binder (m : modifier_t) = (
 	    end)
 	  | Mod_Redeclare (r, d0, h0) => (
 	    let
-		val Defvar (v, q, k0, c, aa, ww) = d0
+		val Defvar (v, k0) = d0
 		val k1 = (walk_k k0)
 		val h1 = (Option.map walk_h h0)
-		val d1 = Defvar (v, q, k1, c, aa, ww)
+		val d1 = Defvar (v, k1)
 	    in
 		Mod_Redeclare (r, d1, h1)
 	    end)
 	  | Mod_Elemental_Redeclare (z, r, d0, h0) => (
 	    let
-		val Defvar (v, q, k0, c, aa, ww) = d0
+		val Defvar (v, k0) = d0
 		val k1 = (walk_k k0)
 		val h1 = (Option.map walk_h h0)
-		val d1 = Defvar (v, q, k1, c, aa, ww)
+		val d1 = Defvar (v, k1)
 	    in
 		Mod_Elemental_Redeclare (z, r, d1, h1)
 	    end)

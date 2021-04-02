@@ -193,6 +193,17 @@ fun simplify_simple_type (k0 : definition_body_t) = (
 	val _ = if ((cook_step k0) = E2) then () else raise Match
 	val subj = (subject_of_class k0)
 
+	fun check_component_prefixes (mode, variability, causality) = (
+	    let
+		val _ = if ((mode = Effort)
+			    andalso ((variability = Continuous)
+				     orelse (variability = Parameter))
+			    andalso (causality = Acausal)) then ()
+			else raise Match
+	    in
+		()
+	    end)
+
 	fun just_value_modifier mm = (
 	    case mm of
 		[] => NIL
@@ -218,8 +229,8 @@ fun simplify_simple_type (k0 : definition_body_t) = (
 	      | Def_Refine (x1, v, ts, q, (ss, mm), cc, aa, ww) => (
 		let
 		    val _ = if (v = NONE) then () else raise Match
-		    val _ = if (q = no_component_prefixes) then ()
-			    else raise Match
+		    val _ = if (cc = NIL) then () else raise Match
+		    val _ = (check_component_prefixes q)
 		    val _ = if (null ss) then ()
 			    else raise error_array_modifier_to_attribute
 		    val x2 = (primitivize x1)
@@ -258,11 +269,10 @@ fun simplify_simple_type (k0 : definition_body_t) = (
 	      | Element_Class _ => e
 	      | Element_State (z, r, d0, h) => (
 		let
-		    val Defvar (v, q, x0, cc, aa, ww) = d0
-		    val _ = if (cc = NONE) then () else raise Match
+		    val Defvar (v, x0) = d0
 		    val x1 = (primitivize x0)
 		    val x2 = (set_value_to_fixed_slot v x1 fixed)
-		    val d1 = Defvar (v, q, x2, cc, aa, ww)
+		    val d1 = Defvar (v, x2)
 		in
 		    Element_State (z, r, d1, h)
 		end)
@@ -346,8 +356,7 @@ fun enumeration_attributes kp = (
 	fun declare name ty = (
 	    let
 		val declaration
-		    = Defvar (Id name, (Effort, Continuous, Acausal),
-			      ty, NONE, Annotation [], Comment [])
+		    = Defvar (Id name, ty)
 	    in
 		(Public, no_element_prefixes, declaration, NONE)
 	    end)
@@ -401,7 +410,7 @@ fun simple_type_attribute kp (id : id_t) = (
 	    case e of
 		Element_State (z, r, d, h) => (
 		let
-		    val Defvar (v, q, kx, c, a, w) = d
+		    val Defvar (v, kx) = d
 		in
 		    if (v = id) then
 			SOME kx
