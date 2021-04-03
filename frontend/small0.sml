@@ -301,25 +301,28 @@ fun classes_are_similar x y = (
 
 (*AHO*)
 
-(* Tests if classes are compatible for outer ci0 to inner ci1.  (They
-   are compatible if ci0 extends ci1). *)
+(* Tests if classes are compatible for outer ne0 to inner ne1.  They
+   are compatible if ne0 extends ne1. *)
 
-fun classes_are_compatible cv0 cv1 = (
+fun classes_are_compatible ne0 ne1 = (
     let
-	(*val same = ((nominal_is_class cv0) = (nominal_is_class cv1))*)
-	(*val ci0 = (class_of_nominal cv0)*)
-	(*val ci1 = (class_of_nominal cv1)*)
+	(*val same = ((nominal_is_class ne0) = (nominal_is_class ne1))*)
+	(*val ci0 = (class_of_nominal ne0)*)
+	(*val ci1 = (class_of_nominal ne1)*)
 	val _ = (warn_no_compatibility_test ())
     in
 	true
     end)
 
-fun binding_is_public (Naming (_, _, _, _, (z, r, dx, h))) = (z = Public)
+fun binding_is_public (Naming (_, _, _, _, ne)) = (
+    case ne of
+	EL_Class (z, r, dx, h) => (z = Public)
+      | EL_State (z, r, dx, h) => (z = Public))
 
-fun binding_is_imported (Naming (_, _, _, i, (z, r, dx, h))) = i
+fun binding_is_imported (Naming (_, _, _, i, _)) = i
 
-fun binding_is_class (Naming (_, _, _, _, (z, r, dx, h))) = (
-    case dx of
+fun binding_is_class (Naming (_, _, _, _, ne)) = (
+    case ne of
 	EL_Class _ => true
       | EL_State _ => false)
 
@@ -383,13 +386,13 @@ fun drop_duplicate_declarations step (bindings : naming_t list) = (
 	    case (b0, b1) of
 		(Naming (v0, _, _, _, e0), Naming (v1, _, _, _, e1)) => (
 		case (e0, e1) of
-		    ((_, _, EL_Class d0, _), (_, _, EL_Class d1, _)) => (
+		    (EL_Class (_, _, d0, _), EL_Class (_, _, d1, _)) => (
 		    if ((tag_of_definition d0) = (tag_of_definition d1)) then
 			b0
 		    else
 			(*raise (error_duplicate_declarations (b0, b1))*)
 			b0)
-		  | ((_, q0, EL_State d0, _), (_, q1, EL_State d1, _)) => (
+		  | (EL_State (_, q0, d0, _), EL_State (_, q1, d1, _)) => (
 		    if (step = E3) then
 			b0
 		    else

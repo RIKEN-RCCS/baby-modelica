@@ -141,6 +141,8 @@ withtype for_index_t = id_t * expression_t
 
 and component_and_subscript_t = id_t * expression_t list
 
+type subscripts_t = expression_t list
+
 datatype visibility_t = Protected | Public
 
 (* Effort is non-explicit in the language, and it is the default of
@@ -254,6 +256,16 @@ datatype primitive_type_t
     | P_String
     | P_Enum of class_tag_t
 
+(* name_tuple_t is name information stored in a Def_Body.  The first
+   subject slot is an instance name or a package name.  The second
+   slot is a class name after potential renaming.  It is a name when
+   redeclarations are last applied.  The third class-tag slot is an
+   original name of a body.  The fourth slot is an enclosing class (of
+   a package). *)
+
+type name_tuple_t = (subject_t * (*class*) subject_t
+		     * class_tag_t * (*enclosing*) subject_t)
+
 (* Equations.  Eq_Connect will have Cref (connectors) for the
    arguments after syntaxing.  E_List is introduced temporarily. *)
 
@@ -292,26 +304,18 @@ and statement_t
 		  * annotation_t * comment_t)
     (*| St_Comment of (annotation_t * comment_t)*)
 
-(* variable_declaration is a tuple of ID and a class definition.  Its
-   body is always a Def_Refine (or a Def_Primitive for the attributes
-   of simple-types).  Component prefixes, array-subscripts, and a
-   conditional in the declaration are moved in a Def_Refine. *)
+(* A variable declaration.  Its body is always a Def_Refine (or a
+   Def_Primitive for the attributes of simple-types).  Component
+   prefixes, array subscripts, and a conditional in a declaration are
+   moved in a Def_Refine. *)
 
 and variable_declaration_t
     = Defvar of (id_t * definition_body_t)
 
-(*
-and variable_declaration_t
-    = Defvar of (id_t * component_prefixes_t
-		 * definition_body_t
-		 * expression_t option
-		 * annotation_t * comment_t)
-*)
-
-(* class_definition is used to refer to a class.  A class-specifier in
-   the syntax is a class-definition with a null class-prefixes.  The
-   second name field is an enclosing class, which is added at a
-   supplementary step in parsing. *)
+(* A class definition.  The second name slot is an enclosing class,
+   which is added at a supplementary step in parsing.  A
+   class-specifier in the syntax is a class-definition with a null
+   class-prefixes.  *)
 
 and class_definition_t
     = Defclass of ((id_t * class_tag_t) * definition_body_t)
@@ -320,14 +324,12 @@ and type_marker_t = ENUM | MAIN | BASE | SIMP
 
 (* Def_Body, Def_Der, Def_Primitive, and Def_Argument are the only
    classes that appear after syntactic processing.  Def_Body is a
-   class definition.  The subject slot is a unique name which is set
-   when it is associated to a package/instance.  The name 3-tuple is
-   name information.  The first class-tag slot is an original name of
-   a body.  The second slot is a class name after potential renaming.
-   The third slot is an enclosing class (of a package).  Field
-   abbreviation is: Def_Body(mk,j,cs,nm,cc,ee,aa,ww).  Def_Der is a
-   derivative definition.  Def_Body and Def_Der represent classes
-   after syntaxing.  Def_Primitive represents a primitive type.
+   class definition.  The name-tuple is name information.  Its first
+   slot is a unique name which is set when it is associated to a
+   package/instance.  Field abbreviation is:
+   Def_Body(mk,cs,nm,cc,ee,aa,ww).  Def_Der is a derivative
+   definition.  Def_Body and Def_Der represent classes after
+   syntaxing.  Def_Primitive represents a primitive type.
    Def_Outer_Alias is a record left in the instance_tree to map an
    outer reference to an inner.  It is a pair of an outer reference
    and a matching inner reference.  Def_Argument represents an
@@ -359,9 +361,7 @@ and type_marker_t = ENUM | MAIN | BASE | SIMP
 and definition_body_t
     = Def_Body of
       ((cook_step_t * instantiation_t * type_marker_t)
-       * class_specifier_t
-       * (subject_t * (*class*) subject_t * class_tag_t
-	  * (*enclosing*) subject_t)
+       * class_specifier_t * name_tuple_t
        * (*conditional*) expression_t
        * element_t list * annotation_t * comment_t)
     | Def_Der of
@@ -385,9 +385,7 @@ and definition_body_t
       ((*extended*) bool * (definition_body_t * modifier_t list)
        * definition_body_t)
     | Def_Replaced of
-      (definition_body_t
-       * (visibility_t * element_prefixes_t
-	  * element_sum_t * constraint_t option))
+      (definition_body_t * naming_element_t)
     | Def_Displaced of class_tag_t * (*enclosing*) subject_t
     | Def_In_File
     | Def_Mock_Array of
@@ -475,22 +473,23 @@ and modifier_t
 
 and annotation_t = Annotation of modifier_t list
 
-(* A naming element in a class is either a class definition or a
-   variable declaration. *)
+(* A naming element in a class is either a variable declaration or a
+   class definition.  It is to hold a subset of class elements:
+   Element_Class, Element_State, Redefine_Class, and
+   Redeclare_State. *)
 
-and element_sum_t
-    = EL_Class of class_definition_t
-    | EL_State of variable_declaration_t
+and naming_element_t
+    = EL_State of
+      (visibility_t * element_prefixes_t
+       * variable_declaration_t * constraint_t option)
+    | EL_Class of
+      (visibility_t * element_prefixes_t
+       * class_definition_t * constraint_t option)
 
-withtype subscripts_t = expression_t list
-
-and constraint_t = (definition_body_t * modifier_t list
-		    * annotation_t * comment_t)
+withtype constraint_t = (definition_body_t * modifier_t list
+			 * annotation_t * comment_t)
 
 and enum_list_t = (id_t * annotation_t * comment_t) list
-
-type naming_element_t = (visibility_t * element_prefixes_t
-			 * element_sum_t * constraint_t option)
 
 (* An entry of an element list (definitions/declarations).  It is
    stored in the class_bindings table.  The identifier slot is a
@@ -697,12 +696,12 @@ fun set_class_prefixes (t1, p1) (Defclass ((v, g), k0)) = (
 	      | Def_Argument _ => raise Match
 	      | Def_Named _ => raise Match
 	      | Def_Scoped _ => raise Match
-	      | Def_Refine (kx, v, ts0, q, (ss, mm), cc, aa, ww) => (
+	      | Def_Refine (kx, rn, ts0, q, (ss, mm), cc, aa, ww) => (
 		let
 		    val _ = if (ts0 = bad_type) then () else raise Match
 		    val ts1 = (t1, p1)
 		in
-		    Def_Refine (kx, v, ts1, q, (ss, mm), cc, aa, ww)
+		    Def_Refine (kx, rn, ts1, q, (ss, mm), cc, aa, ww)
 		end)
 	      | Def_Extending (g, x, kx) => (
 		Def_Extending (g, x, (set_prefixes (t1, p1) kx)))
@@ -731,8 +730,8 @@ fun set_class_final (Defclass ((v, g), k0)) = (
 	      | Def_Argument _ => raise Match
 	      | Def_Named _ => raise Match
 	      | Def_Scoped _ => raise Match
-	      | Def_Refine (kx, v, (t, p), q, (ss, mm), cc, aa, ww) => (
-		Def_Refine (kx, v, (t, (fix p)), q, (ss, mm), cc, aa, ww))
+	      | Def_Refine (kx, rn, (t, p), q, (ss, mm), cc, aa, ww) => (
+		Def_Refine (kx, rn, (t, (fix p)), q, (ss, mm), cc, aa, ww))
 	      | Def_Extending (g, x, kx) => (
 		Def_Extending (g, x, (set_body fix kx)))
 	      | Def_Replaced _ => raise Match

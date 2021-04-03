@@ -98,13 +98,13 @@ fun fetch_element_class cooker_ (defining, id) : definition_body_t = (
 	    in
 		case (find_element false kp id) of
 		    NONE => raise (error_name_not_found id kp)
-		  | SOME (Naming (_, _, _, _, (z, r, EL_Class dx, h))) => (
+		  | SOME (Naming (_, _, _, _, EL_Class (z, r, dx, h))) => (
 		    let
 			val Defclass (_, k0) = dx
 		    in
 			k0
 		    end)
-		  | SOME (Naming (_, _, _, _, (z, r, EL_State dx, h))) => (
+		  | SOME (Naming (_, _, _, _, EL_State (z, r, dx, h))) => (
 		    raise (error_name_is_state id kp))
 	    end)
     end)
@@ -226,23 +226,9 @@ fun assert_no_base_list ee = (
 	(app check ee)
     end)
 
-(* Test if a modified class is (essentially) different. *)
-
-fun modifiers_have_redeclarations mm = (
-    (List.exists test_modifier_is_redeclaration mm))
-
-and test_modifier_is_redeclaration m = (
-    case m of
-	Mod_Redefine _ => true
-      | Mod_Elemental_Redefine _ => true
-      | Mod_Redeclare _ => true
-      | Mod_Elemental_Redeclare _ => true
-      | Mod_Entry (ef, v, mmx, ww) => (modifiers_have_redeclarations mmx)
-      | Mod_Value e => false)
-
 (* ================================================================ *)
 
-(* Records a defining class in a class body element. *)
+(* Records a defining class in each class element. *)
 
 fun record_defining_class (subj, k0) = (
     let
@@ -252,20 +238,20 @@ fun record_defining_class (subj, k0) = (
 	      | Extends_Clause _ => e
 	      | Element_Class (z, r, d0, h) => (
 		let
-		    val Defclass ((id, g), k0) = d0
+		    val Defclass ((id, g), x0) = d0
 		    val subsubj = (compose_subject subj id [])
-		    val k1 = (record_defining_class_in_class (subsubj, k0))
-		    val d1 = Defclass ((id, g), k1)
+		    val x1 = (record_defining_class_in_class (subsubj, x0))
+		    val d1 = Defclass ((id, g), x1)
 		in
 		    Element_Class (z, r, d1, h)
 		end)
 	      | Element_State _ => e
 	      | Redefine_Class (z, r, d0, h) => (
 		let
-		    val Defclass ((id, g), k0) = d0
+		    val Defclass ((id, g), x0) = d0
 		    val subsubj = (compose_subject subj id [])
-		    val k1 = (record_defining_class_in_class (subsubj, k0))
-		    val d1 = Defclass ((id, g), k1)
+		    val x1 = (record_defining_class_in_class (subsubj, x0))
+		    val d1 = Defclass ((id, g), x1)
 		in
 		    Redefine_Class (z, r, d1, h)
 		end)
@@ -289,11 +275,11 @@ fun record_defining_class (subj, k0) = (
 	      | Def_Argument _ => raise Match
 	      | Def_Named _ => k0
 	      | Def_Scoped _ => k0
-	      | Def_Refine (x0, v, ts, q, (ss, mm), cc, aa, ww) => (
+	      | Def_Refine (x0, rn, ts, q, (ss, mm), cc, aa, ww) => (
 		let
 		    val x1 = (record_defining_class_in_class (subsubj, x0))
 		in
-		    Def_Refine (x1, v, ts, q, (ss, mm), cc, aa, ww)
+		    Def_Refine (x1, rn, ts, q, (ss, mm), cc, aa, ww)
 		end)
 	      | Def_Extending (true, _, _) => raise Match
 	      | Def_Extending (false, (kb, mm), x0) => (
@@ -393,14 +379,13 @@ and closure_constraint (scope : scope_t) (k0, mm0, a0, w) = (
 	(k1, mm1, a1, w)
     end)
 
-(* Attaches a scope to a class definition.  It also assigns an
-   enclosing class to extends-redeclarations.  IT SKIPS ATTACHING
-   SCOPES TO EXTENDS-REDECLARATIONS BECAUSE THEY HAVE SPECIAL SCOPING
-   RULES. *)
+(* Attaches a scope to a class definition.  It does nothing on a class
+   body.  IT SKIPS ATTACHING A SCOPE TO MODIFIERS OF AN
+   EXTENDS-REDECLARATION BECAUSE THEY HAVE A SPECIAL SCOPING RULE. *)
 
 and closure_class (scope : scope_t) k0 = (
     case k0 of
-	Def_Body (mk, cs, nm, cc, ee, aa, ww) => (
+	Def_Body _ => (
 	let
 	    val subj = (subject_of_class k0)
 	    val _ = if (subj = bad_subject) then () else raise Match
@@ -413,34 +398,27 @@ and closure_class (scope : scope_t) k0 = (
       | Def_Argument _ => raise Match
       | Def_Named n => Def_Scoped (n, scope)
       | Def_Scoped _ => raise Match
-      | Def_Refine (x0, v, ts, q, (ss0, mm0), cc0, aa, ww) => (
+      | Def_Refine (x0, rn, ts, q, (ss0, mm0), cc0, aa, ww) => (
 	let
 	    val x1 = (closure_class scope x0)
 	    val ss1 = (map (closure_expression scope) ss0)
 	    val mm1 = (map (closure_modifier scope) mm0)
 	    val cc1 = (closure_expression scope cc0)
-	    val k1 = Def_Refine (x1, v, ts, q, (ss1, mm1), cc1, aa, ww)
+	    val k1 = Def_Refine (x1, rn, ts, q, (ss1, mm1), cc1, aa, ww)
 	in
 	    k1
 	end)
       | Def_Extending (true, (n0, mm0), x0) => raise Match
       | Def_Extending (false, (n0, mm0), x0) => (
 	let
+	    (*val mm1 = (map (closure_modifier NONE) mm0)*)
 	    val n1 = (closure_class scope n0)
-	    (*val m1 = (map (closure_modifier NONE) m0)*)
 	    val x1 = (closure_class scope x0)
 	in
 	    Def_Extending (false, (n1, mm0), x1)
 	end)
       | Def_Replaced _ => raise Match
-      | Def_Displaced _ => (
-	let
-	    val (subj, tag) = scope
-	    (*val k1 = (assign_enclosing k0 subj)*)
-	    val k1 = k0
-	in
-	    k1
-	end)
+      | Def_Displaced _ => k0
       | Def_In_File => raise Match
       | Def_Mock_Array _ => raise Match)
 
@@ -560,38 +538,6 @@ fun prepare_for_modification main pkg (subj, k0) = (
 
 (* ================================================================ *)
 
-(* A defined name of a class.  Its state transitions as Vacant =>
-   Candidate => Decisive. *)
-
-datatype name_candidate_t
-    = Decisive_Name of subject_t
-    | Candidate_Name of subject_t
-    | Vacant_Name
-
-fun choose_candidate_name n0 n1 = (
-    case (n0, n1) of
-	(Decisive_Name subj, _) => n0
-      | (_, NONE) => n0
-      | (_, SOME subj) => Candidate_Name subj)
-
-fun coerce_decisive_name n = (
-    case n of
-	Decisive_Name subj => n
-      | Candidate_Name subj => Decisive_Name subj
-      | Vacant_Name => Vacant_Name)
-
-fun take_decisive_name n = (
-    case n of
-	Decisive_Name subj => subj
-      | Candidate_Name subj => subj
-      | Vacant_Name => raise Match)
-
-fun take_optional_name n = (
-    case n of
-	Decisive_Name subj => SOME subj
-      | Candidate_Name subj => SOME subj
-      | Vacant_Name => NONE)
-
 (* Unifies class names.  It replaces a package part of a name by its
    identity name. *)
 
@@ -599,7 +545,7 @@ fun identify_class_name subj = (
     let
 	val (supsubj, (id, ss)) = (subject_prefix subj)
 	val x0 = surely (fetch_from_instance_tree supsubj)
-	val identity = (identity_name_of_body x0)
+	val identity = (class_name_of_body x0)
     in
 	(compose_subject identity id ss)
     end)
@@ -692,7 +638,7 @@ and cook_class_binary pkg (subj, k0) = (
 
 and cook_class_refining main pkg (subj, k0) siblings = (
     let
-	val noname = Vacant_Name
+	val noname = NONE
 	val noprefixes = (Implied, no_class_prefixes, no_component_prefixes)
 	val aa = Annotation []
 	val k1 = (collect_refining
@@ -728,9 +674,8 @@ and collect_refining main pkg (subj, k0) (name1, (t1, p1, q1), mm1, cc1, aa1) si
 	    val (id, g) = (tag_prefix tag)
 
 	    val name0 = (compose_subject enclosing id [])
-	    val namec = (choose_candidate_name name1 (SOME name0))
-	    val namex = (take_decisive_name namec)
-	    val identity = (identify_class_name namex)
+	    val name2 = (getOpt (name1, name0))
+	    val identity = (identify_class_name name2)
 
 	    val nmx = (j, identity, tag, enclosing)
 	    val k1 = Def_Body (mk, (tx, px, qx), nmx, ccx, ee, aax, ww0)
@@ -784,13 +729,10 @@ and collect_refining main pkg (subj, k0) (name1, (t1, p1, q1), mm1, cc1, aa1) si
 	    val aax = (merge_annotations ctx aa0 aa1)
 	    val (tx, px) = (merge_type_prefixes ts0 (t1, p1))
 	    val qx = (merge_component_prefixes q0 q1)
-	    val namec = (choose_candidate_name name1 name0)
-	    val namex = if (modifiers_have_redeclarations mm0)
-			then (coerce_decisive_name namec) else namec
-	    val nameopt = (take_optional_name namex)
+	    val namex = if (isSome name1) then name1 else name0
 	in
 	    if (not (null ss0)) then
-		Def_Refine (k1, nameopt, (tx, px), qx, (ss0, mmx), ccx, aax, ww0)
+		Def_Refine (k1, namex, (tx, px), qx, (ss0, mmx), ccx, aax, ww0)
 	    else
 		(collect_refining
 		     main pkg (subj, k1)

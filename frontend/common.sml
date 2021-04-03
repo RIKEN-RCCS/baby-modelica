@@ -192,7 +192,8 @@ fun reference_is_predefined_variable w = (
 
 fun predefined_reference (Id v) = Subj (VAR, [(Id v, [])])
 
-fun usual_element dd = (Public, no_element_prefixes, dd, NONE)
+fun usual_class_element d = EL_Class (Public, no_element_prefixes, d, NONE)
+fun usual_state_element d = EL_State (Public, no_element_prefixes, d, NONE)
 
 (* ================================================================ *)
 
@@ -637,10 +638,15 @@ fun variability_order v = (
       | Parameter => 1
       | Constant => 0)
 
-fun name_of_element_union cv = (
-    case cv of
-	EL_Class (Defclass ((v, _), _)) => v
-      | EL_State (Defvar (v, _)) => v)
+fun name_of_naming_element (ne : naming_element_t) = (
+    case ne of
+	EL_Class (_, _, Defclass ((v, _), _), _) => v
+      | EL_State (_, _, Defvar (v, _), _) => v)
+
+fun element_prefixes_of_naming_element (ne : naming_element_t) = (
+    case ne of
+	EL_Class (z, r, dx, h) => r
+      | EL_State (z, r, dx, h) => r)
 
 (*val name_of_naming = name_of_element_union*)
 
@@ -802,7 +808,10 @@ fun naming_of_class k = (
       | Def_In_File => raise Match
       | Def_Mock_Array _ => raise Match)
 
-fun identity_name_of_body k = (
+(* Returns a class name.  It is a class name when redeclarations are
+   last applied to it. *)
+
+fun class_name_of_body k = (
     case k of
 	Def_Body (mk, cs, (j, name, c, x), cc, ee, aa, ww) => (
 	let
@@ -1072,8 +1081,6 @@ fun class_is_enumeration_definition k = (
 
 fun class_is_unmodified__ k = raise Match
 
-val class_name_of_instance = identity_name_of_body
-
 (* Tests a class is a connector.  It only returns true on expandable
    connectors when expandable=true. *)
 
@@ -1281,6 +1288,22 @@ fun body_is_partial k = (
     case k of
 	Def_Body (mk, (t, {Partial=p, ...}, q), nm, cc, ee, aa, ww) => p
       | _ => raise Match)
+
+(* ================================================================ *)
+
+(* Tests if a modified class is (essentially) different. *)
+
+fun modifiers_have_redeclarations mm = (
+    (List.exists test_modifier_is_redeclaration mm))
+
+and test_modifier_is_redeclaration m = (
+    case m of
+	Mod_Redefine _ => true
+      | Mod_Elemental_Redefine _ => true
+      | Mod_Redeclare _ => true
+      | Mod_Elemental_Redeclare _ => true
+      | Mod_Entry (ef, v, mmx, ww) => (modifiers_have_redeclarations mmx)
+      | Mod_Value e => false)
 
 (* ================================================================ *)
 

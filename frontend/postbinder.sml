@@ -377,7 +377,7 @@ fun secure_record_class kp = (
     in
 	if ((kind_is_record kx) andalso (class_is_instance kx)) then
 	    let
-		val record = (class_name_of_instance kx)
+		val record = (class_name_of_body kx)
 		val w = (subject_as_reference record)
 		val ctx = kp
 		val _ = (secure_reference ctx false w)

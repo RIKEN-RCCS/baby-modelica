@@ -320,7 +320,7 @@ fun make_refining_class_choose_order replacing k0 mm1 cc1 aa1 ww1 = (
 	      | Def_Argument _ => raise Match
 	      | Def_Named _ => raise Match
 	      | Def_Scoped _ => kx
-	      | Def_Refine (x0, v, ts, q, (ss0, mm0), cc0, aa0, ww0) => (
+	      | Def_Refine (x0, rn, ts, q, (ss0, mm0), cc0, aa0, ww0) => (
 		let
 		    val _ = if (not (class_is_refining x0)) then ()
 			    else raise Match
@@ -334,7 +334,7 @@ fun make_refining_class_choose_order replacing k0 mm1 cc1 aa1 ww1 = (
 		    val ccx = (choose_non_nil cc1 cc0)
 		    val aax = (merge_annotations ctx aa0 aa1)
 		    val wwx = (merge_comments ctx ww0 ww1)
-		    val k1 = Def_Refine (x0, v, ts, q, (ss0, mmx), ccx, aax, wwx)
+		    val k1 = Def_Refine (x0, rn, ts, q, (ss0, mmx), ccx, aax, wwx)
 		in
 		    k1
 		end)
@@ -547,11 +547,11 @@ fun attach_modifiers_to_body ctx k0 mm1 = (
       | Def_Scoped _ => (
 	Def_Refine (k0, NONE, copy_type, no_component_prefixes, ([], mm1),
 		    NIL, Annotation [], Comment []))
-      | Def_Refine (kx, v, ts, q, (ss, mm0), cc, aa, ww) => (
+      | Def_Refine (kx, rn, ts, q, (ss, mm0), cc, aa, ww) => (
 	let
 	    val mmx = (merge_modifiers ctx mm0 mm1)
 	in
-	    Def_Refine (kx, v, ts, q, (ss, mmx), cc, aa, ww)
+	    Def_Refine (kx, rn, ts, q, (ss, mmx), cc, aa, ww)
 	end)
       | Def_Extending _ => raise Match
       | Def_Replaced (x0, ko) => (
@@ -583,7 +583,7 @@ fun merge_element_prefixes q0 q1 = (
 
 fun replace_class source ctx (z0, r0, d0, h0) (z1, r1, d1, h1) = (
     let
-	val old0 = (z0, r0, EL_Class d0, h0)
+	val old0 = EL_Class (z0, r0, d0, h0)
 	val Defclass ((v0, g0), k0) = d0
 	val Defclass ((v1, g1), k1) = d1
 	val _ = (assert_class_is_good_to_dispatch k1)
@@ -621,7 +621,7 @@ fun replace_class_by_elements ctx (z0, r0, d0, h0) (z1, r1, d1, h1) = (
 
 fun redeclare_state source ctx (z0, r0, d0, h0) (z1, r1, d1, h1) = (
     let
-	val oldx = (z0, r0, EL_State d0, h0)
+	val oldx = EL_State (z0, r0, d0, h0)
 	val Defvar (v0, k0) = d0
 	val Defvar (v1, k1) = d1
 	val _ = (assert_class_is_good_to_dispatch k1)
@@ -959,58 +959,71 @@ fun associate_modifiers k0 mm0 = (
 
 (* ================================================================ *)
 
-(* Records a class name in a refining element for each element class.
-   This makes easy to obtain a class name in syntaxing.  It should be
+(* Records a name for a new class.  A class is considered new when it
+   has redefinitions/redeclarations in modifiers.  This recording
+   makes easy to determine a class name in syntaxing.  It should be
    called on a main class after collecting bases. *)
 
-fun record_class_renaming k0 = (
+fun record_new_class_names k0 = (
     let
-	fun renaming subsubj k = (
-	    Def_Refine (k, SOME subsubj, copy_type, no_component_prefixes,
+	fun make_record name k = (
+	    Def_Refine (k, SOME name, copy_type, no_component_prefixes,
 			([], []), NIL, Annotation [], Comment []))
 
-	fun make_class_renaming subsubj k0 = (
+	fun make_class_renaming name k0 = (
 	    case k0 of
-		Def_Body _ => (*(renaming subsubj k0)*) raise Match
-	      | Def_Der _ => (renaming subsubj k0)
+		Def_Body _ => k0
+	      | Def_Der _ => k0
 	      | Def_Primitive _ => raise Match
 	      | Def_Outer_Alias _ => raise Match
 	      | Def_Argument _ => raise Match
 	      | Def_Named _ => raise Match
-	      | Def_Scoped _ => raise Match
-	      | Def_Refine (x0, v_, ts, q, (ss, mm), cc, aa, ww) => (
+	      | Def_Scoped _ => k0
+	      | Def_Refine (x0, rn, ts, q, (ss, mm), cc, aa, ww) => (
 		let
-		    val _ = if (v_ = NONE) then () else raise Match
+		    val _ = if (rn = NONE) then () else raise Match
 		in
-		    Def_Refine (x0, SOME subsubj, ts, q, (ss, mm), cc, aa, ww)
+		    if (modifiers_have_redeclarations mm) then
+			Def_Refine (x0, SOME name, ts, q, (ss, mm), cc, aa, ww)
+		    else
+			let
+			    val x1 = (make_class_renaming name x0)
+			in
+			    Def_Refine (x1, rn, ts, q, (ss, mm), cc, aa, ww)
+			end
 		end)
-	      | Def_Extending (true, _, _) => (renaming subsubj k0)
+	      | Def_Extending (true, _, _) => (make_record name k0)
 	      | Def_Extending (false, (kb, mm), x0) => k0
-	      | Def_Replaced _ => (renaming subsubj k0)
+	      | Def_Replaced (x0, origin) => (
+		let
+		    val x1 = (make_class_renaming name x0)
+		in
+		    Def_Replaced (x1, origin)
+		end)
 	      | Def_Displaced _ => k0
 	      | Def_In_File => raise Match
 	      | Def_Mock_Array _ => raise Match)
 
-	and record_class_renaming_in_element subj e = (
+	and record_new_class_names_in_element subj e = (
 	    case e of
 		Import_Clause _ => raise Match
 	      | Extends_Clause _ => raise Match
 	      | Element_Class (z, r, d0, h) => (
 		let
-		    val Defclass ((id, g), k0) = d0
-		    val subsubj = (compose_subject subj id [])
-		    val k1 = (make_class_renaming subsubj k0)
-		    val d1 = Defclass ((id, g), k1)
+		    val Defclass ((id, g), x0) = d0
+		    val name = (compose_subject subj id [])
+		    val x1 = (make_class_renaming name x0)
+		    val d1 = Defclass ((id, g), x1)
 		in
 		    Element_Class (z, r, d1, h)
 		end)
 	      | Element_State _ => e
 	      | Redefine_Class (z, r, d0, h) => (
 		let
-		    val Defclass ((id, g), k0) = d0
-		    val subsubj = (compose_subject subj id [])
-		    val k1 = (make_class_renaming subsubj k0)
-		    val d1 = Defclass ((id, g), k1)
+		    val Defclass ((id, g), x0) = d0
+		    val name = (compose_subject subj id [])
+		    val x1 = (make_class_renaming name x0)
+		    val d1 = Defclass ((id, g), x1)
 		in
 		    Redefine_Class (z, r, d1, h)
 		end)
@@ -1026,7 +1039,7 @@ fun record_class_renaming k0 = (
 	      | Base_Classes bb0 => (
 		let
 		    val bb1 = (map (fn (c, kx) =>
-				       (c, (record_class_renaming kx)))
+				       (c, (record_new_class_names kx)))
 				   bb0)
 		in
 		    Base_Classes bb1
@@ -1034,7 +1047,7 @@ fun record_class_renaming k0 = (
 
 	val subj = (subject_of_class k0)
 	val ee0 = (body_elements k0)
-	val ee1 = (map (record_class_renaming_in_element subj) ee0)
+	val ee1 = (map (record_new_class_names_in_element subj) ee0)
 	val k1 = (replace_body_elements k0 ee1)
     in
 	k1
@@ -1052,7 +1065,7 @@ fun rectify_modified_class (k0, q1) (t1, p1) aa1 = (
 	    val aax = (merge_annotations ctx aa0 aa1)
 	    val k1 = Def_Body (mk, (tx, px, qx), nm, cc, ee, aax, ww0)
 	    val k2 = if (class_is_main k0) then
-			 (record_class_renaming k1)
+			 (record_new_class_names k1)
 		     else
 			 k1
 	in

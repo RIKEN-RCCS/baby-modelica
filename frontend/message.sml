@@ -174,9 +174,9 @@ fun error_inner_outer_in_package v = Match
 
 fun error_unhandled_outer d = Match
 
-fun warn_no_inner (cv : element_sum_t) = (
+fun warn_no_inner (ne : naming_element_t) = (
     print ("WARNING: No matching inner is found for "^
-	   (id_to_string (name_of_element_union cv)) ^" in ?\n"))
+	   (id_to_string (name_of_naming_element ne)) ^" in ?\n"))
 
 val error_undefined_variable = Match
 

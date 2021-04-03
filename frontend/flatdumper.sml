@@ -859,7 +859,7 @@ fun declaration_of_enumeration modifiers k = (
 		val fixed_default = (fixed_value variability)
 		val (min_default, max_default) = (enumeration_bounds k)
 
-		val namesubj = (identity_name_of_body k)
+		val namesubj = (class_name_of_body k)
 		val name = (subject_to_string namesubj)
 
 		val value_ = (simple_type_attribute k (Id "value"))

@@ -116,8 +116,8 @@ fun make_dummy_array_class (dim, array, dummy) = (
 
 fun assert_inner_outer_condition binding = (
     let
-	val Naming (id, subj, inner, _, (z, r, dd, h)) = binding
-	(*val subcomponent = (test_subcomponent subsubj (subj, id))*)
+	val Naming (id, subj, inner, _, ne) = binding
+	val r = (element_prefixes_of_naming_element ne)
 	val subcomponent = (inner = NONE)
 	val _ = if ((not ((#Outer r) andalso (not (#Inner r))))
 		    orelse (not subcomponent))
@@ -172,13 +172,13 @@ and instantiate_with_dimension (subj, k0) = (
 	    in
 		([], [k1], NONE)
 	    end)
-	  | Def_Refine (x0, v, ts0, q0, (ss0, mm0), cc0, aa0, ww0) => (
+	  | Def_Refine (x0, rn, ts0, q0, (ss0, mm0), cc0, aa0, ww0) => (
 	    let
-		val _ = if (v = NONE) then () else raise Match
+		val _ = if (rn = NONE) then () else raise Match
 		val _ = if (not (null ss0)) then () else raise Match
 		val ss1 = (map (simplify_expression k0 true) ss0)
 		val dim1 = (settle_dimension k1 ss1 mm0)
-		val k2 = Def_Refine (x0, v, ts0, q0, ([], []), cc0, aa0, ww0)
+		val k2 = Def_Refine (x0, rn, ts0, q0, ([], []), cc0, aa0, ww0)
 		val f = (instantiate_at_index (subj, k2) mm0)
 		val dimarraylist = (fill_dimension f [] dim1)
 		val (dimlist, arraylist) = (ListPair.unzip dimarraylist)
@@ -198,14 +198,14 @@ and instantiate_with_dimension (subj, k0) = (
 
 and instantiate_at_index (subj0, k0) mm0 index = (
     case k0 of
-	Def_Refine (x0, v, ts0, q0, (ss_, mm_), cc0, aa0, ww0) => (
+	Def_Refine (x0, rn, ts0, q0, (ss_, mm_), cc0, aa0, ww0) => (
 	let
-	    val _ = if (v = NONE) then () else raise Match
+	    val _ = if (rn = NONE) then () else raise Match
 	    val _ = if (null ss_) then () else raise Match
 	    val _ = if (null mm_) then () else raise Match
 	    val subj1 = (compose_subject_with_index subj0 index)
 	    val mm1 = (commute_modifier_over_subscript index mm0)
-	    val k1 = Def_Refine (x0, v, ts0, q0, ([], mm1), cc0, aa0, ww0)
+	    val k1 = Def_Refine (x0, rn, ts0, q0, ([], mm1), cc0, aa0, ww0)
 	    val (dim, array, dummy) = (instantiate_with_dimension (subj1, k1))
 	in
 	    (dim, array)
@@ -358,14 +358,14 @@ and instantiate_element kp binding = (
 
 and instantiate_named_element kp binding = (
     case binding of
-	Naming (id, subj, NONE, _, (z, r, EL_Class dx, h)) => (
+	Naming (id, subj, NONE, _, EL_Class (z, r, dx, h)) => (
 	let
 	    val Defclass (_, k0) = dx
 	    val k2 = (assemble_package E3 (subj, k0))
 	in
 	    ([], [k2])
 	end)
-      | Naming (id, subj, NONE, _, (z, r, EL_State dx, h)) => (
+      | Naming (id, subj, NONE, _, EL_State (z, r, dx, h)) => (
 	let
 	    val package = (class_is_non_function_package kp)
 	    val _ = if ((not package) orelse (declaration_is_constant dx))
@@ -387,8 +387,8 @@ fun instantiate_components kp = (
     let
 	fun instantiate kp binding = (
 	    case binding of
-		Naming (_, _, _, _, (z, r, EL_Class _, h)) => raise Match
-	      | Naming (_, _, _, _, (z, r, EL_State _, h)) => (
+		Naming (_, _, _, _, EL_Class (z, r, _, h)) => raise Match
+	      | Naming (_, _, _, _, EL_State (z, r, _, h)) => (
 		let
 		    val (dim, array) = (instantiate_element kp binding)
 		in

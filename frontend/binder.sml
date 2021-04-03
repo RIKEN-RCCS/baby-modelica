@@ -193,13 +193,13 @@ fun make_reference kp (_ : bool) w0 = (
 	    in
 		case (find_name_initial_part kp id) of
 		    NONE => raise (error_variable_name_not_found id kp)
-		  | SOME (Naming (_, subj, _, _, (z, r, EL_Class dx, h))) => (
+		  | SOME (Naming (_, subj, _, _, EL_Class (z, r, dx, h))) => (
 		    let
 			val x0 = (refer_in_package kp subj rr)
 		    in
 			x0
 		    end)
-		  | SOME (Naming (_, subj, _, _, (z, r, EL_State dx, h))) => (
+		  | SOME (Naming (_, subj, _, _, EL_State (z, r, dx, h))) => (
 		    let
 			val x0 = (refer_in_variable kp dx subj rr)
 		    in

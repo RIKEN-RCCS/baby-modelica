@@ -41,9 +41,9 @@ fun strip_dimension k0 = (
     case k0 of
 	Def_Body _ => (k0, [], [])
       | Def_Der _ => raise Match
-      | Def_Refine (kx, v, ts, q, (ss, mm), cc, aa, ww) => (
+      | Def_Refine (kx, rn, ts, q, (ss, mm), cc, aa, ww) => (
 	let
-	    val k1 = Def_Refine (kx, v, ts, q, ([], []), cc, aa, ww)
+	    val k1 = Def_Refine (kx, rn, ts, q, ([], []), cc, aa, ww)
 	in
 	    (k1, ss, mm)
 	end)
@@ -58,8 +58,8 @@ fun resolve_function_components kp = (
     let
 	fun resolve binding = (
 	    case binding of
-		Naming (_, _, _, _, (z, r, EL_Class _, h)) => raise Match
-	      | Naming (id, subj, inner, _, (z, r, EL_State dx, h)) => (
+		Naming (_, _, _, _, EL_Class (z, r, _, h)) => raise Match
+	      | Naming (id, subj, inner, _, EL_State (z, r, dx, h)) => (
 		let
 		    val Defvar (_, k0) = dx
 		    val _ = if (not (isSome (fetch_from_instance_tree subj)))
