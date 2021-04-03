@@ -80,6 +80,17 @@ val predefined_types = [
     Defclass (void_predefined_body "ExternalObject"),
     Defclass (void_predefined_body "Connections")]
 
+val predefined_type_names = [
+    "Real",
+    "Integer",
+    "Boolean",
+    "String",
+    "StateSelect",
+    "AssertionLevel",
+    "Clock",
+    "ExternalObject",
+    "Connections"]
+
 val the_real_class = Def_Displaced (Ctag ["Real"],
 				    the_package_root_subject)
 
@@ -1254,6 +1265,14 @@ and modifier_list_to_string mm = (
 
 fun subscript_list_to_string ss = (
     (String.concat (map (fn _ => "[]") ss)))
+
+(* ================================================================ *)
+
+fun body_is_partial k = (
+    case k of
+	Def_Body (mk, j, (t, {Partial, ...}, q), nm, cc, ee, aa, ww) => (
+	Partial)
+      | _ => raise Match)
 
 (* ================================================================ *)
 

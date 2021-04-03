@@ -143,15 +143,22 @@ and component_and_subscript_t = id_t * expression_t list
 
 datatype visibility_t = Protected | Public
 
-datatype analogical_mode_t = Flow | Stream | Effort
+(* Effort is non-explicit in the language, and it is the default of
+   analogical modality. *)
+
+datatype analogical_modality_t = Flow | Stream | Effort
 
 (* Variability is related by inclusion.  Constant is the smallest.
    Continuous means unconstrained, and thus declaring continuous
-   integers is allowed. *)
+   integers is allowed.  Continuous is non-explicit in the language,
+   and it is the default of variability. *)
 
 datatype variability_t = Constant | Parameter | Discrete | Continuous
 
-datatype input_or_output_t = Input | Output | Acausal
+(* Acausal is non-explicit in the language, and it is the default of
+   causality. *)
+
+datatype causality_t = Input | Output | Acausal
 
 type each_or_final_t = {Each : bool, Final : bool}
 
@@ -165,7 +172,7 @@ type class_prefixes_t
      = {Final : bool, Encapsulated : bool, Partial : bool}
 
 type component_prefixes_t
-     = (analogical_mode_t * variability_t * input_or_output_t)
+     = (analogical_modality_t * variability_t * causality_t)
 
 type element_prefixes_t
      = {Final : bool, Replaceable : bool, Inner : bool, Outer : bool}
@@ -547,8 +554,8 @@ datatype vs_t
     | VS_CONSTRAINT of constraint_no_comment_t
     | VS_COMPONENT_PREFIX of component_prefixes_t
     | VS_COMPONENT_TYPE_SPECIFIER of component_type_specifier_t
-    | VS_TYPE_FLOW_OR_STREAM of analogical_mode_t
-    | VS_TYPE_INPUT_OR_OUTPUT of input_or_output_t
+    | VS_TYPE_FLOW_OR_STREAM of analogical_modality_t
+    | VS_TYPE_INPUT_OR_OUTPUT of causality_t
     | VS_TYPE_VARIABILITY of variability_t
     | VS_LANGUAGE of string
     | VS_STRING_LIST of string list

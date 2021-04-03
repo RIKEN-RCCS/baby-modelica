@@ -19,10 +19,13 @@ sig
 	definition_body_t -> definition_body_t
     val insert_attributes_to_enumeration :
 	definition_body_t -> definition_body_t
+
     val take_enumarator_element :
 	definition_body_t -> enum_list_t option
     val register_enumerators_for_enumeration :
 	definition_body_t -> unit
+    val enumeration_bounds :
+	definition_body_t -> expression_t * expression_t
 
     val simple_type_attribute :
 	definition_body_t -> id_t -> expression_t
@@ -325,8 +328,8 @@ fun simplify_simple_type (k0 : definition_body_t) = (
 
 (* ================================================================ *)
 
-(* Takes bounds of an enumeration.  It returns NIL for ":" or an empty
-   enumeration. *)
+(* Takes the bounds of an enumeration.  It returns (NIL,NIL) for ":"
+   or an empty enumeration. *)
 
 fun enumeration_bounds kp = (
     let

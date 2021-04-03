@@ -26,6 +26,7 @@ val list_elements = finder.list_elements
 val simple_type_attribute = simpletype.simple_type_attribute
 val type_of_simple_type = simpletype.type_of_simple_type
 val take_enumarator_element = simpletype.take_enumarator_element
+val enumeration_bounds = simpletype.enumeration_bounds
 
 datatype operator_type_t = datatype operator.operator_type_t
 val operator_type = operator.operator_type
@@ -41,6 +42,11 @@ fun variability_to_string variability = (
       | Parameter => "parameter"
       | Discrete => "discrete"
       | Continuous => "")
+
+(* Returns a string for an expression.  Call it with assoc=0.  assoc
+   is an associativity of an outside expression.  It parenthesizes a
+   string if the expression is with an associativity less-than that.
+   All binary operators are left associative. *)
 
 fun expression_to_string assoc w = (
     let
@@ -380,29 +386,29 @@ fun collect_variables root = (
 	val the_time = Subj (VAR, [(Id "time", [])])
 	val the_end = Subj (VAR, [(Id "end", [])])
 
-	fun collect (kp, acc) = (
-	    if (step_is_less E3 kp) then
+	fun collect (k, acc) = (
+	    if (step_is_less E3 k) then
 		acc
 	    else
 		let
-		    val subj = (subject_of_class kp)
+		    val subj = (subject_of_class k)
 		in
-		    if (class_is_enumerator kp) then
+		    if (class_is_enumerator k) then
 			acc
-		    else if (class_is_argument kp) then
+		    else if (class_is_argument k) then
 			acc
-		    else if (class_is_package kp) then
+		    else if (class_is_package k) then
 			acc
 		    else if (subj = the_time orelse subj = the_end) then
 			acc
-		    else if (class_is_simple_type kp) then
+		    else if (class_is_simple_type k) then
 			let
-			    val _ = if (not (class_is_outer_alias kp)) then ()
+			    val _ = if (not (class_is_outer_alias k)) then ()
 				    else raise Match
-			    val _ = if (step_is_at_least E5 kp) then ()
+			    val _ = if (step_is_at_least E5 k) then ()
 				    else raise Match
 			in
-			    acc @ [kp]
+			    acc @ [k]
 			end
 		    else
 			acc
@@ -468,11 +474,7 @@ fun collect_records root = (
 
 fun collect_functions root = (
     let
-	fun partial k = (
-	    case k of
-		Def_Body (mk, j, (t, {Partial, ...}, q), nm, cc, ee, aa, ww) => (
-		Partial)
-	      | _ => raise Match)
+	val partial = body_is_partial
 
 	fun collect (kp, acc) = (
 	    if (class_is_enumerator kp) then
@@ -559,43 +561,56 @@ fun collect_equations initial () = (
 
 (* ================================================================ *)
 
-val predefined_type_names = [
-    "Real",
-    "Integer",
-    "Boolean",
-    "String",
-    "StateSelect",
-    "AssertionLevel",
-    "Clock",
-    "ExternalObject",
-    "Connections"]
+(* Note zero in real is an integer. *)
 
-fun declaraton_of_real modifiers k = (
+val real_zero = L_Number (Z, "0")
+val integer_zero = L_Number (Z, "0")
+val string_empty = L_String ""
+val boolean_truth = L_Bool true
+val boolean_false = L_Bool false
+
+val stateselect_default
+    = Vref (SOME PKG,
+	    [(Id "StateSelect", []), (Id "default", [])])
+
+val real_inf = Vref (SOME PKG,
+		  [(Id "Modelica", []), (Id "Constants", []), (Id "inf", [])])
+
+val integer_inf = Vref (SOME PKG,
+			[(Id "Modelica", []), (Id "Constants", []),
+			 (Id "Integer_inf", [])])
+
+fun optional_slot k v preset = (
+    let
+	fun quote x = (expression_to_string 0 x)
+    in
+	if (v = NIL orelse v = preset) then ""
+	else (k ^"="^ (quote v))
+    end)
+
+fun fixed_value variability = (
+    if ((variability_order variability)
+	<= (variability_order Parameter)) then
+	boolean_truth
+    else
+	boolean_false)
+
+fun concat_strings separator ss = (
+    (String.concatWith separator (List.filter (fn x => (x <> "")) ss)))
+
+fun declaration_of_real modifiers k = (
     let
 	fun quote x = (expression_to_string 0 x)
 
-	fun opt_slot k v preset = (
-	    if (v = preset orelse v = NIL) then ""
-	    else (k ^"="^ (quote v)))
-
-	val empty_string = L_String ""
-	val real_zero = L_Number (Z, "0")
-	val truth_value = L_Bool true
-	val false_value = L_Bool false
-	val stateselect_default
-	    = Vref (SOME PKG,
-		    [(Id "StateSelect", []), (Id "default", [])])
-	val inf
-	    = Vref (SOME PKG,
-		    [(Id "Modelica", []),
-		     (Id "Constants", []), (Id "inf", [])])
+	val inf = real_inf
 	val min_default = App (Opr Opr_neg, [inf])
 	val max_default = App (Opr Opr_id, [inf])
     in
 	case k of
-	    Def_Body ((u, f, b), subj, (t, p, q), (c, n, x), cc, ee, aa, ww) => (
+	    Def_Body ((u, f, b), subj, (t, p, q), nm, cc, ee, aa, ww) => (
 	    let
-		val (analogical, variability, modality) = q
+		val (modality_, variability, causality_) = q
+		val fixed_default = (fixed_value variability)
 
 		val value_ = (simple_type_attribute k (Id "value"))
 		val quantity_ = (simple_type_attribute k (Id "quantity"))
@@ -609,34 +624,24 @@ fun declaraton_of_real modifiers k = (
 		val unbounded_ = (simple_type_attribute k (Id "unbounded"))
 		val stateSelect_ = (simple_type_attribute k (Id "stateSelect"))
 
-		val fixed_default =
-		      if ((variability_order variability)
-			  <= (variability_order Parameter)) then
-			  truth_value
-		      else
-			  false_value
+		val slots = [(optional_slot "quantity" quantity_ string_empty),
+			     (optional_slot "unit" unit_ string_empty),
+			     (optional_slot "displayUnit" displayUnit_
+					    string_empty),
+			     (optional_slot "min" min_ min_default),
+			     (optional_slot "max" max_ max_default),
+			     (optional_slot "start" start_ real_zero),
+			     (optional_slot "nominal" nominal_ NIL),
+			     (optional_slot "fixed" fixed_ fixed_default),
+			     (optional_slot "unbounded" unbounded_
+					    boolean_false),
+			     (optional_slot "stateSelect" stateSelect_
+					    stateselect_default)]
 
 		val vs = (variability_to_string variability)
 		val ts = "Real"
 		val ms = ("("^
-			  (String.concatWith
-			       ", "
-			       (List.filter
-				    (fn x => (x <> ""))
-				    [(opt_slot "quantity" quantity_
-					       empty_string),
-				     (opt_slot "unit" unit_ empty_string),
-				     (opt_slot "displayUnit" displayUnit_
-					       empty_string),
-				     (opt_slot "min" min_ min_default),
-				     (opt_slot "max" max_ max_default),
-				     (opt_slot "start" start_ real_zero),
-				     (opt_slot "nominal" nominal_ NIL),
-				     (opt_slot "fixed" fixed_ fixed_default),
-				     (opt_slot "unbounded" unbounded_
-					       false_value),
-				     (opt_slot "stateSelect" stateSelect_
-					       stateselect_default)]))
+			  (concat_strings ", " slots)
 			  ^")")
 		val ns = (subject_to_string subj)
 		val _ = if (not ((value_ <> NIL) andalso (modifiers <> "")))
@@ -645,10 +650,7 @@ fun declaraton_of_real modifiers k = (
 			     "= "^ (quote value_)
 			 else
 			     modifiers
-		val ss = ((String.concatWith
-			       " "
-			       (List.filter (fn x => (x <> ""))
-					    [vs, ts, ms, ns, xs]))
+		val ss = ((concat_strings " " [vs, ts, ms, ns, xs])
 			  ^";")
 	    in
 		ss
@@ -658,9 +660,9 @@ fun declaraton_of_real modifiers k = (
 	  | Def_Outer_Alias _ => raise Match
 	  | Def_Argument (kx, (ss, mm), aa, ww) => (
 	    if (null ss) andalso (null mm) then
-		(declaraton_of_real "" kx)
+		(declaration_of_real "" kx)
 	    else
-		(declaraton_of_real "(...)" kx))
+		(declaration_of_real "(...)" kx))
 	  | Def_Named _ => raise Match
 	  | Def_Scoped _ => raise Match
 	  | Def_Refine _ => raise Match
@@ -671,28 +673,19 @@ fun declaraton_of_real modifiers k = (
 	  | Def_Mock_Array _ => raise Match
     end)
 
-fun declaraton_of_integer modifiers k = (
+fun declaration_of_integer modifiers k = (
     let
 	fun quote x = (expression_to_string 0 x)
 
-	fun opt_slot k v preset = (
-	    if (v = preset orelse v = NIL) then ""
-	    else (k ^"="^ (quote v)))
-
-	val empty_string = L_String ""
-	val real_zero = L_Number (Z, "0")
-	val truth_value = L_Bool true
-	val false_value = L_Bool false
-	val inf = Vref (SOME PKG,
-			[(Id "Modelica", []), (Id "Constants", []),
-			 (Id "Integer_inf", [])])
+	val inf = integer_inf
 	val min_default = App (Opr Opr_neg, [inf])
 	val max_default = App (Opr Opr_id, [inf])
     in
 	case k of
-	    Def_Body ((u, f, b), subj, (t, p, q), (c, n, x), cc, ee, aa, ww) => (
+	    Def_Body ((u, f, b), subj, (t, p, q), nm, cc, ee, aa, ww) => (
 	    let
-		val (analogical, variability, modality) = q
+		val (modality_, variability, causality_) = q
+		val fixed_default = (fixed_value variability)
 
 		val value_ = (simple_type_attribute k (Id "value"))
 		val quantity_ = (simple_type_attribute k (Id "quantity"))
@@ -701,26 +694,16 @@ fun declaraton_of_integer modifiers k = (
 		val start_ = (simple_type_attribute k (Id "start"))
 		val fixed_ = (simple_type_attribute k (Id "fixed"))
 
-		val fixed_default =
-		      if ((variability_order variability)
-			  <= (variability_order Parameter)) then
-			  truth_value
-		      else
-			  false_value
+		val slots = [(optional_slot "quantity" quantity_ string_empty),
+			     (optional_slot "min" min_ min_default),
+			     (optional_slot "max" max_ max_default),
+			     (optional_slot "start" start_ real_zero),
+			     (optional_slot "fixed" fixed_ fixed_default)]
 
 		val vs = (variability_to_string variability)
 		val ts = "Integer"
 		val ms = ("("^
-			  (String.concatWith
-			       ", "
-			       (List.filter
-				    (fn x => (x <> ""))
-				    [(opt_slot "quantity" quantity_
-					       empty_string),
-				     (opt_slot "min" min_ min_default),
-				     (opt_slot "max" max_ max_default),
-				     (opt_slot "start" start_ real_zero),
-				     (opt_slot "fixed" fixed_ fixed_default)]))
+			  (concat_strings ", " slots)
 			  ^")")
 		val ns = (subject_to_string subj)
 		val _ = if (not ((value_ <> NIL) andalso (modifiers <> "")))
@@ -729,10 +712,177 @@ fun declaraton_of_integer modifiers k = (
 			     "= "^ (quote value_)
 			 else
 			     modifiers
-		val ss = ((String.concatWith
-			       " "
-			       (List.filter (fn x => (x <> ""))
-					    [vs, ts, ms, ns, xs]))
+		val ss = ((concat_strings " " [vs, ts, ms, ns, xs])
+			  ^";")
+	    in
+		ss
+	    end)
+	  | Def_Der _ => raise Match
+	  | Def_Primitive _ => raise Match
+	  | Def_Outer_Alias _ => raise Match
+	  | Def_Argument (kx, (ss, mm), aa, ww) => (
+	    if (null ss) andalso (null mm) then
+		(declaration_of_integer "" kx)
+	    else
+		(declaration_of_integer "(...)" kx))
+	  | Def_Named _ => raise Match
+	  | Def_Scoped _ => raise Match
+	  | Def_Refine _ => raise Match
+	  | Def_Extending _ => raise Match
+	  | Def_Replaced _ => raise Match
+	  | Def_Displaced _ => raise Match
+	  | Def_In_File => raise Match
+	  | Def_Mock_Array _ => raise Match
+    end)
+
+fun declaration_of_boolean modifiers k = (
+    let
+	fun quote x = (expression_to_string 0 x)
+    in
+	case k of
+	    Def_Body ((u, f, b), subj, (t, p, q), nm, cc, ee, aa, ww) => (
+	    let
+		val (modality_, variability, causality_) = q
+		val fixed_default = (fixed_value variability)
+
+		val value_ = (simple_type_attribute k (Id "value"))
+		val quantity_ = (simple_type_attribute k (Id "quantity"))
+		val start_ = (simple_type_attribute k (Id "start"))
+		val fixed_ = (simple_type_attribute k (Id "fixed"))
+
+		val slots = [(optional_slot "quantity" quantity_ string_empty),
+			     (optional_slot "start" start_ boolean_false),
+			     (optional_slot "fixed" fixed_ fixed_default)]
+
+		val vs = (variability_to_string variability)
+		val ts = "Boolean"
+		val ms = ("("^
+			  (concat_strings ", " slots)
+			  ^")")
+		val ns = (subject_to_string subj)
+		val _ = if (not ((value_ <> NIL) andalso (modifiers <> "")))
+			then () else raise Match
+		val xs = if (value_ <> NIL) then
+			     "= "^ (quote value_)
+			 else
+			     modifiers
+		val ss = ((concat_strings " " [vs, ts, ms, ns, xs])
+			  ^";")
+	    in
+		ss
+	    end)
+	  | Def_Der _ => raise Match
+	  | Def_Primitive _ => raise Match
+	  | Def_Outer_Alias _ => raise Match
+	  | Def_Argument (kx, (ss, mm), aa, ww) => (
+	    if (null ss) andalso (null mm) then
+		(declaration_of_boolean "" kx)
+	    else
+		(declaration_of_boolean "(...)" kx))
+	  | Def_Named _ => raise Match
+	  | Def_Scoped _ => raise Match
+	  | Def_Refine _ => raise Match
+	  | Def_Extending _ => raise Match
+	  | Def_Replaced _ => raise Match
+	  | Def_Displaced _ => raise Match
+	  | Def_In_File => raise Match
+	  | Def_Mock_Array _ => raise Match
+    end)
+
+fun declaration_of_string modifiers k = (
+    let
+	fun quote x = (expression_to_string 0 x)
+    in
+	case k of
+	    Def_Body ((u, f, b), subj, (t, p, q), nm, cc, ee, aa, ww) => (
+	    let
+		val (modality_, variability, causality_) = q
+		val fixed_default = (fixed_value variability)
+
+		val value_ = (simple_type_attribute k (Id "value"))
+		val quantity_ = (simple_type_attribute k (Id "quantity"))
+		val start_ = (simple_type_attribute k (Id "start"))
+		val fixed_ = (simple_type_attribute k (Id "fixed"))
+
+		val slots = [(optional_slot "quantity" quantity_ string_empty),
+			     (optional_slot "start" start_ string_empty),
+			     (optional_slot "fixed" fixed_ fixed_default)]
+
+		val vs = (variability_to_string variability)
+		val ts = "String"
+		val ms = ("("^
+			  (concat_strings ", " slots)
+			  ^")")
+		val ns = (subject_to_string subj)
+		val _ = if (not ((value_ <> NIL) andalso (modifiers <> "")))
+			then () else raise Match
+		val xs = if (value_ <> NIL) then
+			     "= "^ (quote value_)
+			 else
+			     modifiers
+		val ss = ((concat_strings " " [vs, ts, ms, ns, xs])
+			  ^";")
+	    in
+		ss
+	    end)
+	  | Def_Der _ => raise Match
+	  | Def_Primitive _ => raise Match
+	  | Def_Outer_Alias _ => raise Match
+	  | Def_Argument (kx, (ss, mm), aa, ww) => (
+	    if (null ss) andalso (null mm) then
+		(declaration_of_string "" kx)
+	    else
+		(declaration_of_string "(...)" kx))
+	  | Def_Named _ => raise Match
+	  | Def_Scoped _ => raise Match
+	  | Def_Refine _ => raise Match
+	  | Def_Extending _ => raise Match
+	  | Def_Replaced _ => raise Match
+	  | Def_Displaced _ => raise Match
+	  | Def_In_File => raise Match
+	  | Def_Mock_Array _ => raise Match
+    end)
+
+fun declaration_of_enumeration modifiers k = (
+    let
+	fun quote x = (expression_to_string 0 x)
+    in
+	case k of
+	    Def_Body ((u, f, b), subj, (t, p, q), nm, cc, ee, aa, ww) => (
+	    let
+		val (modality_, variability, causality_) = q
+		val fixed_default = (fixed_value variability)
+		val (min_default, max_default) = (enumeration_bounds k)
+
+		val (_, namesubj, _) = nm
+		val name = (subject_to_string namesubj)
+
+		val value_ = (simple_type_attribute k (Id "value"))
+		val quantity_ = (simple_type_attribute k (Id "quantity"))
+		val min_ = (simple_type_attribute k (Id "min"))
+		val max_ = (simple_type_attribute k (Id "max"))
+		val start_ = (simple_type_attribute k (Id "start"))
+		val fixed_ = (simple_type_attribute k (Id "fixed"))
+
+		val slots = [(optional_slot "quantity" quantity_ string_empty),
+			     (optional_slot "min" min_ min_default),
+			     (optional_slot "max" max_ max_default),
+			     (optional_slot "start" start_ min_default),
+			     (optional_slot "fixed" fixed_ fixed_default)]
+
+		val vs = (variability_to_string variability)
+		val ts = (name)
+		val ms = ("("^
+			  (concat_strings ", " slots)
+			  ^")")
+		val ns = (subject_to_string subj)
+		val _ = if (not ((value_ <> NIL) andalso (modifiers <> "")))
+			then () else raise Match
+		val xs = if (value_ <> NIL) then
+			     "= "^ (quote value_)
+			 else
+			     modifiers
+		val ss = ((concat_strings " " [vs, ts, ms, ns, xs])
 			  ^";")
 	    in
 		ss
@@ -742,9 +892,9 @@ fun declaraton_of_integer modifiers k = (
 	  | Def_Outer_Alias _ => raise Match
 	  | Def_Argument (kx, (ss, mm), aa, ww) => (
 	    if (null ss) andalso (null mm) then
-		(declaraton_of_integer "" kx)
+		(declaration_of_enumeration "" kx)
 	    else
-		(declaraton_of_integer "(...)" kx))
+		(declaration_of_enumeration "(...)" kx))
 	  | Def_Named _ => raise Match
 	  | Def_Scoped _ => raise Match
 	  | Def_Refine _ => raise Match
@@ -758,11 +908,11 @@ fun declaraton_of_integer modifiers k = (
 fun dump_variable s k = (
     let
 	val sx = case (type_of_simple_type k) of
-		     P_Number R => (declaraton_of_real "" k)
-		   | P_Number Z => (declaraton_of_integer "" k)
-		   | P_Boolean => ""
-		   | P_String => ""
-		   | P_Enum tag =>  ""
+		     P_Number R => (declaration_of_real "" k)
+		   | P_Number Z => (declaration_of_integer "" k)
+		   | P_Boolean => (declaration_of_boolean "" k)
+		   | P_String => (declaration_of_string "" k)
+		   | P_Enum tag =>  (declaration_of_enumeration "" k)
 	val ss = if (sx = "") then "" else (sx ^"\n")
 	val _ = (TextIO.output (s, ss))
     in
