@@ -369,12 +369,13 @@ fun walk_in_class (vamp : 'a vamper_t) (k0 : definition_body_t, acc0) = (
 	(walk_in_simple_type vamp (k0, acc0))
     else
 	case k0 of
-	    Def_Body (mk, cs, nm, cc, ee0, aa, ww) => (
+	    Def_Body _ => (
 	    let
 		val _ = if (step_is_at_least E3 k0) then () else raise Match
 		val walk_e = (walk_in_class_element vamp k0)
+		val ee0 = (body_elements k0)
 		val (ee1, acc1) = (map_along walk_e (ee0, acc0))
-		val k1 = Def_Body (mk, cs, nm, cc, ee1, aa, ww)
+		val k1 = (replace_body_elements k0 ee1)
 	    in
 		(k1, acc1)
 	    end)

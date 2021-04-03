@@ -43,6 +43,16 @@ datatype subject_t = Subj of instantiation_t * (id_t * int list) list
 
 type scope_t = subject_t * class_tag_t
 
+(* name_tuple_t is name information stored in a Def_Body.  The first
+   subject slot is an instance name or a package name.  The second
+   slot is a class name after potential renaming.  It is a name when
+   redeclarations are last applied.  The third class-tag slot is an
+   original name of a body.  The fourth slot is an enclosing class
+   (for a package). *)
+
+type name_tuple_t = (subject_t * (*class*) subject_t
+		     * class_tag_t * (*enclosing*) subject_t)
+
 (* Real (R) or integer (Z). *)
 
 datatype number_type_t = R | Z
@@ -320,14 +330,12 @@ and type_marker_t = ENUM | MAIN | BASE | SIMP
 
 (* Def_Body, Def_Der, Def_Primitive, and Def_Argument are the only
    classes that appear after syntactic processing.  Def_Body is a
-   class definition.  The subject slot is a unique name which is set
-   when it is associated to a package/instance.  The name 3-tuple is
-   name information.  The first class-tag slot is an original name of
-   a body.  The second slot is a class name after potential renaming.
-   The third slot is an enclosing class (of a package).  Field
-   abbreviation is: Def_Body(mk,j,cs,nm,cc,ee,aa,ww).  Def_Der is a
-   derivative definition.  Def_Body and Def_Der represent classes
-   after syntaxing.  Def_Primitive represents a primitive type.
+   class definition.  The name-tuple is name information.  Its first
+   slot is a unique name which is set when it is associated to a
+   package/instance.  Field abbreviation is:
+   Def_Body(mk,cs,nm,cc,ee,aa,ww).  Def_Der is a derivative
+   definition.  Def_Body and Def_Der represent classes after
+   syntaxing.  Def_Primitive represents a primitive type.
    Def_Outer_Alias is a record left in the instance_tree to map an
    outer reference to an inner.  It is a pair of an outer reference
    and a matching inner reference.  Def_Argument represents an
@@ -359,9 +367,7 @@ and type_marker_t = ENUM | MAIN | BASE | SIMP
 and definition_body_t
     = Def_Body of
       ((cook_step_t * instantiation_t * type_marker_t)
-       * class_specifier_t
-       * (subject_t * (*class*) subject_t * class_tag_t
-	  * (*enclosing*) subject_t)
+       * class_specifier_t * name_tuple_t
        * (*conditional*) expression_t
        * element_t list * annotation_t * comment_t)
     | Def_Der of

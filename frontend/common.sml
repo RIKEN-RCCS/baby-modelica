@@ -802,7 +802,10 @@ fun naming_of_class k = (
       | Def_In_File => raise Match
       | Def_Mock_Array _ => raise Match)
 
-fun identity_name_of_body k = (
+(* Returns a class name.  It is a class name when redeclarations are
+   last applied to it. *)
+
+fun class_name_of_body k = (
     case k of
 	Def_Body (mk, cs, (j, name, c, x), cc, ee, aa, ww) => (
 	let
@@ -1071,8 +1074,6 @@ fun class_is_enumeration_definition k = (
    in a fully-qualified package ("P0.P1.c"). *)
 
 fun class_is_unmodified__ k = raise Match
-
-val class_name_of_instance = identity_name_of_body
 
 (* Tests a class is a connector.  It only returns true on expandable
    connectors when expandable=true. *)

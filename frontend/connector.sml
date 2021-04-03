@@ -139,8 +139,7 @@ fun literalize_subscripts kp w0 = (
 
 fun record_of_connect k = (
     case k of
-	Def_Body (mk, cs, nm, cc, ee, aa, ww) => (
-	Def_Body (mk, cs, nm, cc, ee, aa, ww))
+	Def_Body _ => k
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match

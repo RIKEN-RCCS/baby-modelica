@@ -393,14 +393,13 @@ and closure_constraint (scope : scope_t) (k0, mm0, a0, w) = (
 	(k1, mm1, a1, w)
     end)
 
-(* Attaches a scope to a class definition.  It also assigns an
-   enclosing class to extends-redeclarations.  IT SKIPS ATTACHING
-   SCOPES TO EXTENDS-REDECLARATIONS BECAUSE THEY HAVE SPECIAL SCOPING
-   RULES. *)
+(* Attaches a scope to a class definition.  It does nothing on a class
+   body.  IT SKIPS ATTACHING A SCOPE TO MODIFIERS OF AN
+   EXTENDS-REDECLARATION BECAUSE THEY HAVE A SPECIAL SCOPING RULE. *)
 
 and closure_class (scope : scope_t) k0 = (
     case k0 of
-	Def_Body (mk, cs, nm, cc, ee, aa, ww) => (
+	Def_Body _ => (
 	let
 	    val subj = (subject_of_class k0)
 	    val _ = if (subj = bad_subject) then () else raise Match
@@ -426,21 +425,14 @@ and closure_class (scope : scope_t) k0 = (
       | Def_Extending (true, (n0, mm0), x0) => raise Match
       | Def_Extending (false, (n0, mm0), x0) => (
 	let
+	    (*val mm1 = (map (closure_modifier NONE) mm0)*)
 	    val n1 = (closure_class scope n0)
-	    (*val m1 = (map (closure_modifier NONE) m0)*)
 	    val x1 = (closure_class scope x0)
 	in
 	    Def_Extending (false, (n1, mm0), x1)
 	end)
       | Def_Replaced _ => raise Match
-      | Def_Displaced _ => (
-	let
-	    val (subj, tag) = scope
-	    (*val k1 = (assign_enclosing k0 subj)*)
-	    val k1 = k0
-	in
-	    k1
-	end)
+      | Def_Displaced _ => k0
       | Def_In_File => raise Match
       | Def_Mock_Array _ => raise Match)
 
@@ -599,7 +591,7 @@ fun identify_class_name subj = (
     let
 	val (supsubj, (id, ss)) = (subject_prefix subj)
 	val x0 = surely (fetch_from_instance_tree supsubj)
-	val identity = (identity_name_of_body x0)
+	val identity = (class_name_of_body x0)
     in
 	(compose_subject identity id ss)
     end)
