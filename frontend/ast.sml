@@ -703,12 +703,12 @@ fun set_class_prefixes (t1, p1) (Defclass ((v, g), k0)) = (
 	      | Def_Argument _ => raise Match
 	      | Def_Named _ => raise Match
 	      | Def_Scoped _ => raise Match
-	      | Def_Refine (kx, v, ts0, q, (ss, mm), cc, aa, ww) => (
+	      | Def_Refine (kx, rn, ts0, q, (ss, mm), cc, aa, ww) => (
 		let
 		    val _ = if (ts0 = bad_type) then () else raise Match
 		    val ts1 = (t1, p1)
 		in
-		    Def_Refine (kx, v, ts1, q, (ss, mm), cc, aa, ww)
+		    Def_Refine (kx, rn, ts1, q, (ss, mm), cc, aa, ww)
 		end)
 	      | Def_Extending (g, x, kx) => (
 		Def_Extending (g, x, (set_prefixes (t1, p1) kx)))
@@ -737,8 +737,8 @@ fun set_class_final (Defclass ((v, g), k0)) = (
 	      | Def_Argument _ => raise Match
 	      | Def_Named _ => raise Match
 	      | Def_Scoped _ => raise Match
-	      | Def_Refine (kx, v, (t, p), q, (ss, mm), cc, aa, ww) => (
-		Def_Refine (kx, v, (t, (fix p)), q, (ss, mm), cc, aa, ww))
+	      | Def_Refine (kx, rn, (t, p), q, (ss, mm), cc, aa, ww) => (
+		Def_Refine (kx, rn, (t, (fix p)), q, (ss, mm), cc, aa, ww))
 	      | Def_Extending (g, x, kx) => (
 		Def_Extending (g, x, (set_body fix kx)))
 	      | Def_Replaced _ => raise Match

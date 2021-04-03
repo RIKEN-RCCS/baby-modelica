@@ -41,9 +41,9 @@ fun strip_dimension k0 = (
     case k0 of
 	Def_Body _ => (k0, [], [])
       | Def_Der _ => raise Match
-      | Def_Refine (kx, v, ts, q, (ss, mm), cc, aa, ww) => (
+      | Def_Refine (kx, rn, ts, q, (ss, mm), cc, aa, ww) => (
 	let
-	    val k1 = Def_Refine (kx, v, ts, q, ([], []), cc, aa, ww)
+	    val k1 = Def_Refine (kx, rn, ts, q, ([], []), cc, aa, ww)
 	in
 	    (k1, ss, mm)
 	end)

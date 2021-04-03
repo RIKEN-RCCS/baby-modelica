@@ -320,7 +320,7 @@ fun make_refining_class_choose_order replacing k0 mm1 cc1 aa1 ww1 = (
 	      | Def_Argument _ => raise Match
 	      | Def_Named _ => raise Match
 	      | Def_Scoped _ => kx
-	      | Def_Refine (x0, v, ts, q, (ss0, mm0), cc0, aa0, ww0) => (
+	      | Def_Refine (x0, rn, ts, q, (ss0, mm0), cc0, aa0, ww0) => (
 		let
 		    val _ = if (not (class_is_refining x0)) then ()
 			    else raise Match
@@ -334,7 +334,7 @@ fun make_refining_class_choose_order replacing k0 mm1 cc1 aa1 ww1 = (
 		    val ccx = (choose_non_nil cc1 cc0)
 		    val aax = (merge_annotations ctx aa0 aa1)
 		    val wwx = (merge_comments ctx ww0 ww1)
-		    val k1 = Def_Refine (x0, v, ts, q, (ss0, mmx), ccx, aax, wwx)
+		    val k1 = Def_Refine (x0, rn, ts, q, (ss0, mmx), ccx, aax, wwx)
 		in
 		    k1
 		end)
@@ -547,11 +547,11 @@ fun attach_modifiers_to_body ctx k0 mm1 = (
       | Def_Scoped _ => (
 	Def_Refine (k0, NONE, copy_type, no_component_prefixes, ([], mm1),
 		    NIL, Annotation [], Comment []))
-      | Def_Refine (kx, v, ts, q, (ss, mm0), cc, aa, ww) => (
+      | Def_Refine (kx, rn, ts, q, (ss, mm0), cc, aa, ww) => (
 	let
 	    val mmx = (merge_modifiers ctx mm0 mm1)
 	in
-	    Def_Refine (kx, v, ts, q, (ss, mmx), cc, aa, ww)
+	    Def_Refine (kx, rn, ts, q, (ss, mmx), cc, aa, ww)
 	end)
       | Def_Extending _ => raise Match
       | Def_Replaced (x0, ko) => (

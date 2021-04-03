@@ -289,11 +289,11 @@ fun record_defining_class (subj, k0) = (
 	      | Def_Argument _ => raise Match
 	      | Def_Named _ => k0
 	      | Def_Scoped _ => k0
-	      | Def_Refine (x0, v, ts, q, (ss, mm), cc, aa, ww) => (
+	      | Def_Refine (x0, rn, ts, q, (ss, mm), cc, aa, ww) => (
 		let
 		    val x1 = (record_defining_class_in_class (subsubj, x0))
 		in
-		    Def_Refine (x1, v, ts, q, (ss, mm), cc, aa, ww)
+		    Def_Refine (x1, rn, ts, q, (ss, mm), cc, aa, ww)
 		end)
 	      | Def_Extending (true, _, _) => raise Match
 	      | Def_Extending (false, (kb, mm), x0) => (
@@ -412,13 +412,13 @@ and closure_class (scope : scope_t) k0 = (
       | Def_Argument _ => raise Match
       | Def_Named n => Def_Scoped (n, scope)
       | Def_Scoped _ => raise Match
-      | Def_Refine (x0, v, ts, q, (ss0, mm0), cc0, aa, ww) => (
+      | Def_Refine (x0, rn, ts, q, (ss0, mm0), cc0, aa, ww) => (
 	let
 	    val x1 = (closure_class scope x0)
 	    val ss1 = (map (closure_expression scope) ss0)
 	    val mm1 = (map (closure_modifier scope) mm0)
 	    val cc1 = (closure_expression scope cc0)
-	    val k1 = Def_Refine (x1, v, ts, q, (ss1, mm1), cc1, aa, ww)
+	    val k1 = Def_Refine (x1, rn, ts, q, (ss1, mm1), cc1, aa, ww)
 	in
 	    k1
 	end)
@@ -552,38 +552,6 @@ fun prepare_for_modification main pkg (subj, k0) = (
 
 (* ================================================================ *)
 
-(* A defined name of a class.  Its state transitions as Vacant =>
-   Candidate => Decisive. *)
-
-datatype name_candidate_t
-    = Decisive_Name of subject_t
-    | Candidate_Name of subject_t
-    | Vacant_Name
-
-fun choose_candidate_name n0 n1 = (
-    case (n0, n1) of
-	(Decisive_Name subj, _) => n0
-      | (_, NONE) => n0
-      | (_, SOME subj) => Candidate_Name subj)
-
-fun coerce_decisive_name n = (
-    case n of
-	Decisive_Name subj => n
-      | Candidate_Name subj => Decisive_Name subj
-      | Vacant_Name => Vacant_Name)
-
-fun take_decisive_name n = (
-    case n of
-	Decisive_Name subj => subj
-      | Candidate_Name subj => subj
-      | Vacant_Name => raise Match)
-
-fun take_optional_name n = (
-    case n of
-	Decisive_Name subj => SOME subj
-      | Candidate_Name subj => SOME subj
-      | Vacant_Name => NONE)
-
 (* Unifies class names.  It replaces a package part of a name by its
    identity name. *)
 
@@ -684,7 +652,7 @@ and cook_class_binary pkg (subj, k0) = (
 
 and cook_class_refining main pkg (subj, k0) siblings = (
     let
-	val noname = Vacant_Name
+	val noname = NONE
 	val noprefixes = (Implied, no_class_prefixes, no_component_prefixes)
 	val aa = Annotation []
 	val k1 = (collect_refining
@@ -720,9 +688,8 @@ and collect_refining main pkg (subj, k0) (name1, (t1, p1, q1), mm1, cc1, aa1) si
 	    val (id, g) = (tag_prefix tag)
 
 	    val name0 = (compose_subject enclosing id [])
-	    val namec = (choose_candidate_name name1 (SOME name0))
-	    val namex = (take_decisive_name namec)
-	    val identity = (identify_class_name namex)
+	    val name2 = (getOpt (name1, name0))
+	    val identity = (identify_class_name name2)
 
 	    val nmx = (j, identity, tag, enclosing)
 	    val k1 = Def_Body (mk, (tx, px, qx), nmx, ccx, ee, aax, ww0)
@@ -776,13 +743,12 @@ and collect_refining main pkg (subj, k0) (name1, (t1, p1, q1), mm1, cc1, aa1) si
 	    val aax = (merge_annotations ctx aa0 aa1)
 	    val (tx, px) = (merge_type_prefixes ts0 (t1, p1))
 	    val qx = (merge_component_prefixes q0 q1)
-	    val namec = (choose_candidate_name name1 name0)
-	    val namex = if (modifiers_have_redeclarations mm0)
-			then (coerce_decisive_name namec) else namec
-	    val nameopt = (take_optional_name namex)
+	    val name0opt = if (modifiers_have_redeclarations mm0)
+			   then name0 else NONE
+	    val namex = if (isSome name1) then name1 else name0opt
 	in
 	    if (not (null ss0)) then
-		Def_Refine (k1, nameopt, (tx, px), qx, (ss0, mmx), ccx, aax, ww0)
+		Def_Refine (k1, namex, (tx, px), qx, (ss0, mmx), ccx, aax, ww0)
 	    else
 		(collect_refining
 		     main pkg (subj, k1)
