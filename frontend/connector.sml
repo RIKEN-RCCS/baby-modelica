@@ -139,8 +139,8 @@ fun literalize_subscripts kp w0 = (
 
 fun record_of_connect k = (
     case k of
-	Def_Body (mk, j, cs, nm, cc, ee, aa, ww) => (
-	Def_Body (mk, j, cs, nm, cc, ee, aa, ww))
+	Def_Body (mk, cs, nm, cc, ee, aa, ww) => (
+	Def_Body (mk, cs, nm, cc, ee, aa, ww))
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
@@ -156,8 +156,8 @@ fun record_of_connect k = (
 
 fun unmark_expandable_connector k = (
     case k of
-	Def_Body (mk, j, (Connector true, p, q), nm, cc, ee, aa, ww) => (
-	Def_Body (mk, j, (Connector false, p, q), nm, cc, ee, aa, ww))
+	Def_Body (mk, (Connector true, p, q), nm, cc, ee, aa, ww) => (
+	Def_Body (mk, (Connector false, p, q), nm, cc, ee, aa, ww))
       | Def_Body _ => raise Match
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
@@ -174,7 +174,7 @@ fun unmark_expandable_connector k = (
 
 fun connect_mode_marker k = (
     case k of
-	Def_Body (mk, j, (t, p, (mode, _, _)), nm, cc, ee, aa, ww) => mode
+	Def_Body (mk, (t, p, (mode, _, _)), nm, cc, ee, aa, ww) => mode
       | Def_Argument (kx, sm, aa, ww) => (connect_mode_marker kx)
       | _ => raise error_connector_is_not_record)
 
@@ -273,7 +273,7 @@ fun choose_connect_rule r0 rules = (
 
 fun instance_is_enabled k = (
     case k of
-	Def_Body (mk, j, cs, nm, L_Bool b, ee, aa, ww) => b
+	Def_Body (mk, cs, nm, L_Bool b, ee, aa, ww) => b
       | Def_Body _ => raise error_conditional_is_not_determined
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
@@ -308,7 +308,7 @@ fun enable_instance enable0 k0 = (
 	    enable0
 	else
 	    case k0 of
-	        Def_Body (mk, j, cs, nm, cc0, ee, aa, ww) => (
+	        Def_Body (mk, cs, nm, cc0, ee, aa, ww) => (
 		let
 		    val subj = (subject_of_class k0)
 		    val cc1 = (simplify cc0)
@@ -317,7 +317,7 @@ fun enable_instance enable0 k0 = (
 			    else raise error_non_constant_conditional
 		    val enable1 = (enable0 andalso (literal_to_bool cc2))
 		    val cc3 = L_Bool enable1
-		    val k1 = Def_Body (mk, j, cs, nm, cc3, ee, aa, ww)
+		    val k1 = Def_Body (mk, cs, nm, cc3, ee, aa, ww)
 		    val _ = (store_to_instance_tree subj k1)
 		in
 		    enable1
@@ -1031,10 +1031,10 @@ fun insert_equations_section eqns = (
 	val model0 = (! kx)
     in
 	case model0 of
-	    Def_Body (mk, j, cs, nm, cc, ee0, aa, ww) => (
+	    Def_Body (mk, cs, nm, cc, ee0, aa, ww) => (
 	    let
 		val ee1 = (ee0 @ [section])
-		val model1 = Def_Body (mk, j, cs, nm, cc, ee1, aa, ww)
+		val model1 = Def_Body (mk, cs, nm, cc, ee1, aa, ww)
 		val _ = (kx := model1)
 	    in
 		()

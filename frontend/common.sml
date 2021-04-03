@@ -49,11 +49,11 @@ val the_package_root_tag = Ctag []
 val the_package_root_print_name = "(*root*)"
 
 val the_package_root = Def_Body ((E5, PKG, MAIN),
-				 the_package_root_subject,
 				 (Package, no_class_prefixes,
 				  no_component_prefixes),
-				 (the_package_root_tag,
+				 (the_package_root_subject,
 				  the_package_root_subject,
+				  the_package_root_tag,
 				  the_package_root_subject),
 				 NIL,
 				 [], Annotation [], Comment [])
@@ -343,7 +343,7 @@ fun assert_proper_class (k : definition_body_t) = (
 
 fun cook_step (k : definition_body_t) = (
     case k of
-	Def_Body ((u, f, b), j, cs, nm, cc, ee, aa, ww) => u
+	Def_Body ((u, f, b), cs, nm, cc, ee, aa, ww) => u
       | Def_Der _ => E5
       | Def_Primitive _ => E5
       | Def_Outer_Alias _ => E5
@@ -359,8 +359,8 @@ fun cook_step (k : definition_body_t) = (
 
 fun set_cook_step step (k : definition_body_t) = (
     case k of
-	Def_Body ((u_, f, b), j, cs, nm, cc, ee, aa, ww) => (
-	Def_Body ((step, f, b), j, cs, nm, cc, ee, aa, ww))
+	Def_Body ((u_, f, b), cs, nm, cc, ee, aa, ww) => (
+	Def_Body ((step, f, b), cs, nm, cc, ee, aa, ww))
       | Def_Der _ => k
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
@@ -599,7 +599,7 @@ fun pseudo_path subj = (
 
 fun body_is_package_root k = (
     case k of
-	Def_Body (mk, j, cs, (tag, n, x), cc, ee, aa, ww) => (
+	Def_Body (mk, cs, (j, n, tag, x), cc, ee, aa, ww) => (
 	(tag = the_package_root_tag))
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
@@ -736,7 +736,7 @@ fun tag_as_displaced_class tag = (
 
 fun marker_of_body k = (
     case k of
-	Def_Body ((u, f, b), j, cs, nm, cc, ee, aa, ww) => b
+	Def_Body ((u, f, b), cs, nm, cc, ee, aa, ww) => b
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
@@ -754,9 +754,9 @@ fun class_is_main k = ((marker_of_body k) <> BASE)
 
 fun subject_of_class k = (
     case k of
-	Def_Body (mk, subj, cs, nm, cc, ee, aa, ww) => (
+	Def_Body (mk, cs, (subj, n, c, x), cc, ee, aa, ww) => (
 	let
-	    val _ = if (not (subj = bad_subject)) then () else raise Match
+	    val _ = if (subj <> bad_subject) then () else raise Match
 	in
 	    subj
 	end)
@@ -782,31 +782,12 @@ fun subject_of_class k = (
 
 fun naming_of_class k = (
     case k of
-	Def_Body (mk, subj, cs, (tag, c, x), cc, ee, aa, ww) => (
-	if (subj = bad_subject orelse tag = bad_tag) then
-	    raise Match
-	else
-	    (subj, tag))
-      | Def_Der _ => raise Match
-      | Def_Primitive _ => raise Match
-      | Def_Outer_Alias _ => raise Match
-      | Def_Argument _ => raise Match
-      | Def_Named _ => raise Match
-      | Def_Scoped _ => raise Match
-      | Def_Refine _ => raise Match
-      | Def_Extending _ => raise Match
-      | Def_Replaced _ => raise Match
-      | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
-      | Def_Mock_Array _ => raise Match)
-
-fun enclosing_of_body k = (
-    case k of
-	Def_Body (mk, j, cs, (c, n, enclosing), cc, ee, aa, ww) => (
+	Def_Body (mk, cs, (subj, n, tag, x), cc, ee, aa, ww) => (
 	let
-	    val _ = if (enclosing <> bad_subject) then () else raise Match
+	    val _ = if (not (subj = bad_subject orelse tag = bad_tag)) then ()
+		    else raise Match
 	in
-	    enclosing
+	    (subj, tag)
 	end)
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
@@ -823,11 +804,53 @@ fun enclosing_of_body k = (
 
 fun identity_name_of_body k = (
     case k of
-	Def_Body (mk, j, cs, (c, naming, e), cc, ee, aa, ww) => (
+	Def_Body (mk, cs, (j, name, c, x), cc, ee, aa, ww) => (
 	let
-	    val _ = if (naming <> bad_subject) then () else raise Match
+	    val _ = if (name <> bad_subject) then () else raise Match
 	in
-	    naming
+	    name
+	end)
+      | Def_Der _ => raise Match
+      | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
+      | Def_Argument _ => raise Match
+      | Def_Named _ => raise Match
+      | Def_Scoped _ => raise Match
+      | Def_Refine _ => raise Match
+      | Def_Extending _ => raise Match
+      | Def_Replaced _ => raise Match
+      | Def_Displaced _ => raise Match
+      | Def_In_File => raise Match
+      | Def_Mock_Array _ => raise Match)
+
+fun tag_of_body k = (
+    case k of
+	Def_Body (mk, cs, (j, n, tag, x), cc, ee, aa, ww) => (
+	let
+	    val _ = if (tag <> bad_tag) then () else raise Match
+	in
+	    tag
+	end)
+      | Def_Der _ => raise Match
+      | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
+      | Def_Argument (kx, sm, aa, ww) => (tag_of_body kx)
+      | Def_Named _ => raise Match
+      | Def_Scoped _ => raise Match
+      | Def_Refine _ => raise Match
+      | Def_Extending _ => raise Match
+      | Def_Replaced _ => raise Match
+      | Def_Displaced _ => raise Match
+      | Def_In_File => raise Match
+      | Def_Mock_Array _ => raise Match)
+
+fun enclosing_of_body k = (
+    case k of
+	Def_Body (mk, cs, (j, n, c, enclosing), cc, ee, aa, ww) => (
+	let
+	    val _ = if (enclosing <> bad_subject) then () else raise Match
+	in
+	    enclosing
 	end)
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
@@ -851,13 +874,13 @@ fun identity_name_of_body k = (
 
 fun assign_enclosing k enclosing = (
     case k of
-	Def_Body (mk, j, cs, (c, n, enc_), cc, ee, aa, ww) => (
+	Def_Body (mk, cs, (j, n, c, enc_), cc, ee, aa, ww) => (
 	let
 	    val _ = if ((cook_step k) = E0) then () else raise Match
 	    val _ = if (enclosing <> bad_subject) then () else raise Match
 	    val _ = if (enc_ = bad_subject) then () else raise Match
 	in
-	    Def_Body (mk, j, cs, (c, n, enclosing), cc, ee, aa, ww)
+	    Def_Body (mk, cs, (j, n, c, enclosing), cc, ee, aa, ww)
 	end)
       | Def_Der _ => k
       | Def_Primitive _ => raise Match
@@ -882,7 +905,7 @@ fun assign_enclosing k enclosing = (
 
 fun kind_of_class k = (
     case k of
-	Def_Body (mk, j, (kind, p, q), nm, cc, ee, aa, ww) => SOME kind
+	Def_Body (mk, (kind, p, q), nm, cc, ee, aa, ww) => SOME kind
       | Def_Der _ => NONE
       | Def_Primitive _ => NONE
       | Def_Outer_Alias _ => raise Match
@@ -912,7 +935,7 @@ fun kind_is_record k = (
 
 fun class_is_enum k = (
     case k of
-	Def_Body ((u, f, enum), j, cs, nm, cc, ee, aa, ww) => (enum = ENUM)
+	Def_Body ((u, f, enum), cs, nm, cc, ee, aa, ww) => (enum = ENUM)
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
@@ -980,7 +1003,7 @@ fun class_is_simple_type k = (
 	      | _ => false)
     in
 	case k of
-	    Def_Body (mk, j, cs, (tag, n, x), cc, ee, aa, ww) => (
+	    Def_Body (mk, cs, (j, n, tag, x), cc, ee, aa, ww) => (
 	    let
 		(*val _ = if (step_is_at_least E2 k) then () else raise Match*)
 	    in
@@ -1003,7 +1026,7 @@ fun class_is_simple_type k = (
 
 fun class_is_boolean k = (
     case k of
-	Def_Body (mk, j, cs, (tag, n, x), cc, ee, aa, ww) => (
+	Def_Body (mk, cs, (j, n, tag, x), cc, ee, aa, ww) => (
 	let
 	    val _ = if (step_is_at_least E3 k) then () else raise Match
 	in
@@ -1019,7 +1042,7 @@ fun class_is_boolean k = (
 
 fun class_is_package k = (
     case k of
-	Def_Body ((u, f, b), j, cs, nm, cc, ee, aa, ww) => (f = PKG)
+	Def_Body ((u, f, b), cs, nm, cc, ee, aa, ww) => (f = PKG)
       | Def_Der _ => false
       | Def_Primitive _ => false
       | Def_Outer_Alias (f, _, _) => (f = PKG)
@@ -1049,28 +1072,14 @@ fun class_is_enumeration_definition k = (
 
 fun class_is_unmodified__ k = raise Match
 
-fun class_name_of_instance k = (
-    case k of
-	Def_Body (mk, j, cs, (tag, name, enclosing), cc, ee, aa, ww) => name
-      | Def_Der _ => raise Match
-      | Def_Primitive _ => raise Match
-      | Def_Outer_Alias _ => raise Match
-      | Def_Argument _ => raise Match
-      | Def_Named _ => raise Match
-      | Def_Scoped _ => raise Match
-      | Def_Refine _ => raise Match
-      | Def_Extending _ => raise Match
-      | Def_Replaced _ => raise Match
-      | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
-      | Def_Mock_Array _ => raise Match)
+val class_name_of_instance = identity_name_of_body
 
 (* Tests a class is a connector.  It only returns true on expandable
    connectors when expandable=true. *)
 
 fun class_is_connector expandable k = (
     case k of
-	Def_Body (mk, j, (t, p, q), nm, cc, ee, aa, ww) => (
+	Def_Body (mk, (t, p, q), nm, cc, ee, aa, ww) => (
 	case t of
 	    Connector x => ((not expandable) orelse x)
 	  | _ => false)
@@ -1149,7 +1158,7 @@ fun class_is_record_definition k = (
 
 fun class_is_constant k = (
     case k of
-	Def_Body (mk, j, (t, p, q), nm, cc, ee, aa, ww) => (
+	Def_Body (mk, (t, p, q), nm, cc, ee, aa, ww) => (
 	let
 	    val (lg, vc, io) = q
 	in
@@ -1182,7 +1191,7 @@ fun class_is_encapsulated k = (
 	fun check (t, {Encapsulated, ...}, _) = Encapsulated
     in
 	case k of
-	    Def_Body (mk, j, cs, nm, cc, ee, aa, ww) => (check cs)
+	    Def_Body (mk, cs, nm, cc, ee, aa, ww) => (check cs)
 	  | Def_Der (c, cs, n, vv, aa, ww) => (check cs)
 	  | Def_Primitive _ => raise Match
 	  | Def_Outer_Alias _ => raise Match
@@ -1203,7 +1212,7 @@ fun class_is_encapsulated k = (
 
 fun class_print_name k = (
     case k of
-	Def_Body (mk, j, cs, (tag, c, x), cc, ee, aa, ww) =>
+	Def_Body (mk, cs, (j, n, tag, x), cc, ee, aa, ww) =>
 	if (class_is_enum k) then
 	    ("enum ("^ (tag_to_string tag) ^")")
 	else
@@ -1270,8 +1279,7 @@ fun subscript_list_to_string ss = (
 
 fun body_is_partial k = (
     case k of
-	Def_Body (mk, j, (t, {Partial, ...}, q), nm, cc, ee, aa, ww) => (
-	Partial)
+	Def_Body (mk, (t, {Partial=p, ...}, q), nm, cc, ee, aa, ww) => p
       | _ => raise Match)
 
 (* ================================================================ *)

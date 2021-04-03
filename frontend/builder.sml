@@ -159,7 +159,7 @@ and instantiate_with_dimension (subj, k0) = (
 	val k1 = (assemble_instance (subj, k0))
     in
 	case k1 of
-	    Def_Body ((u, f, b), j, cs, nm, cc, ee, aa, ww) => (
+	    Def_Body ((u, f, b), cs, nm, cc, ee, aa, ww) => (
 	    let
 		val _= if (f = VAR) then () else raise Match
 		val _ = (assert_cook_step E3 k1)

@@ -1044,13 +1044,13 @@ fun record_class_renaming k0 = (
 
 fun rectify_modified_class (k0, q1) (t1, p1) aa1 = (
     case k0 of
-	Def_Body (mk, subj, (t0, p0, q0), nm, cc, ee, aa0, ww0) => (
+	Def_Body (mk, (t0, p0, q0), nm, cc, ee, aa0, ww0) => (
 	let
 	    val ctx = k0
 	    val (tx, px) = (merge_type_prefixes (t0, p0) (t1, p1))
 	    val qx = (merge_component_prefixes q0 q1)
 	    val aax = (merge_annotations ctx aa0 aa1)
-	    val k1 = Def_Body (mk, subj, (tx, px, qx), nm, cc, ee, aax, ww0)
+	    val k1 = Def_Body (mk, (tx, px, qx), nm, cc, ee, aax, ww0)
 	    val k2 = if (class_is_main k0) then
 			 (record_class_renaming k1)
 		     else

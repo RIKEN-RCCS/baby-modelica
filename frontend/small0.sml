@@ -65,7 +65,7 @@ fun definition_body (Defclass ((v, g), b)) = b
 
 fun innate_tag k = (
     case k of
-	Def_Body (mk, j, cs, (tag, n, x), cc, ee, aa, ww) => tag
+	Def_Body (mk, cs, (j, n, tag, x), cc, ee, aa, ww) => tag
       | Def_Der (tag, cs, n, vv, aa, ww) => tag
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
@@ -79,25 +79,9 @@ fun innate_tag k = (
       | Def_In_File => raise Match
       | Def_Mock_Array _ => raise Match)
 
-fun tag_of_body k = (
-    case k of
-	Def_Body (mk, j, cs, (tag, n, x), cc, ee, aa, ww) => tag
-      | Def_Der _ => raise Match
-      | Def_Primitive _ => raise Match
-      | Def_Outer_Alias _ => raise Match
-      | Def_Argument (kx, sm, aa, ww) => (tag_of_body kx)
-      | Def_Named _ => raise Match
-      | Def_Scoped _ => raise Match
-      | Def_Refine _ => raise Match
-      | Def_Extending _ => raise Match
-      | Def_Replaced _ => raise Match
-      | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
-      | Def_Mock_Array _ => raise Match)
-
 fun body_elements (k : definition_body_t) = (
     case k of
-	Def_Body (mk, j, cs, nm, cc, ee, aa, ww) => ee
+	Def_Body (mk, cs, nm, cc, ee, aa, ww) => ee
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
@@ -117,8 +101,8 @@ fun class_elements (Defclass ((v, g), k)) = (body_elements k)
 
 fun replace_body_elements (k : definition_body_t) ee = (
     case k of
-	Def_Body (mk, j, cs, nm, cc, ee_, aa, ww) => (
-	Def_Body (mk, j, cs, nm, cc, ee, aa, ww))
+	Def_Body (mk, cs, nm, cc, ee_, aa, ww) => (
+	Def_Body (mk, cs, nm, cc, ee, aa, ww))
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match

@@ -67,7 +67,7 @@ fun tr_bind (s : string) = if true then (print (s ^"\n")) else ()
 
 fun bind_in_class ctx binder k0 = (
     case k0 of
-	Def_Body (mk, j, cs, nm, cc0, ee0, aa, ww) => (
+	Def_Body (mk, cs, nm, cc0, ee0, aa, ww) => (
 	if (class_is_simple_type k0) then
 	    let
 		val buildphase = false
@@ -86,7 +86,7 @@ fun bind_in_class ctx binder k0 = (
 		val walk_e = (bind_in_class_element ctx binder)
 		val cc1 = (walk_x cc0)
 		val ee1 = (map walk_e ee0)
-		val k1 = Def_Body (mk, j, cs, nm, cc1, ee1, aa, ww)
+		val k1 = Def_Body (mk, cs, nm, cc1, ee1, aa, ww)
 		val k2 = (set_cook_step E5 k1)
 	    in
 		k2

@@ -400,14 +400,12 @@ and closure_constraint (scope : scope_t) (k0, mm0, a0, w) = (
 
 and closure_class (scope : scope_t) k0 = (
     case k0 of
-	Def_Body (mk, j, cs, nm, cc, ee, aa, ww) => (
+	Def_Body (mk, cs, nm, cc, ee, aa, ww) => (
 	let
-	    val _ = if (j = bad_subject) then () else raise Match
-	    val (subj, tag) = scope
-	    (*val k1 = (assign_enclosing k0 subj)*)
-	    val k1 = k0
+	    val subj = (subject_of_class k0)
+	    val _ = if (subj = bad_subject) then () else raise Match
 	in
-	    k1
+	    k0
 	end)
       | Def_Der _ => k0
       | Def_Primitive _ => raise Match
@@ -529,7 +527,7 @@ fun prepare_for_modification main pkg (subj, k0) = (
 	val _ = if ((cook_step k0) = E0) then () else raise Match
     in
 	case k0 of
-	    Def_Body ((u, f_, b_), j_, cs, (c, n, x), cc, ee, aa, ww) => (
+	    Def_Body ((u, f_, b_), cs, (j_, n, c, x), cc, ee, aa, ww) => (
 	    let
 		val _ = if (f_ = PKG) then () else raise Match
 		val _ = if (b_ = ENUM orelse b_ = MAIN) then ()
@@ -538,8 +536,8 @@ fun prepare_for_modification main pkg (subj, k0) = (
 		val _ = if ((f_ = PKG) orelse (x <> bad_subject)) then ()
 			else raise Match
 		val mark = (marker (b_, main))
-		val k1 = Def_Body ((u, pkg, mark), subj, cs,
-				   (c, n, x), cc, ee, aa, ww)
+		val k1 = Def_Body ((u, pkg, mark), cs, (subj, n, c, x),
+				   cc, ee, aa, ww)
 		val k2 = (attach_scope (subj, k1))
 		val k3 = (record_defining_class (subj, k2))
 		val k4 = (set_cook_step E1 k3)
@@ -711,7 +709,7 @@ and cook_class_refining main pkg (subj, k0) siblings = (
 
 and collect_refining main pkg (subj, k0) (name1, (t1, p1, q1), mm1, cc1, aa1) siblings = (
     case k0 of
-	Def_Body (mk, j, (t0, p0, q0), nm0, cc0, ee, aa0, ww0) => (
+	Def_Body (mk, (t0, p0, q0), nm0, cc0, ee, aa0, ww0) => (
 	let
 	    val _ = tr_cook_vvv (";; collect_refining"^
 				 (if main then ":main" else ":base") ^" ("^
@@ -725,15 +723,17 @@ and collect_refining main pkg (subj, k0) (name1, (t1, p1, q1), mm1, cc1, aa1) si
 	    val qx = (merge_component_prefixes q0 q1)
 	    val ccx = (choose_non_nil cc1 cc0)
 	    val aax = (merge_annotations ctx aa0 aa1)
-	    val (tag, name_, enclosing) = nm0
+	    val (j, name_, tag, enclosing) = nm0
 	    val _ = if (name_ = bad_subject) then () else raise Match
 	    val (id, g) = (tag_prefix tag)
+
 	    val name0 = (compose_subject enclosing id [])
 	    val namec = (choose_candidate_name name1 (SOME name0))
 	    val namex = (take_decisive_name namec)
 	    val identity = (identify_class_name namex)
-	    val nmx = (tag, identity, enclosing)
-	    val k1 = Def_Body (mk, j, (tx, px, qx), nmx, ccx, ee, aax, ww0)
+
+	    val nmx = (j, identity, tag, enclosing)
+	    val k1 = Def_Body (mk, (tx, px, qx), nmx, ccx, ee, aax, ww0)
 	    val k3 = (make_modified_class k1 mm1 (Annotation []) (Comment []))
 	in
 	    k3

@@ -602,12 +602,13 @@ fun declaration_of_real modifiers k = (
     let
 	fun quote x = (expression_to_string 0 x)
 
+	val subj = (subject_of_class k)
 	val inf = real_inf
 	val min_default = App (Opr Opr_neg, [inf])
 	val max_default = App (Opr Opr_id, [inf])
     in
 	case k of
-	    Def_Body ((u, f, b), subj, (t, p, q), nm, cc, ee, aa, ww) => (
+	    Def_Body ((u, f, b), (t, p, q), nm, cc, ee, aa, ww) => (
 	    let
 		val (modality_, variability, causality_) = q
 		val fixed_default = (fixed_value variability)
@@ -677,12 +678,13 @@ fun declaration_of_integer modifiers k = (
     let
 	fun quote x = (expression_to_string 0 x)
 
+	val subj = (subject_of_class k)
 	val inf = integer_inf
 	val min_default = App (Opr Opr_neg, [inf])
 	val max_default = App (Opr Opr_id, [inf])
     in
 	case k of
-	    Def_Body ((u, f, b), subj, (t, p, q), nm, cc, ee, aa, ww) => (
+	    Def_Body ((u, f, b), (t, p, q), nm, cc, ee, aa, ww) => (
 	    let
 		val (modality_, variability, causality_) = q
 		val fixed_default = (fixed_value variability)
@@ -738,9 +740,10 @@ fun declaration_of_integer modifiers k = (
 fun declaration_of_boolean modifiers k = (
     let
 	fun quote x = (expression_to_string 0 x)
+	val subj = (subject_of_class k)
     in
 	case k of
-	    Def_Body ((u, f, b), subj, (t, p, q), nm, cc, ee, aa, ww) => (
+	    Def_Body ((u, f, b), (t, p, q), nm, cc, ee, aa, ww) => (
 	    let
 		val (modality_, variability, causality_) = q
 		val fixed_default = (fixed_value variability)
@@ -792,9 +795,10 @@ fun declaration_of_boolean modifiers k = (
 fun declaration_of_string modifiers k = (
     let
 	fun quote x = (expression_to_string 0 x)
+	val subj = (subject_of_class k)
     in
 	case k of
-	    Def_Body ((u, f, b), subj, (t, p, q), nm, cc, ee, aa, ww) => (
+	    Def_Body ((u, f, b), (t, p, q), nm, cc, ee, aa, ww) => (
 	    let
 		val (modality_, variability, causality_) = q
 		val fixed_default = (fixed_value variability)
@@ -846,15 +850,16 @@ fun declaration_of_string modifiers k = (
 fun declaration_of_enumeration modifiers k = (
     let
 	fun quote x = (expression_to_string 0 x)
+	val subj = (subject_of_class k)
     in
 	case k of
-	    Def_Body ((u, f, b), subj, (t, p, q), nm, cc, ee, aa, ww) => (
+	    Def_Body ((u, f, b), (t, p, q), nm, cc, ee, aa, ww) => (
 	    let
 		val (modality_, variability, causality_) = q
 		val fixed_default = (fixed_value variability)
 		val (min_default, max_default) = (enumeration_bounds k)
 
-		val (_, namesubj, _) = nm
+		val namesubj = (identity_name_of_body k)
 		val name = (subject_to_string namesubj)
 
 		val value_ = (simple_type_attribute k (Id "value"))
@@ -928,7 +933,7 @@ fun dump_enumeration s k = (
 	      | _ => false)
     in
 	case k of
-	    Def_Body (mk, j, (t, p, q), nm, cc, ee, aa, ww) => (
+	    Def_Body (mk, (t, p, q), nm, cc, ee, aa, ww) => (
 	    let
 		val tag = (tag_of_body k)
 		val name = (subject_to_string (subject_of_class k))
@@ -956,7 +961,7 @@ fun dump_record s k = (
 	      | _ => false)
     in
 	case k of
-	    Def_Body (mk, j, (t, p, q), nm, cc, ee, aa, ww) => (
+	    Def_Body (mk, (t, p, q), nm, cc, ee, aa, ww) => (
 	    let
 		val tag = (tag_of_body k)
 		val name = (subject_to_string (subject_of_class k))
@@ -1006,7 +1011,7 @@ fun dump_function s k = (
 	fun component_prefixes_string (a, v, d) = ()
     in
 	case k of
-	    Def_Body (mk, j, (t, p, q), nm, cc, ee, aa, ww) => (
+	    Def_Body (mk, (t, p, q), nm, cc, ee, aa, ww) => (
 	    let
 		val pp = (kind_string t)
 		val name = (subject_to_string (subject_of_class k))

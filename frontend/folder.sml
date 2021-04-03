@@ -104,7 +104,7 @@ fun primitive_type_is_string p = (
 
 fun value_of_instance w0 kp = (
     case kp of
-	Def_Body (mk, subj, cs, nm, cc, ee, aa, ww) => (
+	Def_Body _ => (
 	if (not (class_is_simple_type kp)) then
 	    let
 		val _ = if (class_is_package kp) then
@@ -113,6 +113,7 @@ fun value_of_instance w0 kp = (
 			else
 			    if (step_is_at_least E5 kp) then ()
 			    else raise Match
+		val subj = (subject_of_class kp)
 	    in
 		if (class_is_package kp) then
 		    w0

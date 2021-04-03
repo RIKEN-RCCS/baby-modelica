@@ -336,9 +336,9 @@ and type_marker_t = ENUM | MAIN | BASE | SIMP
    language.  Def_Scoped replaces a Def_Named by attaching scope
    information.  Def_Refine represents modifications and subscripts to
    a class and a variable.  Def_Refine holds component_prefixes but it
-   usually only uses a type_prefix part.  The entire
+   usually only uses a type_prefix part of it.  The entire
    component_prefixes are needed at instantiation.  An optional
-   subject records a class name when it is given.  Its field
+   subject holds a class name when it is given.  Its field
    abbreviation is: Def_Refine(k,rn,q,(ss,mm),cc,aa,ww).
    Def_Extending represents an extends-redeclaration.  It is a pair of
    a base with modifiers and a body.  The boolean slot is an
@@ -359,9 +359,10 @@ and type_marker_t = ENUM | MAIN | BASE | SIMP
 and definition_body_t
     = Def_Body of
       ((cook_step_t * instantiation_t * type_marker_t)
-       * subject_t * class_specifier_t
-       * (class_tag_t * subject_t * (*enclosing*) subject_t)
-       * ((*conditional*) expression_t)
+       * class_specifier_t
+       * (subject_t * (*class*) subject_t * class_tag_t
+	  * (*enclosing*) subject_t)
+       * (*conditional*) expression_t
        * element_t list * annotation_t * comment_t)
     | Def_Der of
       (class_tag_t * class_specifier_t
@@ -598,11 +599,9 @@ val no_each_or_final : each_or_final_t = {Each=false, Final=false}
 fun syntax_error (s : string) = (raise (Fail s))
 
 fun make_predefinition_body enum body aa ww = (
-    Def_Body ((E0, PKG, enum),
-	      bad_subject, bad_class,
-	      (bad_tag, bad_subject, bad_subject),
-	      NIL,
-	      body, aa, ww))
+    Def_Body ((E0, PKG, enum), bad_class,
+	      (bad_subject, bad_subject, bad_tag, bad_subject),
+	      NIL, body, aa, ww))
 
 fun make_short_predefinition k io (ss, mm) aa ww = (
     Def_Refine (k, NONE, bad_type,
@@ -677,13 +676,13 @@ fun set_class_prefixes (t1, p1) (Defclass ((v, g), k0)) = (
     let
 	fun set_prefixes (t1, p1) k = (
 	    case k of
-		Def_Body ((u, f, b), j, cs0, (c, n, x), cc, ee, aa, ww) => (
+		Def_Body ((u, f, b), cs0, nm, cc, ee, aa, ww) => (
 		let
 		    val _ = if (cs0 = bad_class) then () else raise Match
 		    val (t0, p0, q) = cs0
 		    val cs1 = (t1, p1, q)
 		in
-		    Def_Body ((u, f, b), j, cs1, (c, n, x), cc, ee, aa, ww)
+		    Def_Body ((u, f, b), cs1, nm, cc, ee, aa, ww)
 		end)
 	      | Def_Der (c, cs0, n, vv, aa, ww) => (
 		let
@@ -723,8 +722,8 @@ fun set_class_final (Defclass ((v, g), k0)) = (
 
 	fun set_body fix k = (
 	    case k of
-		Def_Body (mk, j, (t, p, q), (c, n, x), cc, ee, aa, ww) => (
-		Def_Body (mk, j, (t, (fix p), q), (c, n, x), cc, ee, aa, ww))
+		Def_Body (mk, (t, p, q), nm, cc, ee, aa, ww) => (
+		Def_Body (mk, (t, (fix p), q), nm, cc, ee, aa, ww))
 	      | Def_Der (c, (t, p, q), n, vv, aa, ww) => (
 		Def_Der (c, (t, (fix p), q), n, vv, aa, ww))
 	      | Def_Primitive _ => raise Match
