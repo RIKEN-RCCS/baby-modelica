@@ -1291,6 +1291,22 @@ fun body_is_partial k = (
 
 (* ================================================================ *)
 
+(* Tests if a modified class is (essentially) different. *)
+
+fun modifiers_have_redeclarations mm = (
+    (List.exists test_modifier_is_redeclaration mm))
+
+and test_modifier_is_redeclaration m = (
+    case m of
+	Mod_Redefine _ => true
+      | Mod_Elemental_Redefine _ => true
+      | Mod_Redeclare _ => true
+      | Mod_Elemental_Redeclare _ => true
+      | Mod_Entry (ef, v, mmx, ww) => (modifiers_have_redeclarations mmx)
+      | Mod_Value e => false)
+
+(* ================================================================ *)
+
 (*fun scan_as_subject0 (s : string) : subject_t = (
     (name_to_subject (Name (String.fields (fn c => (c = #".")) s))))*)
 

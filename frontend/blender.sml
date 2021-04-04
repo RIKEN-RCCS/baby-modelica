@@ -226,23 +226,9 @@ fun assert_no_base_list ee = (
 	(app check ee)
     end)
 
-(* Test if a modified class is (essentially) different. *)
-
-fun modifiers_have_redeclarations mm = (
-    (List.exists test_modifier_is_redeclaration mm))
-
-and test_modifier_is_redeclaration m = (
-    case m of
-	Mod_Redefine _ => true
-      | Mod_Elemental_Redefine _ => true
-      | Mod_Redeclare _ => true
-      | Mod_Elemental_Redeclare _ => true
-      | Mod_Entry (ef, v, mmx, ww) => (modifiers_have_redeclarations mmx)
-      | Mod_Value e => false)
-
 (* ================================================================ *)
 
-(* Records a defining class in a class body element. *)
+(* Records a defining class in each class element. *)
 
 fun record_defining_class (subj, k0) = (
     let
@@ -252,20 +238,20 @@ fun record_defining_class (subj, k0) = (
 	      | Extends_Clause _ => e
 	      | Element_Class (z, r, d0, h) => (
 		let
-		    val Defclass ((id, g), k0) = d0
+		    val Defclass ((id, g), x0) = d0
 		    val subsubj = (compose_subject subj id [])
-		    val k1 = (record_defining_class_in_class (subsubj, k0))
-		    val d1 = Defclass ((id, g), k1)
+		    val x1 = (record_defining_class_in_class (subsubj, x0))
+		    val d1 = Defclass ((id, g), x1)
 		in
 		    Element_Class (z, r, d1, h)
 		end)
 	      | Element_State _ => e
 	      | Redefine_Class (z, r, d0, h) => (
 		let
-		    val Defclass ((id, g), k0) = d0
+		    val Defclass ((id, g), x0) = d0
 		    val subsubj = (compose_subject subj id [])
-		    val k1 = (record_defining_class_in_class (subsubj, k0))
-		    val d1 = Defclass ((id, g), k1)
+		    val x1 = (record_defining_class_in_class (subsubj, x0))
+		    val d1 = Defclass ((id, g), x1)
 		in
 		    Redefine_Class (z, r, d1, h)
 		end)
@@ -743,9 +729,7 @@ and collect_refining main pkg (subj, k0) (name1, (t1, p1, q1), mm1, cc1, aa1) si
 	    val aax = (merge_annotations ctx aa0 aa1)
 	    val (tx, px) = (merge_type_prefixes ts0 (t1, p1))
 	    val qx = (merge_component_prefixes q0 q1)
-	    val name0opt = if (modifiers_have_redeclarations mm0)
-			   then name0 else NONE
-	    val namex = if (isSome name1) then name1 else name0opt
+	    val namex = if (isSome name1) then name1 else name0
 	in
 	    if (not (null ss0)) then
 		Def_Refine (k1, namex, (tx, px), qx, (ss0, mmx), ccx, aax, ww0)
