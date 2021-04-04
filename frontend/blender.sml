@@ -98,13 +98,13 @@ fun fetch_element_class cooker_ (defining, id) : definition_body_t = (
 	    in
 		case (find_element false kp id) of
 		    NONE => raise (error_name_not_found id kp)
-		  | SOME (Naming (_, _, _, _, (z, r, EL_Class dx, h))) => (
+		  | SOME (Naming (_, _, _, _, EL_Class (z, r, dx, h))) => (
 		    let
 			val Defclass (_, k0) = dx
 		    in
 			k0
 		    end)
-		  | SOME (Naming (_, _, _, _, (z, r, EL_State dx, h))) => (
+		  | SOME (Naming (_, _, _, _, EL_State (z, r, dx, h))) => (
 		    raise (error_name_is_state id kp))
 	    end)
     end)

@@ -193,13 +193,13 @@ fun lookup_in_main_and_bases (cooker : cooker_t) ctx kp id = (
 	    in
 		case (find_element true kp id) of
 		    NONE => raise (error_name_not_found id kp)
-		  | SOME (Naming (_, subj, _, _, (z, r, EL_Class dx, h))) => (
+		  | SOME (Naming (_, subj, _, _, EL_Class (z, r, dx, h))) => (
 		    let
 			val Defclass (_, k0) = dx
 		    in
 			SOME (enclosing, (subj, k0))
 		    end)
-		  | SOME (Naming (_, subj, _, _, (z, r, EL_State dx, h))) => (
+		  | SOME (Naming (_, subj, _, _, EL_State (z, r, dx, h))) => (
 		    raise (error_name_is_state id kp))
 	    end
 	else

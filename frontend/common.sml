@@ -192,7 +192,8 @@ fun reference_is_predefined_variable w = (
 
 fun predefined_reference (Id v) = Subj (VAR, [(Id v, [])])
 
-fun usual_element dd = (Public, no_element_prefixes, dd, NONE)
+fun usual_class_element d = EL_Class (Public, no_element_prefixes, d, NONE)
+fun usual_state_element d = EL_State (Public, no_element_prefixes, d, NONE)
 
 (* ================================================================ *)
 
@@ -637,10 +638,15 @@ fun variability_order v = (
       | Parameter => 1
       | Constant => 0)
 
-fun name_of_element_union cv = (
-    case cv of
-	EL_Class (Defclass ((v, _), _)) => v
-      | EL_State (Defvar (v, _)) => v)
+fun name_of_naming_element (ne : naming_element_t) = (
+    case ne of
+	EL_Class (_, _, Defclass ((v, _), _), _) => v
+      | EL_State (_, _, Defvar (v, _), _) => v)
+
+fun element_prefixes_of_naming_element (ne : naming_element_t) = (
+    case ne of
+	EL_Class (z, r, dx, h) => r
+      | EL_State (z, r, dx, h) => r)
 
 (*val name_of_naming = name_of_element_union*)
 

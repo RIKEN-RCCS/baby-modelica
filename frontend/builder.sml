@@ -116,8 +116,8 @@ fun make_dummy_array_class (dim, array, dummy) = (
 
 fun assert_inner_outer_condition binding = (
     let
-	val Naming (id, subj, inner, _, (z, r, dd, h)) = binding
-	(*val subcomponent = (test_subcomponent subsubj (subj, id))*)
+	val Naming (id, subj, inner, _, ne) = binding
+	val r = (element_prefixes_of_naming_element ne)
 	val subcomponent = (inner = NONE)
 	val _ = if ((not ((#Outer r) andalso (not (#Inner r))))
 		    orelse (not subcomponent))
@@ -358,14 +358,14 @@ and instantiate_element kp binding = (
 
 and instantiate_named_element kp binding = (
     case binding of
-	Naming (id, subj, NONE, _, (z, r, EL_Class dx, h)) => (
+	Naming (id, subj, NONE, _, EL_Class (z, r, dx, h)) => (
 	let
 	    val Defclass (_, k0) = dx
 	    val k2 = (assemble_package E3 (subj, k0))
 	in
 	    ([], [k2])
 	end)
-      | Naming (id, subj, NONE, _, (z, r, EL_State dx, h)) => (
+      | Naming (id, subj, NONE, _, EL_State (z, r, dx, h)) => (
 	let
 	    val package = (class_is_non_function_package kp)
 	    val _ = if ((not package) orelse (declaration_is_constant dx))
@@ -387,8 +387,8 @@ fun instantiate_components kp = (
     let
 	fun instantiate kp binding = (
 	    case binding of
-		Naming (_, _, _, _, (z, r, EL_Class _, h)) => raise Match
-	      | Naming (_, _, _, _, (z, r, EL_State _, h)) => (
+		Naming (_, _, _, _, EL_Class (z, r, _, h)) => raise Match
+	      | Naming (_, _, _, _, EL_State (z, r, _, h)) => (
 		let
 		    val (dim, array) = (instantiate_element kp binding)
 		in

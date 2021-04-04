@@ -43,16 +43,6 @@ datatype subject_t = Subj of instantiation_t * (id_t * int list) list
 
 type scope_t = subject_t * class_tag_t
 
-(* name_tuple_t is name information stored in a Def_Body.  The first
-   subject slot is an instance name or a package name.  The second
-   slot is a class name after potential renaming.  It is a name when
-   redeclarations are last applied.  The third class-tag slot is an
-   original name of a body.  The fourth slot is an enclosing class
-   (for a package). *)
-
-type name_tuple_t = (subject_t * (*class*) subject_t
-		     * class_tag_t * (*enclosing*) subject_t)
-
 (* Real (R) or integer (Z). *)
 
 datatype number_type_t = R | Z
@@ -150,6 +140,8 @@ datatype expression_t
 withtype for_index_t = id_t * expression_t
 
 and component_and_subscript_t = id_t * expression_t list
+
+type subscripts_t = expression_t list
 
 datatype visibility_t = Protected | Public
 
@@ -264,6 +256,16 @@ datatype primitive_type_t
     | P_String
     | P_Enum of class_tag_t
 
+(* name_tuple_t is name information stored in a Def_Body.  The first
+   subject slot is an instance name or a package name.  The second
+   slot is a class name after potential renaming.  It is a name when
+   redeclarations are last applied.  The third class-tag slot is an
+   original name of a body.  The fourth slot is an enclosing class (of
+   a package). *)
+
+type name_tuple_t = (subject_t * (*class*) subject_t
+		     * class_tag_t * (*enclosing*) subject_t)
+
 (* Equations.  Eq_Connect will have Cref (connectors) for the
    arguments after syntaxing.  E_List is introduced temporarily. *)
 
@@ -302,26 +304,18 @@ and statement_t
 		  * annotation_t * comment_t)
     (*| St_Comment of (annotation_t * comment_t)*)
 
-(* variable_declaration is a tuple of ID and a class definition.  Its
-   body is always a Def_Refine (or a Def_Primitive for the attributes
-   of simple-types).  Component prefixes, array-subscripts, and a
-   conditional in the declaration are moved in a Def_Refine. *)
+(* A variable declaration.  Its body is always a Def_Refine (or a
+   Def_Primitive for the attributes of simple-types).  Component
+   prefixes, array subscripts, and a conditional in a declaration are
+   moved in a Def_Refine. *)
 
 and variable_declaration_t
     = Defvar of (id_t * definition_body_t)
 
-(*
-and variable_declaration_t
-    = Defvar of (id_t * component_prefixes_t
-		 * definition_body_t
-		 * expression_t option
-		 * annotation_t * comment_t)
-*)
-
-(* class_definition is used to refer to a class.  A class-specifier in
-   the syntax is a class-definition with a null class-prefixes.  The
-   second name field is an enclosing class, which is added at a
-   supplementary step in parsing. *)
+(* A class definition.  The second name slot is an enclosing class,
+   which is added at a supplementary step in parsing.  A
+   class-specifier in the syntax is a class-definition with a null
+   class-prefixes.  *)
 
 and class_definition_t
     = Defclass of ((id_t * class_tag_t) * definition_body_t)
@@ -391,9 +385,7 @@ and definition_body_t
       ((*extended*) bool * (definition_body_t * modifier_t list)
        * definition_body_t)
     | Def_Replaced of
-      (definition_body_t
-       * (visibility_t * element_prefixes_t
-	  * element_sum_t * constraint_t option))
+      (definition_body_t * naming_element_t)
     | Def_Displaced of class_tag_t * (*enclosing*) subject_t
     | Def_In_File
     | Def_Mock_Array of
@@ -481,22 +473,23 @@ and modifier_t
 
 and annotation_t = Annotation of modifier_t list
 
-(* A naming element in a class is either a class definition or a
-   variable declaration. *)
+(* A naming element in a class is either a variable declaration or a
+   class definition.  It is to hold a subset of class elements:
+   Element_Class, Element_State, Redefine_Class, and
+   Redeclare_State. *)
 
-and element_sum_t
-    = EL_Class of class_definition_t
-    | EL_State of variable_declaration_t
+and naming_element_t
+    = EL_State of
+      (visibility_t * element_prefixes_t
+       * variable_declaration_t * constraint_t option)
+    | EL_Class of
+      (visibility_t * element_prefixes_t
+       * class_definition_t * constraint_t option)
 
-withtype subscripts_t = expression_t list
-
-and constraint_t = (definition_body_t * modifier_t list
-		    * annotation_t * comment_t)
+withtype constraint_t = (definition_body_t * modifier_t list
+			 * annotation_t * comment_t)
 
 and enum_list_t = (id_t * annotation_t * comment_t) list
-
-type naming_element_t = (visibility_t * element_prefixes_t
-			 * element_sum_t * constraint_t option)
 
 (* An entry of an element list (definitions/declarations).  It is
    stored in the class_bindings table.  The identifier slot is a

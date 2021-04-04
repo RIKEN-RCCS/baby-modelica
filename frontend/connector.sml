@@ -252,8 +252,8 @@ fun connector_is_overdetermined subj = (
     in
 	case (find_element true kp id) of
 	    NONE => false
-	  | SOME (Naming (_, _, _, _, (z, r, EL_Class dx, h))) => true
-	  | SOME (Naming (_, _, _, _, (z, r, EL_State dx, h))) => false
+	  | SOME (Naming (_, _, _, _, EL_Class _)) => true
+	  | SOME (Naming (_, _, _, _, EL_State _)) => false
     end)
 
 fun global_function name = Instances ([], [Subj (PKG, [(Id name, [])])])

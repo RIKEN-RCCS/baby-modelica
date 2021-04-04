@@ -583,7 +583,7 @@ fun merge_element_prefixes q0 q1 = (
 
 fun replace_class source ctx (z0, r0, d0, h0) (z1, r1, d1, h1) = (
     let
-	val old0 = (z0, r0, EL_Class d0, h0)
+	val old0 = EL_Class (z0, r0, d0, h0)
 	val Defclass ((v0, g0), k0) = d0
 	val Defclass ((v1, g1), k1) = d1
 	val _ = (assert_class_is_good_to_dispatch k1)
@@ -621,7 +621,7 @@ fun replace_class_by_elements ctx (z0, r0, d0, h0) (z1, r1, d1, h1) = (
 
 fun redeclare_state source ctx (z0, r0, d0, h0) (z1, r1, d1, h1) = (
     let
-	val oldx = (z0, r0, EL_State d0, h0)
+	val oldx = EL_State (z0, r0, d0, h0)
 	val Defvar (v0, k0) = d0
 	val Defvar (v1, k1) = d1
 	val _ = (assert_class_is_good_to_dispatch k1)
