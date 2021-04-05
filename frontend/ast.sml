@@ -391,19 +391,21 @@ and definition_body_t
     | Def_Mock_Array of
       (int list * definition_body_t list * definition_body_t option)
 
-(* Import_Clause has an ID pair (v0,v1) for importing v1=pkg.v0.  Or,
-   it is a "*"-form import if the ID part is NONE.  Element_Class and
-   Element_State are class definitions and variable declarations.
-   Redefine_Class and Redeclare_State are the same as Element_Class
-   and Element_State, but ones prefixed by redeclare.  Usual field
-   namings are: Element_State(z,r,d,h) and Element_Class(z,r,d,h).
-   The entires Element_Import, Element_Base, Base_List, and
-   Base_Classes are introduced in syntaxing.  Element_Import replaces
-   Import_Clause.  Element_Base replaces Extends_Clause, and names a
-   base class.  Base_List lists bases of this class (transitively).
-   Base_Classes holds the class definitions to which Element_Base and
-   Base_List refers.  Base_Classes only exists in a main (non-base)
-   class.  The bases are collected to remove duplicates. *)
+(* An Import_Clause has an ID pair (v0,v1) for importing v1=P.v0.  Or,
+   it is NONE for a "*"-form import.  An Extends_Clause is as it is.
+   An Element_Class and an Element_State are class definitions and
+   variable declarations.  A Redefine_Class and a Redeclare_State are
+   similar to an Element_Class and an Element_State, but ones prefixed
+   by redeclare.  Usual field namings are: Element_State(z,r,d,h) and
+   Element_Class(z,r,d,h).  The entires Element_Import, Element_Base,
+   Base_List, and Base_Classes are introduced in syntaxing.  An
+   Element_Import replaces an Import_Clause.  An Element_Base replaces
+   an Extends_Clause, and it names a base class in the Base_Classes.
+   A Base_List lists bases of this class (the list exists even if it
+   is not a main class).  A Base_Classes holds the class definitions
+   to which an Element_Base and a Base_List refers.  A Base_Classes
+   only exists in a main (non-base) class.  The bases are collected to
+   remove duplicates. *)
 
 and element_t
     = Import_Clause of

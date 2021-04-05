@@ -20,6 +20,8 @@ val model_root_node = classtree.model_root_node
 val subject_to_instance_tree_path = classtree.subject_to_instance_tree_path
 val extract_base_classes = classtree.extract_base_classes
 val traverse_tree = classtree.traverse_tree
+val fetch_instance_tree_node = classtree.fetch_instance_tree_node
+val access_node = classtree.access_node
 
 val list_elements = finder.list_elements
 
@@ -36,12 +38,29 @@ fun tr_flat_vvv (s : string) = if false then (print (s ^"\n")) else ()
 
 (* ================================================================ *)
 
+fun concat_strings separator ss = (
+    (String.concatWith separator (List.filter (fn x => (x <> "")) ss)))
+
 fun variability_to_string variability = (
     case variability of
 	Constant => "constant"
       | Parameter => "parameter"
       | Discrete => "discrete"
       | Continuous => "")
+
+fun causality_to_string causality = (
+    case causality of
+	Input => "input"
+      | Output => "output"
+      | Acausal => "")
+
+fun component_prefixes_to_string argument (modality, variability, causality) = (
+    let
+	val va = (variability_to_string variability)
+	val ca = if argument then (causality_to_string causality) else ""
+    in
+	(concat_strings " " [va, ca])
+    end)
 
 (* Returns a string for an expression.  Call it with assoc=0.  assoc
    is an associativity of an outside expression.  It parenthesizes a
@@ -595,10 +614,15 @@ fun fixed_value variability = (
     else
 	boolean_false)
 
-fun concat_strings separator ss = (
-    (String.concatWith separator (List.filter (fn x => (x <> "")) ss)))
+fun component_to_string argument subj = (
+    if (not argument) then
+	(subject_to_string subj)
+    else
+	case (subject_prefix subj) of
+	    (_, (id, [])) => (id_to_string id)
+	  | _ => raise Match)
 
-fun declaration_of_real modifiers k = (
+fun declaration_of_real argument modifiers k = (
     let
 	fun quote x = (expression_to_string 0 x)
 
@@ -639,12 +663,12 @@ fun declaration_of_real modifiers k = (
 			     (optional_slot "stateSelect" stateSelect_
 					    stateselect_default)]
 
-		val vs = (variability_to_string variability)
+		val vs = (component_prefixes_to_string argument q)
 		val ts = "Real"
 		val ms = ("("^
 			  (concat_strings ", " slots)
 			  ^")")
-		val ns = (subject_to_string subj)
+		val ns = (component_to_string argument subj)
 		val _ = if (not ((value_ <> NIL) andalso (modifiers <> "")))
 			then () else raise Match
 		val xs = if (value_ <> NIL) then
@@ -661,9 +685,9 @@ fun declaration_of_real modifiers k = (
 	  | Def_Outer_Alias _ => raise Match
 	  | Def_Argument (kx, (ss, mm), aa, ww) => (
 	    if (null ss) andalso (null mm) then
-		(declaration_of_real "" kx)
+		(declaration_of_real argument "" kx)
 	    else
-		(declaration_of_real "(...)" kx))
+		(declaration_of_real argument "(...)" kx))
 	  | Def_Named _ => raise Match
 	  | Def_Scoped _ => raise Match
 	  | Def_Refine _ => raise Match
@@ -674,7 +698,7 @@ fun declaration_of_real modifiers k = (
 	  | Def_Mock_Array _ => raise Match
     end)
 
-fun declaration_of_integer modifiers k = (
+fun declaration_of_integer argument modifiers k = (
     let
 	fun quote x = (expression_to_string 0 x)
 
@@ -702,12 +726,12 @@ fun declaration_of_integer modifiers k = (
 			     (optional_slot "start" start_ real_zero),
 			     (optional_slot "fixed" fixed_ fixed_default)]
 
-		val vs = (variability_to_string variability)
+		val vs = (component_prefixes_to_string argument q)
 		val ts = "Integer"
 		val ms = ("("^
 			  (concat_strings ", " slots)
 			  ^")")
-		val ns = (subject_to_string subj)
+		val ns = (component_to_string argument subj)
 		val _ = if (not ((value_ <> NIL) andalso (modifiers <> "")))
 			then () else raise Match
 		val xs = if (value_ <> NIL) then
@@ -724,9 +748,9 @@ fun declaration_of_integer modifiers k = (
 	  | Def_Outer_Alias _ => raise Match
 	  | Def_Argument (kx, (ss, mm), aa, ww) => (
 	    if (null ss) andalso (null mm) then
-		(declaration_of_integer "" kx)
+		(declaration_of_integer argument "" kx)
 	    else
-		(declaration_of_integer "(...)" kx))
+		(declaration_of_integer argument "(...)" kx))
 	  | Def_Named _ => raise Match
 	  | Def_Scoped _ => raise Match
 	  | Def_Refine _ => raise Match
@@ -737,7 +761,7 @@ fun declaration_of_integer modifiers k = (
 	  | Def_Mock_Array _ => raise Match
     end)
 
-fun declaration_of_boolean modifiers k = (
+fun declaration_of_boolean argument modifiers k = (
     let
 	fun quote x = (expression_to_string 0 x)
 	val subj = (subject_of_class k)
@@ -757,12 +781,12 @@ fun declaration_of_boolean modifiers k = (
 			     (optional_slot "start" start_ boolean_false),
 			     (optional_slot "fixed" fixed_ fixed_default)]
 
-		val vs = (variability_to_string variability)
+		val vs = (component_prefixes_to_string argument q)
 		val ts = "Boolean"
 		val ms = ("("^
 			  (concat_strings ", " slots)
 			  ^")")
-		val ns = (subject_to_string subj)
+		val ns = (component_to_string argument subj)
 		val _ = if (not ((value_ <> NIL) andalso (modifiers <> "")))
 			then () else raise Match
 		val xs = if (value_ <> NIL) then
@@ -779,9 +803,9 @@ fun declaration_of_boolean modifiers k = (
 	  | Def_Outer_Alias _ => raise Match
 	  | Def_Argument (kx, (ss, mm), aa, ww) => (
 	    if (null ss) andalso (null mm) then
-		(declaration_of_boolean "" kx)
+		(declaration_of_boolean argument "" kx)
 	    else
-		(declaration_of_boolean "(...)" kx))
+		(declaration_of_boolean argument "(...)" kx))
 	  | Def_Named _ => raise Match
 	  | Def_Scoped _ => raise Match
 	  | Def_Refine _ => raise Match
@@ -792,7 +816,7 @@ fun declaration_of_boolean modifiers k = (
 	  | Def_Mock_Array _ => raise Match
     end)
 
-fun declaration_of_string modifiers k = (
+fun declaration_of_string argument modifiers k = (
     let
 	fun quote x = (expression_to_string 0 x)
 	val subj = (subject_of_class k)
@@ -812,12 +836,12 @@ fun declaration_of_string modifiers k = (
 			     (optional_slot "start" start_ string_empty),
 			     (optional_slot "fixed" fixed_ fixed_default)]
 
-		val vs = (variability_to_string variability)
+		val vs = (component_prefixes_to_string argument q)
 		val ts = "String"
 		val ms = ("("^
 			  (concat_strings ", " slots)
 			  ^")")
-		val ns = (subject_to_string subj)
+		val ns = (component_to_string argument subj)
 		val _ = if (not ((value_ <> NIL) andalso (modifiers <> "")))
 			then () else raise Match
 		val xs = if (value_ <> NIL) then
@@ -834,9 +858,9 @@ fun declaration_of_string modifiers k = (
 	  | Def_Outer_Alias _ => raise Match
 	  | Def_Argument (kx, (ss, mm), aa, ww) => (
 	    if (null ss) andalso (null mm) then
-		(declaration_of_string "" kx)
+		(declaration_of_string argument "" kx)
 	    else
-		(declaration_of_string "(...)" kx))
+		(declaration_of_string argument "(...)" kx))
 	  | Def_Named _ => raise Match
 	  | Def_Scoped _ => raise Match
 	  | Def_Refine _ => raise Match
@@ -847,7 +871,7 @@ fun declaration_of_string modifiers k = (
 	  | Def_Mock_Array _ => raise Match
     end)
 
-fun declaration_of_enumeration modifiers k = (
+fun declaration_of_enumeration argument modifiers k = (
     let
 	fun quote x = (expression_to_string 0 x)
 	val subj = (subject_of_class k)
@@ -875,12 +899,12 @@ fun declaration_of_enumeration modifiers k = (
 			     (optional_slot "start" start_ min_default),
 			     (optional_slot "fixed" fixed_ fixed_default)]
 
-		val vs = (variability_to_string variability)
+		val vs = (component_prefixes_to_string argument q)
 		val ts = (name)
 		val ms = ("("^
 			  (concat_strings ", " slots)
 			  ^")")
-		val ns = (subject_to_string subj)
+		val ns = (component_to_string argument subj)
 		val _ = if (not ((value_ <> NIL) andalso (modifiers <> "")))
 			then () else raise Match
 		val xs = if (value_ <> NIL) then
@@ -897,9 +921,9 @@ fun declaration_of_enumeration modifiers k = (
 	  | Def_Outer_Alias _ => raise Match
 	  | Def_Argument (kx, (ss, mm), aa, ww) => (
 	    if (null ss) andalso (null mm) then
-		(declaration_of_enumeration "" kx)
+		(declaration_of_enumeration argument "" kx)
 	    else
-		(declaration_of_enumeration "(...)" kx))
+		(declaration_of_enumeration argument "(...)" kx))
 	  | Def_Named _ => raise Match
 	  | Def_Scoped _ => raise Match
 	  | Def_Refine _ => raise Match
@@ -910,19 +934,69 @@ fun declaration_of_enumeration modifiers k = (
 	  | Def_Mock_Array _ => raise Match
     end)
 
-fun dump_variable s k = (
+fun declaration_of_simple_type argument modifiers k = (
+    case (type_of_simple_type k) of
+	P_Number R => (declaration_of_real argument "" k)
+      | P_Number Z => (declaration_of_integer argument "" k)
+      | P_Boolean => (declaration_of_boolean argument "" k)
+      | P_String => (declaration_of_string argument "" k)
+      | P_Enum _ => (declaration_of_enumeration argument"" k))
+
+fun declaration_of_record argument modifiers k = (
     let
-	val sx = case (type_of_simple_type k) of
-		     P_Number R => (declaration_of_real "" k)
-		   | P_Number Z => (declaration_of_integer "" k)
-		   | P_Boolean => (declaration_of_boolean "" k)
-		   | P_String => (declaration_of_string "" k)
-		   | P_Enum tag =>  (declaration_of_enumeration "" k)
-	val ss = if (sx = "") then "" else (sx ^"\n")
-	val _ = (TextIO.output (s, ss))
+	fun quote x = (expression_to_string 0 x)
+
+	val subj = (subject_of_class k)
+	val inf = real_inf
+	val min_default = App (Opr Opr_neg, [inf])
+	val max_default = App (Opr Opr_id, [inf])
     in
-	()
+	case k of
+	    Def_Body ((u, f, b), (t, p, q), nm, cc, ee, aa, ww) => (
+	    let
+		val (modality_, variability, causality) = q
+		val (_, name, _, _) = nm
+
+		val vs = (component_prefixes_to_string argument q)
+		val ts = (subject_to_string name)
+		val ns = (component_to_string argument subj)
+		val xs = modifiers
+		val ss = ((concat_strings " " [vs, ts, ns, xs])
+			  ^";")
+	    in
+		ss
+	    end)
+	  | Def_Der _ => raise Match
+	  | Def_Primitive _ => raise Match
+	  | Def_Outer_Alias _ => raise Match
+	  | Def_Argument _ => raise Match
+	  | Def_Named _ => raise Match
+	  | Def_Scoped _ => raise Match
+	  | Def_Refine _ => raise Match
+	  | Def_Extending _ => raise Match
+	  | Def_Replaced _ => raise Match
+	  | Def_Displaced _ => raise Match
+	  | Def_In_File => raise Match
+	  | Def_Mock_Array _ => raise Match
     end)
+
+fun dump_variable argument s k = (
+    if (kind_is_record k) then
+	let
+	    val sx = (declaration_of_record argument "" k)
+	    val ss = if (sx = "") then "" else (sx ^"\n")
+	    val _ = (TextIO.output (s, ss))
+	in
+	    ()
+	end
+    else
+	let
+	    val sx = (declaration_of_simple_type argument "" k)
+	    val ss = if (sx = "") then "" else (sx ^"\n")
+	    val _ = (TextIO.output (s, ss))
+	in
+	    ()
+	end)
 
 fun dump_enumeration s k = (
     let
@@ -998,9 +1072,6 @@ fun dump_predefined s k = (
 	(TextIO.output (s, dummy))
     end)
 
-(*(Function false, {Encapsulated = false, Final = false, Partial = false},*)
-(*(Effort, Continuous, Acausal)*)
-
 fun dump_function s k = (
     let
 	fun kind_string t = (
@@ -1008,21 +1079,44 @@ fun dump_function s k = (
 		Function pure  => if pure then "pure functions" else "function"
 	      | _ => raise Match)
 	fun class_prefixes_string {Final, Encapsulated, Partial} = ()
-	fun component_prefixes_string (a, v, d) = ()
+	fun component_prefixes_string (mo, va, ca) = ()
+
+	fun dump_slot s (Slot (v, dim, array, _)) = (
+	    case (dim, array) of
+		([], [node]) => (
+		let
+		    val (kv, _) = (access_node E3 false node)
+		in
+		    case kv of
+			Def_Argument (kx, sm, aa, ww) => (
+			(dump_variable true s kx))
+		      | _ => raise Match
+		end)
+	      | _ => raise Match)
+
+	fun dump_components s subj = (
+	    let
+		val node = surely (fetch_instance_tree_node subj)
+		val (_, components) = (access_node E3 false node)
+		val _ = (app (dump_slot s) components)
+	    in
+		()
+	    end)
     in
 	case k of
 	    Def_Body (mk, (t, p, q), nm, cc, ee, aa, ww) => (
 	    let
+		val subj = (subject_of_class k)
 		val pp = (kind_string t)
-		val name = (subject_to_string (subject_of_class k))
+		val name = (subject_to_string subj)
 
 		val _ = (assert_cooked_at_least E3 k)
 		val bindings = (list_elements true k)
 		val (_, states) =
 		      (List.partition binding_is_class bindings)
-		(*val _ = raise Match*)
 
 		val _ = (TextIO.output (s, (pp ^" "^ name ^"\n")))
+		val _ = (dump_components s subj)
 		val _ = (TextIO.output (s, "end "^ name ^";\n"))
 		val _ = (TextIO.output (s, "\n"))
 	    in
@@ -1180,7 +1274,7 @@ fun dump_flat_model () = (
 	val _ = (TextIO.output (s, "/* Constants in packages. */\n"))
 	val _ = (TextIO.output (s, "\n"))
 	val vars0 = (collect_variables PKG)
-	val _ = (app (dump_variable s) vars0)
+	val _ = (app (dump_variable false s) vars0)
 
 	(* Variables. *)
 
@@ -1189,12 +1283,12 @@ fun dump_flat_model () = (
 	val _ = (TextIO.output (s, "\n"))
 	val vars1 = (collect_variables VAR)
 	val (vars2, vars3) = (List.partition class_is_constant vars1)
-	val _ = (app (dump_variable s) vars2)
+	val _ = (app (dump_variable false s) vars2)
 
 	val _ = (TextIO.output (s, "\n"))
 	val _ = (TextIO.output (s, "/* State variables. */\n"))
 	val _ = (TextIO.output (s, "\n"))
-	val _ = (app (dump_variable s) vars3)
+	val _ = (app (dump_variable false s) vars3)
 
 	(* Enumerations, records, functions. *)
 
@@ -1216,21 +1310,26 @@ fun dump_flat_model () = (
 	val _ = (app (dump_record s) recs0)
 	val _ = (app (dump_record s) recs1)
 
-	val _ = if ((null recs0) andalso (null recs1))
-		then (TextIO.output (s, "\n")) else ()
-	val _ = (TextIO.output (s, "/* Functions. */\n"))
+	val _ = if (null (recs0 @ recs1)) then ()
+		else (TextIO.output (s, "\n"))
+	val _ = (TextIO.output (s, "/* Functions (predefined). */\n"))
 	val _ = (TextIO.output (s, "\n"))
 
 	val funs0 = (collect_functions PKG)
 	val (funs1, funs2)  = (List.partition function_is_predefined funs0)
 	val funs3 = (collect_functions VAR)
 	val _ = (app (dump_predefined s) funs1)
+
+	val _ = if (null funs1) then ()
+		else (TextIO.output (s, "\n"))
+	val _ = (TextIO.output (s, "/* Functions. */\n"))
+	val _ = (TextIO.output (s, "\n"))
+
 	val _ = (app (dump_function s) funs2)
 	val _ = (app (dump_function s) funs3)
 
 	(* Equation sections. *)
 
-	val _ = (TextIO.output (s, "\n"))
 	val _ = (TextIO.output (s, "/* Equations. */\n"))
 
 	val eqns0 = (collect_equations false ())

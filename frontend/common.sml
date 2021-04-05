@@ -874,6 +874,22 @@ fun enclosing_of_body k = (
       | Def_In_File => raise Match
       | Def_Mock_Array _ => raise Match)
 
+fun class_specifier_of_body k = (
+    case k of
+	Def_Body (mk, cs, nm, cc, ee, aa, ww) => cs
+      | Def_Der _ => raise Match
+      | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
+      | Def_Argument _ => raise Match
+      | Def_Named _ => raise Match
+      | Def_Scoped _ => raise Match
+      | Def_Refine _ => raise Match
+      | Def_Extending _ => raise Match
+      | Def_Replaced _ => raise Match
+      | Def_Displaced _ => raise Match
+      | Def_In_File => raise Match
+      | Def_Mock_Array _ => raise Match)
+
 (* Records a defining class to a definition body, which indicates
    where the body is defined.  It is used to obtain an enclosing
    class, (which is the prefix of the subject).  This assignment takes
