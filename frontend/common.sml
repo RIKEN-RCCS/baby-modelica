@@ -8,11 +8,6 @@ structure common = struct
 open plain
 open ast
 
-(* Prints a trace message. *)
-
-fun tr_tree (s : string) = if true then (print (s ^"\n")) else ()
-fun tr_tree_vvv (s : string) = if false then (print (s ^"\n")) else ()
-
 (* ================================================================ *)
 
 type cooker_t =
@@ -861,6 +856,22 @@ fun enclosing_of_body k = (
 	in
 	    enclosing
 	end)
+      | Def_Der _ => raise Match
+      | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
+      | Def_Argument _ => raise Match
+      | Def_Named _ => raise Match
+      | Def_Scoped _ => raise Match
+      | Def_Refine _ => raise Match
+      | Def_Extending _ => raise Match
+      | Def_Replaced _ => raise Match
+      | Def_Displaced _ => raise Match
+      | Def_In_File => raise Match
+      | Def_Mock_Array _ => raise Match)
+
+fun class_specifier_of_body k = (
+    case k of
+	Def_Body (mk, cs, nm, cc, ee, aa, ww) => cs
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match

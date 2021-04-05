@@ -324,16 +324,16 @@ and bind_in_statement kp binder s0 = (
 	    St_Break (Annotation (map walk_m aa0), ww))
 	  | St_Return (Annotation aa0, ww) => (
 	    St_Return (Annotation (map walk_m aa0), ww))
-	  | St_Assign (x0, y0, Annotation aa0, ww) => (
-	    St_Assign ((walk_x x0), (walk_x y0),
+	  | St_Assign ((x0, y0), Annotation aa0, ww) => (
+	    St_Assign (((walk_x x0), (walk_x y0)),
 		       Annotation (map walk_m aa0), ww))
-	  | St_Call (x0, y0, z0, Annotation aa0, ww) => (
-	    St_Call ((map walk_x x0), (walk_x y0), (map walk_x z0),
+	  | St_Call ((x0, y0, z0), Annotation aa0, ww) => (
+	    St_Call (((map walk_x x0), (walk_x y0), (map walk_x z0)),
 		     Annotation (map walk_m aa0), ww))
 	  | St_If (c0, Annotation aa0, ww) => (
 	    St_If ((map walk_x_ss c0),
 		   Annotation (map walk_m aa0), ww))
-	  | St_For (ii0, ss0, Annotation aa0, ww) => (
+	  | St_For ((ii0, ss0), Annotation aa0, ww) => (
 	    let
 		val (binder1, ii1) = (make_iterator_binder
 					  ctx false binder ii0)
@@ -342,10 +342,10 @@ and bind_in_statement kp binder s0 = (
 		val ss1 = (map walk_s ss0)
 		val aa1 = (map walk_m aa0)
 	    in
-		St_For (ii1, ss1, Annotation aa1, ww)
+		St_For ((ii1, ss1), Annotation aa1, ww)
 	    end)
-	  | St_While (e0, ss0, Annotation aa0, ww) => (
-	    St_While ((walk_x e0), (map walk_s ss0),
+	  | St_While ((e0, ss0), Annotation aa0, ww) => (
+	    St_While (((walk_x e0), (map walk_s ss0)),
 		      Annotation (map walk_m aa0), ww))
 	  | St_When (cc0, Annotation aa0, ww) => (
 	    St_When ((map walk_x_ss cc0),

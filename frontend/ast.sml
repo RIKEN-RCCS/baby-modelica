@@ -290,18 +290,18 @@ datatype equation_t
 and statement_t
     = St_Break of annotation_t * comment_t
     | St_Return of annotation_t * comment_t
-    | St_Assign of (expression_t * expression_t
+    | St_Assign of ((expression_t * expression_t)
 		    * annotation_t * comment_t)
-    | St_Call of (expression_t list * expression_t * expression_t list
+    | St_Call of ((expression_t list * expression_t * expression_t list)
 		  * annotation_t * comment_t)
     | St_If of ((expression_t * statement_t list) list
 		* annotation_t * comment_t)
-    | St_For of (for_index_t list * statement_t list
-		 * annotation_t * comment_t)
-    | St_While of (expression_t * statement_t list
-		   * annotation_t * comment_t)
     | St_When of ((expression_t * statement_t list) list
 		  * annotation_t * comment_t)
+    | St_For of ((for_index_t list * statement_t list)
+		 * annotation_t * comment_t)
+    | St_While of ((expression_t * statement_t list)
+		   * annotation_t * comment_t)
     (*| St_Comment of (annotation_t * comment_t)*)
 
 (* A variable declaration.  Its body is always a Def_Refine (or a
@@ -391,19 +391,21 @@ and definition_body_t
     | Def_Mock_Array of
       (int list * definition_body_t list * definition_body_t option)
 
-(* Import_Clause has an ID pair (v0,v1) for importing v1=pkg.v0.  Or,
-   it is a "*"-form import if the ID part is NONE.  Element_Class and
-   Element_State are class definitions and variable declarations.
-   Redefine_Class and Redeclare_State are the same as Element_Class
-   and Element_State, but ones prefixed by redeclare.  Usual field
-   namings are: Element_State(z,r,d,h) and Element_Class(z,r,d,h).
-   The entires Element_Import, Element_Base, Base_List, and
-   Base_Classes are introduced in syntaxing.  Element_Import replaces
-   Import_Clause.  Element_Base replaces Extends_Clause, and names a
-   base class.  Base_List lists bases of this class (transitively).
-   Base_Classes holds the class definitions to which Element_Base and
-   Base_List refers.  Base_Classes only exists in a main (non-base)
-   class.  The bases are collected to remove duplicates. *)
+(* An Import_Clause has an ID pair (v0,v1) for importing v1=P.v0.  Or,
+   it is NONE for a "*"-form import.  An Extends_Clause is as it is.
+   An Element_Class and an Element_State are class definitions and
+   variable declarations.  A Redefine_Class and a Redeclare_State are
+   similar to an Element_Class and an Element_State, but ones prefixed
+   by redeclare.  Usual field namings are: Element_State(z,r,d,h) and
+   Element_Class(z,r,d,h).  The entires Element_Import, Element_Base,
+   Base_List, and Base_Classes are introduced in syntaxing.  An
+   Element_Import replaces an Import_Clause.  An Element_Base replaces
+   an Extends_Clause, and it names a base class in the Base_Classes.
+   A Base_List lists bases of this class (the list exists even if it
+   is not a main class).  A Base_Classes holds the class definitions
+   to which an Element_Base and a Base_List refers.  A Base_Classes
+   only exists in a main (non-base) class.  The bases are collected to
+   remove duplicates. *)
 
 and element_t
     = Import_Clause of
@@ -773,12 +775,12 @@ fun attach_comment_to_statement s (aa, ww) = (
     case s of
 	St_Break (_, _) => St_Break (aa, ww)
       | St_Return (_, _) => St_Return (aa, ww)
-      | St_Assign (x, y, _, _) => St_Assign (x, y, aa, ww)
-      | St_Call (vv, f, ee, _, _) => St_Call (vv, f, ee, aa, ww)
+      | St_Assign ((x, y), _, _) => St_Assign ((x, y), aa, ww)
+      | St_Call ((vv, f, ee), _, _) => St_Call ((vv, f, ee), aa, ww)
       | St_If (cc, _, _) => St_If (cc, aa, ww)
       | St_When (cc, _, _) => St_When (cc, aa, ww)
-      | St_For (rr, ss, _, _) => St_For (rr, ss, aa, ww)
-      | St_While (e, ss, _, _) => St_While (e, ss, aa, ww))
+      | St_For ((rr, ss), _, _) => St_For ((rr, ss), aa, ww)
+      | St_While ((e, ss), _, _) => St_While ((e, ss), aa, ww))
 
 (* Makes if-then-else, by simply concatenating an else-if part to
    reduce nesting. *)

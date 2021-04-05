@@ -371,44 +371,6 @@ fun body_is_declaration_form k = (
 
 (* ================================================================ *)
 
-(*AHO*)
-
-(* CLASS SIMILARITY IS NOT IMPLEMENTED. *)
-
-(* It does not matter about variable declarations at step=E3. *)
-
-fun drop_duplicate_declarations step (bindings : naming_t list) = (
-    let
-	fun eq (Naming (v0, _, _, _, _), Naming (v1, _, _, _, _)) = (
-	    (v0 = v1))
-
-	fun unify (b0, b1) = (
-	    case (b0, b1) of
-		(Naming (v0, _, _, _, e0), Naming (v1, _, _, _, e1)) => (
-		case (e0, e1) of
-		    (EL_Class (_, _, d0, _), EL_Class (_, _, d1, _)) => (
-		    if ((tag_of_definition d0) = (tag_of_definition d1)) then
-			b0
-		    else
-			(*raise (error_duplicate_declarations (b0, b1))*)
-			b0)
-		  | (EL_State (_, q0, d0, _), EL_State (_, q1, d1, _)) => (
-		    if (step = E3) then
-			b0
-		    else
-			(*raise (error_duplicate_declarations (b0, b1))*)
-			b0)
-		  | _ => raise (error_duplicate_declarations (b0, b1))))
-
-	fun unify_by_pairs ([]) = raise Match
-	  | unify_by_pairs (b :: bb) = (foldl unify b bb)
-
-	val bb0 = (list_groups eq bindings)
-	val bb1 = (map unify_by_pairs bb0)
-    in
-	bb1
-    end)
-
 (* Tests approximately if a class is modifiable.  The cooker skips
    modifier applications if it is not.  It returns true only when it
    is certain.  Returning false is OK that continues applying

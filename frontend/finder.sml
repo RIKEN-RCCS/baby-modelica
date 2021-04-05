@@ -71,6 +71,53 @@ fun import_name_to_string tag idxid = (
 	NONE => (tag_to_string tag)
       | SOME (id, _) => ((tag_to_string tag) ^"."^ (id_to_string id)))
 
+(*AHO*)
+
+(* CLASS SIMILARITY IS NOT IMPLEMENTED. *)
+
+(* Drops duplicate declarations.  It does not matter about variable
+   declarations at step=E3. *)
+
+fun drop_duplicate_declarations step (bindings : naming_t list) = (
+    let
+	fun eq (Naming (v0, _, _, _, _), Naming (v1, _, _, _, _)) = (
+	    (v0 = v1))
+
+	fun unify (b0 as Naming (_, _, _, _, e0), b1 as Naming (_, _, _, _, e1)) = (
+	    case (e0, e1) of
+		(EL_Class (_, _, d0, _), EL_Class (_, _, d1, _)) => (
+		let
+		    val Defclass ((v0, g0), k0) = d0
+		    val Defclass ((v1, g1), k1) = d1
+		in
+		    if ((tag_of_definition d0) = (tag_of_definition d1)) then
+			b0
+		    else
+			(*raise (error_duplicate_declarations (b0, b1))*)
+			b0
+		end)
+	      | (EL_State (_, q0, d0, _), EL_State (_, q1, d1, _)) => (
+		let
+		    val Defvar (v0, k0) = d0
+		    val Defvar (v1, k1) = d1
+		in
+		    if (step = E3) then
+			b0
+		    else
+			(*raise (error_duplicate_declarations (b0, b1))*)
+			b0
+		end)
+	      | _ => raise (error_duplicate_declarations (b0, b1)))
+
+	fun unify_by_pairs ([]) = raise Match
+	  | unify_by_pairs (b :: bb) = (foldl unify b bb)
+
+	val bb0 = (list_groups eq bindings)
+	val bb1 = (map unify_by_pairs bb0)
+    in
+	bb1
+    end)
+
 (* ================================================================ *)
 
 fun mark_inner ne0 = (

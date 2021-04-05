@@ -126,9 +126,9 @@ language specification.
 
 This random memo accompanies the source code.  This document was
 written as implementation notes but has grown with addendums to
-the_specification.  So, it is now renamed as a reference manual.  This
+the_specification.  It is now a kind of a reference manual.  This
 document often refers to the sections of the_specification.  We
-apologize if it is hard to read.
+apologize for poor understanding and poor English.
 
 %%%%%%%%%%%%%%%%
 
@@ -170,30 +170,33 @@ Some rules are assumed in the_implementation on syntaxing.
 
 \subsubsection*{Composite names}
 
-A variable (instance) reference is in the form like
+A non-constant variable (instance) reference is in the form like
 $x[...].y[...].z[...]$.  Subscripts are optional in a variable
 reference.  A class reference is like $A.B.C$.  Subscripts are not
 allowed in a class reference.  Classes $A$, $B$, and $C$ can be
-packages or non-packages.  A constant refererence in a class is like
+packages or non-packages, and classes except for the last one are
+treated as packages.  A constant refererence in a class is like
 $A.B.C.a[...].b[...].c[..]$, where all $a$, $b$, and $c$ are constants
 and subscripts are optional.
 
-A non-constant variable (instance) reference does not have any
-prefixes of classes nor a preceding dot.
+A non-constant variable reference does not have any prefixes of
+classes nor a preceding dot.  A class reference may be with a
+preceding dot, where the empty name refers to the package-root.  A
+class may be referred to via a variable reference, and in that case,
+the class is considered as a package.
 
-A class reference may be with a preceding dot, which refers to the
-unnamed root.  Or, a class reference may follow a variable reference,
-in that case classes are considered as packages.
-
-\begin{QRULE}\label{mixed-class-instance-reference} There is a single
-namespace for classes and variables.  It is allowed to refer to a
-constant in a package via a variable reference as $x.P.c$.  But, it is
-illegal to refer to a class via a variable reference in a declaration
-as (illegal) $x.C~v$.\end{QRULE}
+There is a single namespace for classes and variables.
+%%%%
+\begin{QRULE}\label{mixed-class-instance-reference} It is legal to
+refer to a class via a variable reference as $x.P$, but the class is
+treated as a package.  Thus, it is legal to refer to a constant via a
+variable reference as $x.P.c$, but, it is illegal to refer to a class
+via a variable reference in a declaration as (illegal)
+$x.C~v$.\end{QRULE}
 
 \begin{QFACT} An enclosing class is considered as a package in the
-nesting of class definitions, and the scope of an enclosing class only
-includes the constants but variables are ignored.\end{QFACT}
+nesting of class definitions, and the elements of an enclosing class
+only includes the constants but the variables are ignored.\end{QFACT}
 %%%%
 See Rule~\ref{model-nesting} for the binary roles of a class.
 
@@ -206,9 +209,10 @@ For example, (illegal) $\{1,2,3\}[1]$ is not allowed.
 
 \begin{QRULE}\label{time-and-end} A variable $\mathit{time}$ is
 visible everywhere.  Variables $\mathit{end}$ are visible in array
-indexing.  These are the only predefined_variables.  $\mathit{time}$
-is a variable, and thus, not defined in the unnamed-enclosing-class
-(it is a package).\end{QRULE}
+indexing.  These are the only predefined_variables.\end{QRULE}
+
+$\mathit{time}$ is a variable and not defined in the package-root (it
+is a package), Thus, $\mathit{time}$ cannot have a preceding dot.
 %%%%
 \begin{quote}
 \begin{lstlisting}[aboveskip=-\baselineskip]
@@ -221,42 +225,42 @@ end M;
 \end{lstlisting}
 \end{quote}
 
-\subsubsection*{(?) Scopes}
+\subsubsection*{Scopes}
 
 The scope is flat in most cases, spanning from the main (non-base)
-class to the base classes where the class and variable names are
-distinct.  However, class names and constants are visible via
-enclosing classes, and hiding some of the names in an enclosing class
-may happen.  An enclosing class is defined to each main and base
-class.
+class to the base classes.  The class and variable names should be
+distinct, or the definitions/declarations should be identical.
+However, class names and constants in the enclosing classes are
+visible hierarchically, and shadowing some of the names in an
+enclosing class may happen.  An enclosing class is defined to each
+main and base class.
 
 %%%%%%%%%%%%%%%%
 
 \subsection{Importing}
 
-\def\baseofbase{This inclusion recurses transitively to the base
+\def\baseimport{This inclusion recurses transitively to the base
 classes}
 
 \def\noimport{This inclusion does not include the imported names in
 the base classes nor the names in the enclosing classes in the base
 classes}
 
-Importing makes visible the names of the definition/declaration
-elements of the specified package to the present class.  The inclusion
-is from any classes but they are processed as packages.  The inclusion
-is limited to the public elements. \baseofbase. \noimport.
+Importing makes visible the names of the definitions/declarations of
+the specified package to the present class.  The inclusion is from any
+classes but they are treated as packages.  The inclusion is limited to
+the public elements. \baseimport. \noimport.
 
 \subsubsection*{Import-clause syntax}
 
-\def\packagenames{P_0.\,...\,.P_{n-1}}
-
-See \specref{13.2.1}.  A package name in an import-clause is
-considered as fully~qualified.  It can import only from packages.  In
-the following, $\mathit{package}$ is a sequence of identifiers
-$\mathit{package}=\packagenames$.  Each prefix in $P_0\,...\,.P_i$
-refers to a class, and $P_{n-1}$ refers to a package.
-$\mathit{package}$ can be empty.  Each $P_i$ and $N$ refers to an
-indentifier.
+See \specref{13.2.1}.  Importing is only from packages.  However,
+classes of any class_kinds are treated as packages.  A package name in
+an import-clause is considered as fully_qualified.  That is, a name
+search starts from the package-root.  In the following description,
+each $P_i$ and $N$ refers to an identifier, and $\mathit{package}$ is
+a sequence of identifiers $\mathit{package}={P_0.\,...\,.P_{n-1}}$.
+Each prefix $P_0\,...\,.P_i$ and $\mathit{package}$ refers to a
+package.  $\mathit{package}$ can be empty.
 
 \begin{quote}
 \begin{description}
@@ -268,8 +272,9 @@ syntactic difference when $N$ refers to a class/package or a constant.
 
 \item [$\mathbf{import}\;\mathit{package}.*$] (unqualified import):
 imports each public name visible in the package including one in the
-base_classes as "$\mathbf{import}\;N_i=\mathit{package}.N_i$" for
-$N_i$.  The package part can not be empty in this case.
+base_classes.  It equivalent to
+"$\mathbf{import}\;N_i=\mathit{package}.N_i$" for $N_i$ in the
+package.  The package part can not be empty in this case.
 
 \item [$\mathbf{import}\;\mathit{package}.N$] (qualified import/single
 definition import): is equivalent to
@@ -297,19 +302,23 @@ a package $P_{n-1}$ visible as an identifier $N$.
 \subsection{Extending}
 
 Extending includes the (definition/declaration) elements of the base
-classes to the present class.  \baseofbase.  \noimport.  The
+classes to the present class.  \baseimport.  \noimport.  The
 visibility is nothing to do with the bases because it is either
 $\mathbf{public}$ or $\mathbf{protected}$.
 
 \subsubsection*{Checks for extends clauses}
 
-\begin{QRULE}\label{uniqueness-after-extension} It is an error if a
+\begin{QRULE}\label{uniqueness-after-extension} It is illegal if a
 base class $A$ of $\mathbf{extends}\;A$ is defined in the class $A$
-itself or in other base classes.  This is broadly interpreted as a
-lookup of $A$ skips extends-clauses. \end{QRULE}
+itself or in its base classes.  This can be interpreted as a lookup of
+$A$ just ignores its extends-clauses.\end{QRULE}
 
-This may be a result of requiring the uniqueness of resolution of a
-class name.  When another class $A$ were defined in $A$ in the code
+\begin{qquote} (\specref{5.6.1.4}\/) The classes of extends-clauses
+are looked up before and after handling extends-clauses; and it is an
+error if those lookups generate different results.\end{qquote}
+%%%%
+This may be by the requirement of the uniqueness of class name
+resolution.  When another class $A$ were defined in $A$ in the code
 below, two occurrences of $A$ would refer to the different classes,
 which contradicts to an intuitive assumption that the both $A$ are the
 same.
@@ -323,60 +332,9 @@ end M;
 \end{lstlisting}
 \end{quote}
 
-\begin{qquote} (\specref{5.6.1.4}\/) The classes of extends-clauses
-are looked up before and after handling extends-clauses; and it is an
-error if those lookups generate different results.\end{qquote}
-
-\subsubsection*{Mutual dependence of extends-clauses}
-
-\begin{QRULE}\label{ban-mutual-inheritance} Mutual dependence of
-extends-clauses is prohibited.  \end{QRULE}
-
-(?) The_specification does not likely state it explicitly.
-The_specification states that inheritance is unified in cases where a
-class extends a common base_class through distinct intermediate
-base_classes.  Mutual dependence could be resolved by identifying.
-
-%% ("diamond"-paths of inheritance)
-
-\subsubsection*{Extending a single base multiple times (?)}
-
-\begin{QRULE}\label{multiple-extensions-of-single-base} (?) Extending
-a single class multiple times (usually via a common base class) is
-allowed only if the modifiers to it are identical.  It is an error if
-the modifiers differ.  \end{QRULE}
-
-It is ambiguous what identical means.  Textual equality may not be
-sufficient with class modifications.  Consider "extends~A(x=a)" and
-"extends~A(x=b)" with "a=0" and "b=0".
-
-(?) It may require {unifying inherited elements}.  Classes and
-variables multiply inherited are unified.
-
-\begin{qquote}\label{quo:unifying-inherited-elements} (\specref{5.6.1.4},
-in the paragraph {\it{}The inherited contents of the element\/}) At
-the end, the current instance is checked whether their children with
-the same name are identical and only the first one of them is kept.
-It is an error if they are not identical. (* A "child" means a
-component. *)\end{qquote}
-
-(* The_implementation does not check the equivalence of modifiers, and
-arbitrary selects one modification. *)
-
-\subsubsection*{Operator_record}
-
-Operator_records have restrictions on extends-clauses.
-
-\begin{qquote} (\specref{4.6}, in the table) (?) It is not legal to
-extend from any of its enclosing scopes.  (* {\it{}enclosing\/} likely
-refers to {\it{}enclosed} *).\end{qquote}
-
-\subsubsection*{No scopes of bases in a lookup of a base class}
-
-\begin{QRULE} A lookup of a base class name skips bases of the present
-class.  It applies to a lookup of both the first part and the
-remaining parts of a composite name. \end{QRULE}
-
+For more examples of skipping bases of the present class in looking up
+of a base class.  It applies to a lookup of both the first part and
+the remaining parts of a composite name.
 %%%%
 \begin{quote}
 \begin{lstlisting}[aboveskip=-\baselineskip]
@@ -401,20 +359,70 @@ end M1;
 
 \paragraph {Remark}
 
-Note the first case is accepted with warnings in some_implementations,
-and the both cases will be accepted, when the extends-clauses are
-swapped, i.e., when $\mathbf{extends}\;A$ comes early.
+Note that some_implementations accept the first case with warnings
+($M0$), and will accept the both cases ($M0$ and $M1$) when the
+extends-clauses are swapped, i.e., when $\mathbf{extends}\;A$ comes
+early.
+
+\subsubsection*{Mutual dependence of extends-clauses}
+
+\begin{QRULE}\label{ban-mutual-inheritance} Mutual dependence of
+extends-clauses is prohibited.\end{QRULE}
+%%%%
+The_specification does not likely state it explicitly.
+
+\paragraph {Remark}
+
+The_specification states that inheritance is unified in case a class
+extends a common base_class through distinct intermediate
+base_classes.  Thus, mutual dependence might be allowed by unifying
+the base classes.
+
+%% ("diamond"-paths of inheritance)
+
+\subsubsection*{Extending a single base multiple times (?)}
+
+\begin{QRULE}\label{multiple-extensions-of-single-base} (?) Extending
+a single class multiple times (usually via a common base class) is
+allowed only if the modifiers to it are identical.  It is illegal if
+the modifiers differ.\end{QRULE}
+
+\begin{qquote}\label{quo:unifying-inherited-elements}
+(\specref{5.6.1.4}, in the paragraph {\it{}The inherited contents of
+the element\/}) At the end, the current instance is checked whether
+their children with the same name are identical and only the first one
+of them is kept.  It is an error if they are not identical. (* A
+"child" means a component. *)\end{qquote}
+%%%%
+It requires unifying inherited elements.  Classes and variables
+multiply inherited are unified.
+
+\paragraph {Remark}
+
+It is ambiguous what identical means.  Textual equality may not be
+sufficient with class modifications.  Consider for example,
+$\mathbf{extends}\;A(x=a)$ and $\mathbf{extends}\;A(x=b)$ with $a=0$
+and $b=0$.
+
+\subsubsection*{Operator_record}
+
+Operator_records have restrictions on extends-clauses.
+
+\begin{qquote} (\specref{4.6}, in the table) An operator record can
+only extend from an operator record [as a short class definition, and
+not from another specialized class].  It is not legal to extend from
+any of its enclosing scopes.\end{qquote}
 
 \subsubsection*{Unifying defined classes}
 
-\begin{QRULE}\label{multiple-definitions} It is not an error if
-classes with the same name are defined multiple times in the main
-class and its bases, when the definitions are considered identical.
-Identical classes are a sort of unified.  It is defined in
-the_specification that classes are identical if they are textually
-identical after possible modifications. \end{QRULE}
-
-For example, in Fluid/Interfaces, the declarations of
+\begin{QRULE}\label{multiple-definitions} It is legal if classes with
+the same name are defined multiple times in the main class and its
+bases, when the definitions are considered identical.  Identical
+classes are a sort of unified.  It is defined that classes are
+identical if they are textually identical after possible
+modifications.\end{QRULE}
+%%%%
+For example in $\mathit{Fluid/Interfaces}$, the definitions of
 $\mathit{Medium}$ need be unified, when $\mathit{PartialPump}$ extends
 both $\mathit{PartialTwoPort}$ and $\mathit{PartialLumpedVolume}$.
 %%%%
@@ -435,18 +443,19 @@ end PartialLumpedVolume;
 \end{quote}
 %%%%
 $\mathit{PartialPump}$ is defined in
-$\mathit{Modelica.Fluid.Machines.BaseClasses}$.\\
+$\mathit{Modelica}.\mathit{Fluid}.\mathit{Machines}.\mathit{BaseClasses}$.\\
 $\mathit{PartialTwoPort}$ and $\mathit{PartialLumpedVolume}$ are
-defined in $\mathit{Modelica.Fluid.Interfaces}$.
+defined in $\mathit{Modelica}.\mathit{Fluid}.\mathit{Interfaces}$.
 
-\subsubsection*{Extending simple_types}
+\subsubsection*{Restrictions on adding elements}
 
 \begin{QFACT}\label{extending-simple-types} Extending simple_types is
-legal either by a short_class_definition or by an extends-clause.  But
-adding elements is illegal.\end{QFACT}
+legal either by a short_class_definition or by an extends-clause.
+But, adding elements (class/variable) is illegal.\end{QFACT}
 
-\subsubsection*{Restrictions on elements}
-
+Add elements is illegal to a class extending an array, a simple_type,
+or a class with an input/output prefix.
+%%%%
 \begin{qquote} (\specref{4.5.2}\/) It is not legal to combine other
 components or base-classes with an extends from an array class, a
 class with non-empty base-prefix, a simple_type...\end{qquote}
@@ -821,6 +830,7 @@ $a$ is resolved in the LHS rule, and $x$ in the RHS rule.
 \begin{quote}
 \begin{lstlisting}[aboveskip=-\baselineskip]
 /*LEGAL*/
+
 model A
     Real a=0;
     constant Real x=1;
@@ -931,6 +941,7 @@ A modifier $(x=20)$ is ignored in the following example.
 \begin{quote}
 \begin{lstlisting}[aboveskip=-\baselineskip]
 /*LEGAL*/
+
 model A
     Real x=10;
     Real y=10;
@@ -3375,23 +3386,26 @@ parameter subexpressions is a parameter expression.\end{qquote}
 \specref{3.8.1}\/ and \specref{3.8.2}\/ list constant expressions
 (functions and variables) which can take non-constant arguments:
 %%%%
-\begin{quote}\spaceskip=2em
-initial
-terminal
-der
-edge
-change
-sample
-pre
+\begin{quote}%\spaceskip=2em
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w initial
+\w terminal
+\w der
+\w edge
+\w change
+\w sample
+\w pre
 \end{quote}
 %%%%
-\begin{quote}\spaceskip=2em\let~=\enspace
-ndims(A)
-cardinality(c)
-end
-size(A) size(A,~j)
-Connections.isRoot(A.R)
-Connections.rooted(A.R)
+\begin{quote}%\spaceskip=2em
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w ndims(A)
+\w cardinality(c)
+\w end
+\w size(A)
+\w size(A,~j)
+   Connections.isRoot(A.R)
+   Connections.rooted(A.R)
 \end{quote}
 
 %%%%%%%%%%%%%%%%
@@ -3668,75 +3682,78 @@ etc.
 
 \subsubsection*{Syntactic keywords}
 
-\begin{quote}\widespacing
-algorithm
-and
-annotation
-block
-break
-class
-connect
-connector
-constant
-constrainedby
-der
-discrete
-each
-else
-elseif
-elsewhen
-encapsulated
-end
-enumeration
-equation
-expandable
-extends
-external
-false
-final
-flow
-for
-function
-if
-import
-impure
-in
-initial
-inner
-input
-loop
-model
-not
-operator
-or
-outer
-output
-package
-parameter
-partial
-protected
-public
-pure
-record
-redeclare
-replaceable
-return
-stream
-then
-true
-type
-when
-while
-within
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w algorithm
+\w and
+\w annotation
+\w block
+\w break
+\w class
+\w connect
+\w connector
+\w constant
+\w constrainedby
+\w der
+\w discrete
+\w each
+\w else
+\w elseif
+\w elsewhen
+\w encapsulated
+\w end
+\w enumeration
+\w equation
+\w expandable
+\w extends
+\w external
+\w false
+\w final
+\w flow
+\w for
+\w function
+\w if
+\w import
+\w impure
+\w in
+\w initial
+\w inner
+\w input
+\w loop
+\w model
+\w not
+\w operator
+\w or
+\w outer
+\w output
+\w package
+\w parameter
+\w partial
+\w protected
+\w public
+\w pure
+\w record
+\w redeclare
+\w replaceable
+\w return
+\w stream
+\w then
+\w true
+\w type
+\w when
+\w while
+\w within
+\hfill
 \end{quote}
 
 \subsubsection*{Reserved type names}
 
-\begin{quote}\widespacing
-Real
-Integer
-Boolean
-String
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w Real
+\w Integer
+\w Boolean
+\w String
 \end{quote}
 
 \noindent
@@ -3755,20 +3772,19 @@ These names have overloaded meanings.
 \subsubsection*{Classes}
 
 \begin{quote}
-\spaceskip=2em
-\sloppy\hyphenpenalty=10000\exhyphenpenalty=10000
-
-Real
-Integer
-Boolean
-String
-{\it{}enumeration}
-Clock
-StateSelect
-ExternalObject
-AssertionLevel
-Connections
-
+%\spaceskip=2em
+%\sloppy\hyphenpenalty=10000\exhyphenpenalty=10000
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w Real
+\w Integer
+\w Boolean
+\w String
+\w {\it{}enumeration}
+\w Clock
+\w StateSelect
+\w ExternalObject
+\w AssertionLevel
+\w Connections
 \end{quote}
 
 \noindent $\mathit{enumeration}$ means names of any enumeration.  All
@@ -3777,13 +3793,12 @@ enumerations are members of simple_types.  It may be referred to as
 
 \subsubsection*{Attributes}
 
-\begin{quote}\widespacing
-
-start
-fixed
-nominal
-unbounded
-
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w start
+\w fixed
+\w nominal
+\w unbounded
 \end{quote}
 
 %%%%%%%%%%%%%%%%
@@ -3794,8 +3809,9 @@ unbounded
 
 (\specref{3.6.7}\/)
 
-\begin{quote}\widespacing
-time
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w time
 \end{quote}
 %%%%
 
@@ -3803,8 +3819,9 @@ $\mathit{time}$ has a special scoping rule.
 
 \subsubsection*{end}
 
-\begin{quote}\widespacing
-end
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w end
 \end{quote}
 
 Variables $\mathit{end}$ have a special scoping rule.
@@ -3980,68 +3997,64 @@ variables. *)
 \subsubsection*{Numeric functions and conversion functions}
 (\specref{3.7.1}\/)
 
-\begin{quote}\widespacing
-
-abs(v)
-sign(v)
-sqrt(v)
-Integer(e)
-{\it{}enumeration}(i)
-String(...)
-
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w abs(v)
+\w sign(v)
+\w sqrt(v)
+\w Integer(e)
+\w {\it{}enumeration}(i)
+\w String(...)
 \end{quote}
 
 \subsubsection*{Event triggering mathematical functions}
 (\specref{3.7.1.1}\/)
 
-\begin{quote}\widespacing
-
-div(x,~y)
-mod(x,~y)
-rem(x,~y)
-ceil(x)
-floor(x)
-integer(x)
-
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w div(x,~y)
+\w mod(x,~y)
+\w rem(x,~y)
+\w ceil(x)
+\w floor(x)
+\w integer(x)
 \end{quote}
 
 \subsubsection*{Predefined mathematical functions}
 (\specref{3.7.1.2}\/)
 
-\begin{quote}\widespacing
-
-sin(x)
-cos(x)
-tan(x)
-asin(x)
-acos(x)
-atan(x)
-atan2(y,~x)
-sinh(x)
-cosh(x)
-tanh(x)
-exp(x)
-log(x)
-log10(x)
-
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w sin(x)
+\w cos(x)
+\w tan(x)
+\w asin(x)
+\w acos(x)
+\w atan(x)
+\w atan2(y,~x)
+\w sinh(x)
+\w cosh(x)
+\w tanh(x)
+\w exp(x)
+\w log(x)
+\w log10(x)
 \end{quote}
 
 \subsubsection*{Derivative and special purpose operators}
 (\specref{3.7.2}\/)
 
-\begin{quote}\widespacing
-
-der(expr)
-delay(expr,~delayTime,~delayMax)
-delay(expr,~delayTime)
-cardinality(c)
-homotopy(actual,~simplified)
-semiLinear(x,~positiveSlope,~negativeSlope)
-inStream(v)
-actualStream(v)
-spatialDistribution(in0,~in1,~x,~positiveVelocity,~initialPoints,~initialValues)
-getInstanceName()
-
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[14em][l]{#1} }\raggedright\let~=\enspace
+\w der(expr)
+\w delay(expr,~delayTime,~delayMax)
+\w delay(expr,~delayTime)
+\w cardinality(c)
+\w homotopy(actual,~simplified)
+   semiLinear(x,~positiveSlope,~negativeSlope)
+\w inStream(v)
+\w actualStream(v)
+   spatialDistribution(in0,~in1,~x,~positiveVelocity,~initialPoints,~initialValues)
+\w getInstanceName()
 \end{quote}
 
 \noindent $\mathrm{der}\,(...)$ accepts only one argument, although it
@@ -4053,47 +4066,41 @@ equations related to a given steam variable $v$.
 \subsubsection*{Event-related operators}
 (\specref{3.7.3}\/)
 
-\begin{quote}\widespacing
-
-initial()
-terminal()
-noEvent(expr)
-smooth(p,~expr)
-sample(start,~interval)
-pre(y)
-edge(b)
-change(v)
-reinit(x,~expr)
-
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[10em][l]{#1} }\raggedright\let~=\enspace
+\w initial()
+\w terminal()
+\w noEvent(expr)
+\w smooth(p,~expr)
+\w sample(start,~interval)
+\w pre(y)
+\w edge(b)
+\w change(v)
+\w reinit(x,~expr)
 \end{quote}
 
 \subsubsection*{Assert}
 (\specref{8.3.7}\/)
 
 \begin{quote}\widespacing
-
 assert(condition,~message,~level)
-
 \end{quote}
 
 \subsubsection*{Terminate}
 (\specref{8.3.8}\/)
 
 \begin{quote}\widespacing
-
 terminate(s)
-
 \end{quote}
 
 \subsubsection*{Array dimension and size functions}
 (\specref{10.3.1}\/)
 
-\begin{quote}\widespacing
-
-ndims(A)
-size(A,~i)
-size(A)
-
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w ndims(A)
+\w size(A,~i)
+\w size(A)
 \end{quote}
 
 \noindent See~\ref{sec:array-size}.
@@ -4101,12 +4108,11 @@ size(A)
 \subsubsection*{Dimensionality conversion functions}
 (\specref{10.3.2}\/)
 
-\begin{quote}\widespacing
-
-scalar(A)
-vector(A)
-matrix(A)
-
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w scalar(A)
+\w vector(A)
+\w matrix(A)
 \end{quote}
 
 \subsubsection*{Array constructor}
@@ -4121,13 +4127,14 @@ array(...)
 \subsubsection*{Specialized array constructor functions}
 (\specref{10.3.3}\/)
 
-\begin{quote}\widespacing
-identity(n)
-diagonal(v)
-zeros(n1,~n2,~n3,~...)
-ones(n1,~n2,~n3,~...)\\
-fill(e,~n1,~n2,~n3,~...)
-linspace(x1,~x2,~n)
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[10em][l]{#1} }\raggedright\let~=\enspace
+\w identity(n)
+\w diagonal(v)
+\w zeros(n1,~n2,~n3,~...)
+\w ones(n1,~n2,~n3,~...)
+\w fill(e,~n1,~n2,~n3,~...)
+\w linspace(x1,~x2,~n)
 \end{quote}
 
 \noindent See~\ref{sec:array-size}.
@@ -4154,30 +4161,30 @@ case.
 \subsubsection*{Matrix and vector algebra functions}
 (\specref{10.3.5}\/)
 
-\begin{quote}\widespacing
-transpose(A)
-outerProduct(v1,~v2)
-symmetric(A)
-cross(x,~y)
-skew(x)
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[10em][l]{#1} }\raggedright\let~=\enspace
+\w transpose(A)
+\w outerProduct(v1,~v2)
+\w symmetric(A)
+\w cross(x,~y)
+\w skew(x)
 \end{quote}
 
 \subsubsection*{Reduction functions and operators}
 (\specref{10.3.4}\/)
 
-\begin{quote}\widespacing
-
-min(A)
-min(x,~y)
-min(e(i,~...,~j)~for~i~in~u,~...,~j~in~v)
-max(A)
-max(x,~y)
-max(e(i,~...,~j)~for~i~in~u,~...,~j~in~v)
-sum(A)
-sum(e(i,~...,~j)~for~i~in~u,~...,~j~in~v)
-product(A)
-product(e(i,~...,~j)~for~i~in~u,~...,~j~in~v)
-
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w min(A)
+\w min(x,~y)
+   min(e(i,~...,~j)~for~i~in~u,~...,~j~in~v)
+\w max(A)
+\w max(x,~y)
+   max(e(i,~...,~j)~for~i~in~u,~...,~j~in~v)
+\w sum(A)
+   sum(e(i,~...,~j)~for~i~in~u,~...,~j~in~v)
+\w product(A)
+   product(e(i,~...,~j)~for~i~in~u,~...,~j~in~v)
 \end{quote}
 
 \subsubsection*{pure}
@@ -4196,9 +4203,7 @@ pure(...)
 \subsubsection*{Functions in types and records}
 
 \begin{quote}\widespacing
-
 equalityConstraint(x,~y)
-
 \end{quote}
 
 %%%%%%%%%%%%%%%%
@@ -4215,42 +4220,37 @@ class Clock;
 (\specref{16.4}\/)
 
 \begin{quote}\widespacing
-
 previous(u)
-
 \end{quote}
 
 \subsubsection*{Base-clock conversion operators}
 (\specref{16.5.1}\/)
 
-\begin{quote}\widespacing
-
-sample(u,~c)
-hold(u)
-
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w sample(u,~c)
+\w hold(u)
 \end{quote}
 
 \subsubsection*{Sub-clock conversion operators}
 (\specref{16.5.2}\/)
 
-\begin{quote}\widespacing
-
-subSample(u,~factor)
-superSample(u,~factor)
-shiftSample(u,~shiftCounter,~resolution)
-backSample(u,~backCounter,~resolution)
-noClock(u)
-
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[14em][l]{#1} }\raggedright\let~=\enspace
+\w subSample(u,~factor)
+\w superSample(u,~factor)
+   shiftSample(u,~shiftCounter,~resolution)
+   backSample(u,~backCounter,~resolution)
+\w noClock(u)
 \end{quote}
 
 \subsubsection*{Other operators}
 (\specref{16.10}\/)
 
-\begin{quote}\widespacing
-
-firstTick(u)
-interval(u)
-
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w firstTick(u)
+\w interval(u)
 \end{quote}
 
 %%%%%%%%%%%%%%%%
@@ -4260,14 +4260,13 @@ interval(u)
 \subsubsection*{Transitions}
 (\specref{17.1}\/)
 
-\begin{quote}\widespacing
-
-transition(from,~to,~condition,~immediate,~reset,~synchronize,~priority)
-initialState(state)
-activeState(state)
-ticksInState()
-timeInState()
-
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+   transition(from,~to,~condition,~immediate,~reset,~synchronize,~priority)
+\w initialState(state)
+\w activeState(state)
+\w ticksInState()
+\w timeInState()
 \end{quote}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -4315,23 +4314,25 @@ arrayLayout
 \subsubsection*{External libraries}
 (\specref{12.9.4}\/)
 
-\begin{quote}\spaceskip=2em
-Library
-Include
-IncludeDirectory
-LibraryDirectory
+\begin{quote}%\spaceskip=2em
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w Library
+\w Include
+\w IncludeDirectory
+\w LibraryDirectory
 \end{quote}
 
 \subsubsection*{Code generation}
 (\specref{18.3}\/)
 
-\begin{quote}\spaceskip=2em
-Evaluate
-HideResult
-Inline
-LateInline
-GenerateEvents
-smoothOrder
+\begin{quote}%\spaceskip=2em
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w Evaluate
+\w HideResult
+\w Inline
+\w LateInline
+\w GenerateEvents
+\w smoothOrder
 \end{quote}
 
 $\mathit{Evaluate}$ and $\mathit{HideResult}$ affect component
@@ -4349,12 +4350,13 @@ It takes optional argument $\mathit{normallyConstant}$.
 \subsubsection*{Simulation setting}
 (\specref{18.4}\/)
 
-\begin{quote}\spaceskip=2em
-experiment
-StartTime
-StopTime
-Interval
-Toleranc
+\begin{quote}%\spaceskip=2em
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w experiment
+\w StartTime
+\w StopTime
+\w Interval
+\w Toleranc
 \end{quote}
 
 (?) $\mathit{experiment}$ is placed in class body elements.
@@ -4371,10 +4373,11 @@ singleInstance
 \subsubsection*{Diagnostics messages}
 (\specref{18.7}\/)
 
-\begin{quote}\spaceskip=2em
-missingInnerMessage
-obsolete
-unassignedMessage
+\begin{quote}%\spaceskip=2em
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w missingInnerMessage
+\w obsolete
+\w unassignedMessage
 \end{quote}
 
 $\mathit{obsolete}$ applies to classes.
@@ -4382,10 +4385,11 @@ $\mathit{obsolete}$ applies to classes.
 \subsubsection*{Version setting}
 (\specref{18.8.2}\/)
 
-\begin{quote}\spaceskip=2em
-version
-conversion
-uses
+\begin{quote}%\spaceskip=2em
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w version
+\w conversion
+\w uses
 \end{quote}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -4519,6 +4523,8 @@ to a connection to an outside_connector.
 
 \item [merging_modifiers] is to merge a part of prefixes and modifiers
 in a redeclaration.  It is called inheriting in the_specification.
+
+\item [package-root] refers to the unamed-enclosing-class.
 
 \item [predefined_type{$\mbox{}^\top$}] is simple_types and classes
 defined in \specref{4.8.8}.  "Built-in_type" is synonymous and
@@ -5017,7 +5023,7 @@ section~\ref{sec:lookup-cycle}.
 
 %%%%%%%%%%%%%%%%
 
-\subsection{Other specific behabiors}
+\subsection{Other specific behaviors}
 
 \subsubsection*{Class prefixes}
 
@@ -5044,6 +5050,12 @@ Fact~\ref{parameters}.
 The_implementation treats {time} and {end} as if they were defined in
 the unnamed-enclosing-class, because a look up of a name ends there.
 It violates the Rule~\ref{time-and-end}.
+
+\subsubsection*{Unifying multiply inherited classes/variables}
+
+The_implementation does not check the equivalence of modifiers, and
+arbitrary selects one modification.  See
+Rule~\ref{multiple-extensions-of-single-base}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -5269,7 +5281,6 @@ similarly after {\tt{}"fun~f~=~({\char`\\}n"}.
 \stepcounter{section}
 \addcontentsline{toc}{section}{\numberline{\arabic{section}}References}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \appendix

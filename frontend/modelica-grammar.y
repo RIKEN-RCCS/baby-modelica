@@ -632,16 +632,16 @@ language_specification
 
 external_function_call
 	: IDENT "(" ")" {
-		St_Call ([], Vref (NONE, [(Id $1, [])]), [],
+		St_Call (([], Vref (NONE, [(Id $1, [])]), []),
 			 Annotation [], Comment [])}
 	| IDENT "(" expression_list ")" {
-		St_Call ([], Vref (NONE, [(Id $1, [])]), $3,
+		St_Call (([], Vref (NONE, [(Id $1, [])]), $3),
 			 Annotation [], Comment [])}
 	| component_reference "=" IDENT "(" ")" {
-		St_Call ([$1], Vref (NONE, [(Id $3, [])]), [],
+		St_Call (([$1], Vref (NONE, [(Id $3, [])]), []),
 			 Annotation [], Comment [])}
 	| component_reference "=" IDENT "(" expression_list ")" {
-		St_Call ([$1], Vref (NONE, [(Id $3, [])]), $5,
+		St_Call (([$1], Vref (NONE, [(Id $3, [])]), $5),
 			 Annotation [], Comment [])}
 	;
 
@@ -1109,12 +1109,12 @@ statement
 
 statement_body_
 	: component_reference DEF expression {
-		St_Assign ($1, $3, Annotation [], Comment [])}
+		St_Assign (($1, $3), Annotation [], Comment [])}
 	| component_reference function_call_args {
-		St_Call ([], $1, $2, Annotation [], Comment [])}
+		St_Call (([], $1, $2), Annotation [], Comment [])}
 	| "(" output_expression_list ")" DEF component_reference
 		function_call_args {
-		St_Call ($2, $5, $6, Annotation [], Comment [])}
+		St_Call (($2, $5, $6), Annotation [], Comment [])}
 	| BREAK {
 		St_Break (Annotation [], Comment [])}
 	| RETURN {
@@ -1172,7 +1172,7 @@ for_equation
 
 for_statement
 	: FOR for_indices LOOP statement_loop_ END FOR {
-		St_For ($2, $4, Annotation [], Comment [])}
+		St_For (($2, $4), Annotation [], Comment [])}
 	;
 
 for_indices
@@ -1191,7 +1191,7 @@ for_index
 
 while_statement
 	: WHILE expression LOOP statement_loop_ END WHILE {
-		St_While ($2, $4, Annotation [], Comment [])}
+		St_While (($2, $4), Annotation [], Comment [])}
 	;
 
 when_equation

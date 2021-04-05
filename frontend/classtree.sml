@@ -117,8 +117,7 @@ open settings
 open ast
 open small0
 
-fun tr_load (s : string) = if true then (print (s ^"\n")) else ()
-fun tr_load_vvv (s : string) = if false then (print (s ^"\n")) else ()
+fun trace n (s : string) = if (n <= 1) then (print (s ^"\n")) else ()
 
 (* ================================================================ *)
 
@@ -168,7 +167,7 @@ fun store_to_loaded_classes overwrite (d as Defclass ((v, pkg), k)) = (
 		    if ((class_is_in_file x) orelse overwrite) then ()
 		    else raise (error_duplicate_definitions d))
 	val _ = ignore (HashTable.insert loaded_classes (s, d))
-	val _ = tr_tree_vvv (";; - Loaded ("^ s ^")")
+	val _ = trace 5 (";; - Loaded ("^ s ^")")
     in
 	Defclass ((v, pkg), Def_Displaced (tag, bad_subject))
     end)
@@ -457,7 +456,7 @@ fun store_to_instance_tree subj kp = (
     let
 	fun store_model (subj, k0) = (
 	    let
-		val _ = tr_tree (";; - [cook] Register ("^
+		val _ = trace 3 (";; - [cook] Register ("^
 				 (subject_body_to_string (subj, k0)) ^")")
 		val (_, kx, cx) = instance_tree
 		val _ = kx := k0
@@ -467,7 +466,7 @@ fun store_to_instance_tree subj kp = (
 
 	fun store_scalar upnode node id (subj, k0) = (
 	    let
-		val _ = tr_tree (";; - [cook] Register ("^
+		val _ = trace 3 (";; - [cook] Register ("^
 				 (subject_body_to_string (subj, k0)) ^")")
 
 		val _ = if ((cook_step k0) = E0) then ()
@@ -510,7 +509,7 @@ fun store_to_instance_tree subj kp = (
 
 	fun store_array upnode node id aggsubj (dim, array, dummy) = (
 	    let
-		val _ = tr_tree (";; - [cook] Register ("^
+		val _ = trace 3 (";; - [cook] Register ("^
 				 (if (null array) then
 				      (subject_print_string aggsubj)
 				  else
@@ -710,7 +709,7 @@ fun substitute_outer_loop slot0 (prefix0, suffix0) = (
 	    val (prefix1, (id, ss)) = (split_last prefix0)
 	    val prefix2 = (List.take (prefix1, ((length inner) - 1)))
 	    val path = (prefix2 @ [(id, ss)] @ suffix0)
-	    val _ = tr_tree (";; substitute_outer ("^
+	    val _ = trace 5 (";; substitute_outer ("^
 			     (name_to_string (Name outer)) ^", "^
 			     (name_to_string (Name inner)) ^")")
 	in
