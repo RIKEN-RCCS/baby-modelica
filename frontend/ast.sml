@@ -290,18 +290,18 @@ datatype equation_t
 and statement_t
     = St_Break of annotation_t * comment_t
     | St_Return of annotation_t * comment_t
-    | St_Assign of (expression_t * expression_t
+    | St_Assign of ((expression_t * expression_t)
 		    * annotation_t * comment_t)
-    | St_Call of (expression_t list * expression_t * expression_t list
+    | St_Call of ((expression_t list * expression_t * expression_t list)
 		  * annotation_t * comment_t)
     | St_If of ((expression_t * statement_t list) list
 		* annotation_t * comment_t)
-    | St_For of (for_index_t list * statement_t list
-		 * annotation_t * comment_t)
-    | St_While of (expression_t * statement_t list
-		   * annotation_t * comment_t)
     | St_When of ((expression_t * statement_t list) list
 		  * annotation_t * comment_t)
+    | St_For of ((for_index_t list * statement_t list)
+		 * annotation_t * comment_t)
+    | St_While of ((expression_t * statement_t list)
+		   * annotation_t * comment_t)
     (*| St_Comment of (annotation_t * comment_t)*)
 
 (* A variable declaration.  Its body is always a Def_Refine (or a
@@ -775,12 +775,12 @@ fun attach_comment_to_statement s (aa, ww) = (
     case s of
 	St_Break (_, _) => St_Break (aa, ww)
       | St_Return (_, _) => St_Return (aa, ww)
-      | St_Assign (x, y, _, _) => St_Assign (x, y, aa, ww)
-      | St_Call (vv, f, ee, _, _) => St_Call (vv, f, ee, aa, ww)
+      | St_Assign ((x, y), _, _) => St_Assign ((x, y), aa, ww)
+      | St_Call ((vv, f, ee), _, _) => St_Call ((vv, f, ee), aa, ww)
       | St_If (cc, _, _) => St_If (cc, aa, ww)
       | St_When (cc, _, _) => St_When (cc, aa, ww)
-      | St_For (rr, ss, _, _) => St_For (rr, ss, aa, ww)
-      | St_While (e, ss, _, _) => St_While (e, ss, aa, ww))
+      | St_For ((rr, ss), _, _) => St_For ((rr, ss), aa, ww)
+      | St_While ((e, ss), _, _) => St_While ((e, ss), aa, ww))
 
 (* Makes if-then-else, by simply concatenating an else-if part to
    reduce nesting. *)

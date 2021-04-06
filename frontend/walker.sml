@@ -657,22 +657,22 @@ fun walk_in_statement vamp_s (vamp_x : 'a x_vamper_t) (s0, acc0) = (
 	    in
 		(vamp_s (s1, acc1))
 	    end)
-	  | St_Assign (x0, y0, Annotation mm0, ww) => (
+	  | St_Assign ((x0, y0), Annotation mm0, ww) => (
 	    let
 		val (x1, acc1) = (walk_x (x0, acc0))
 		val (y1, acc2) = (walk_x (y0, acc1))
 		val (mm1, acc3) = (map_along walk_m (mm0, acc2))
-		val s1 = St_Assign (x1, y1, Annotation mm1, ww)
+		val s1 = St_Assign ((x1, y1), Annotation mm1, ww)
 	    in
 		(vamp_s (s1, acc3))
 	    end)
-	  | St_Call (xx0, y0, zz0, Annotation mm0, ww) => (
+	  | St_Call ((xx0, y0, zz0), Annotation mm0, ww) => (
 	    let
 		val (xx1, acc1) = (map_along walk_x (xx0, acc0))
 		val (y1, acc2) = (walk_x (y0, acc1))
 		val (zz1, acc3) = (map_along walk_x (zz0, acc2))
 		val (mm1, acc4) = (map_along walk_m (mm0, acc3))
-		val s1 = St_Call (xx1, y1, zz1, Annotation mm1, ww)
+		val s1 = St_Call ((xx1, y1, zz1), Annotation mm1, ww)
 	    in
 		(vamp_s (s1, acc4))
 	    end)
@@ -684,12 +684,12 @@ fun walk_in_statement vamp_s (vamp_x : 'a x_vamper_t) (s0, acc0) = (
 	    in
 		(vamp_s (s1, acc2))
 	    end)
-	  | St_While (x0, ss0, Annotation mm0, ww) => (
+	  | St_While ((x0, ss0), Annotation mm0, ww) => (
 	    let
 		val (x1, acc1) = (walk_x (x0, acc0))
 		val (ss1, acc2) = (map_along walk_s (ss0, acc1))
 		val (mm1, acc3) = (map_along walk_m (mm0, acc2))
-		val s1 = St_While (x1, ss1, Annotation mm1, ww)
+		val s1 = St_While ((x1, ss1), Annotation mm1, ww)
 	    in
 		(vamp_s (s1, acc3))
 	    end)
@@ -701,12 +701,12 @@ fun walk_in_statement vamp_s (vamp_x : 'a x_vamper_t) (s0, acc0) = (
 	    in
 		(vamp_s (s1, acc2))
 	    end)
-	  | St_For (ii0, ss0, Annotation mm0, ww) => (
+	  | St_For ((ii0, ss0), Annotation mm0, ww) => (
 	    let
 		val (ii1, acc1) = (map_along walk_n_x (ii0, acc0))
 		val (ss1, acc2) = (map_along walk_s (ss0, acc1))
 		val (mm1, acc3) = (map_along walk_m (mm0, acc2))
-		val s1 = St_For (ii1, ss1, Annotation mm1, ww)
+		val s1 = St_For ((ii1, ss1), Annotation mm1, ww)
 	    in
 		(vamp_s (s1, acc3))
 	    end)

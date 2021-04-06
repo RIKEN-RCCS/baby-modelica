@@ -1063,7 +1063,239 @@ fun function_is_predefined k = (
 	(predefined (tag_of_body k))
     end)
 
-fun dump_predefined s k = (
+fun for_index_to_string i = (
+    case i of
+	(v, Colon) => (id_to_string v)
+      | (v, e) => ((id_to_string v) ^" in "^ (expression_to_string 0 e)))
+
+(* Dumps conditionals on equations or statements.  Use this with
+   dump=dump_equation or dump=dump_statement. *)
+
+fun dump_conditional key dump s ((e, ee), start) = (
+    case e of
+	Otherwise => (
+	let
+	    val cc0 = if (start) then "" else ("else")
+	    val cc1 = if (cc0 = "") then "" else (cc0 ^"\n")
+	    val _ = (TextIO.output (s, cc1))
+	    val _ = (app (dump s) ee)
+	in
+	    false
+	end)
+      | _ => (
+	let
+	    val pp = if (start) then key else ("else"^ key)
+	    val cc = (pp ^" "^ (expression_to_string 0 e) ^" then")
+	    val _ = (TextIO.output (s, (cc ^"\n")))
+	    val _ = (app (dump s) ee)
+	in
+	    false
+	end))
+
+fun dump_equation s q = (
+    case q of
+	Eq_Eq ((e0, e1), aa, ww) => (
+	let
+	    val ss = ((expression_to_string 0 e0)
+		      ^" = "^ (expression_to_string 0 e1))
+	    val _ = (TextIO.output (s, (ss ^";\n")))
+	in
+	    ()
+	end)
+      | Eq_Connect ((Cref (e0, side0), Cref (e1, side1)), aa, ww) => (
+	let
+	    val _ = (TextIO.output
+			 (s, ("/*connect("^
+			      (expression_to_string 0 e0)
+			      (*^(if side0 then "(+)" else "(-)")*)
+			      ^", "^
+			      (expression_to_string 0 e1)
+			      (*^(if side1 then "(+)" else "(-)")*)
+			      ^")*/\n")))
+	in
+	    ()
+	end)
+      | Eq_Connect ((e0, e1), aa, ww) => (
+	let
+	    val _ = (TextIO.output
+			 (s, ("/*connect("^
+			      (expression_to_string 0 e0)
+			      ^", "^
+			      (expression_to_string 0 e1)
+			      ^")*/\n")))
+	in
+	    ()
+	end)
+      | Eq_If (cc, aa, ww) => (
+	let
+	    val f = (dump_conditional "if" dump_equation s)
+	    val _ = (foldl f true cc)
+	    val _ = (TextIO.output (s, "end if;\n"))
+	in
+	    ()
+	end)
+      | Eq_When (cc, aa, ww) => (
+	let
+	    val f = (dump_conditional "when" dump_equation s)
+	    val _ = (foldl f true cc)
+	    val _ = (TextIO.output (s, "end when;\n"))
+	in
+	    ()
+	end)
+      | Eq_For ((ii, qq), aa, ww) => (
+	let
+	    val ss = ((String.concatWith ", ")
+			  (map for_index_to_string ii))
+	    val _ = (TextIO.output (s, ("for "^ ss ^" loop\n")))
+	    val _ = (app (dump_equation s) qq)
+	    val _ = (TextIO.output (s, "end for;\n"))
+	in
+	    ()
+	end)
+      | Eq_App ((f, ee), aa, ww) => (
+	let
+	    val nn = (expression_to_string 0 f)
+	    val sa = ((String.concatWith ", ")
+			  (map (expression_to_string 0) ee))
+	    val ss = (nn ^"("^ sa ^")")
+	    val _ = (TextIO.output (s, (ss ^ ";\n")))
+	in
+	    ()
+	end))
+
+fun dump_equations s (subj, ee) = (
+    let
+	fun dump_eqn0 s e = (
+	    case e of
+		Element_Equations (b, qq) => (
+		let
+		    val _ = if b then
+				(TextIO.output (s, "initial equation\n"))
+			    else
+				(TextIO.output (s, "equation\n"))
+		    val _ = (app (dump_equation s) qq)
+		in
+		    ()
+		end)
+	      | _ => raise Match)
+
+	fun dump_eqn1 s (tag, ee) = (
+	    let
+		val bn = (tag_to_string tag)
+		val _ = (TextIO.output (s, "/* Class "^ bn ^" */\n"))
+		val _ = (app (dump_eqn0 s) ee)
+	    in
+		()
+	    end)
+
+	val cn = (subject_to_string subj)
+	val _ = (TextIO.output (s, "\n"))
+	val _ = (TextIO.output (s, "/* Component "^ cn ^" */\n"))
+	val _ = (app (dump_eqn1 s) ee)
+    in
+	()
+    end)
+
+fun expression_tuple_to_string parenthesis ww = (
+    let
+	val xx = (map (expression_to_string 0) ww)
+    in
+	case xx of
+	    [] => if (parenthesis) then "()" else ""
+	  | [w] => if (parenthesis) then "("^ w ^")" else w
+	  | _ => "("^ (String.concatWith ", " xx) ^")"
+    end)
+
+fun dump_statement s g = (
+    case g of
+	St_Break (aa, ww) => (
+	let
+	    val ss = "break"
+	    val _ = (TextIO.output (s, (ss ^";\n")))
+	in
+	    ()
+	end)
+      | St_Return (aa, ww) => (
+	let
+	    val ss = "return"
+	    val _ = (TextIO.output (s, (ss ^";\n")))
+	in
+	    ()
+	end)
+      | St_Assign ((w0, w1), aa, ww) => (
+	let
+	    val lhs = (expression_to_string 0 w0)
+	    val rhs = (expression_to_string 0 w1)
+	    val ss = (lhs ^" := "^ rhs)
+	    val _ = (TextIO.output (s, (ss ^";\n")))
+	in
+	    ()
+	end)
+      | St_Call ((xx0, w0, xx1), aa, ww) => (
+	let
+	    val lhs = (expression_tuple_to_string false xx0)
+	    val asn = case xx0 of
+			  [] => ""
+			| _ => (lhs ^" := ")
+	    val associativity = 7
+	    val name = (expression_to_string associativity w0)
+	    val arg = (expression_tuple_to_string true xx1)
+	    val ss = (asn ^ name ^" "^ arg)
+	    val _ = (TextIO.output (s, (ss ^";\n")))
+	in
+	    ()
+	end)
+      | St_If (cc, aa, ww) => (
+	let
+	    val f = (dump_conditional "if" dump_statement s)
+	    val _ = (foldl f true cc)
+	    val _ = (TextIO.output (s, "end if;\n"))
+	in
+	    ()
+	end)
+      | St_When (cc, aa, ww) => (
+	let
+	    val f = (dump_conditional "when" dump_statement s)
+	    val _ = (foldl f true cc)
+	    val _ = (TextIO.output (s, "end when;\n"))
+	in
+	    ()
+	end)
+      | St_For ((ii, gg), aa, ww) => (
+	let
+	    val ss = ((String.concatWith ", ")
+			  (map for_index_to_string ii))
+	    val _ = (TextIO.output (s, ("for "^ ss ^" loop\n")))
+	    val _ = (app (dump_statement s) gg)
+	    val _ = (TextIO.output (s, "end for;\n"))
+	in
+	    ()
+	end)
+      | St_While ((w, gg), aa, ww) => (
+	let
+	    val ss = (expression_to_string 0 w)
+	    val _ = (TextIO.output (s, ("while "^ ss ^" loop\n")))
+	    val _ = (app (dump_statement s) gg)
+	    val _ = (TextIO.output (s, "end while;\n"))
+	in
+	    ()
+	end))
+
+fun dump_algorithm s e = (
+    case e of
+	Element_Algorithms (b, gg) => (
+	let
+	    val _ = if b then
+			(TextIO.output (s, "initial algorithm\n"))
+		    else
+			(TextIO.output (s, "algorithm\n"))
+	    val _ = (app (dump_statement s) gg)
+	in
+	    ()
+	end)
+      | _ => ())
+
+fun dump_predefined_function s k = (
     let
 	val _ = if (function_is_predefined k) then () else raise Match
 	val name = (subject_to_string (subject_of_class k))
@@ -1076,7 +1308,7 @@ fun dump_function s k = (
     let
 	fun kind_string t = (
 	    case t of
-		Function pure  => if pure then "pure functions" else "function"
+		Function pure => if pure then "pure functions" else "function"
 	      | _ => raise Match)
 	fun class_prefixes_string {Final, Encapsulated, Partial} = ()
 	fun component_prefixes_string (mo, va, ca) = ()
@@ -1117,142 +1349,13 @@ fun dump_function s k = (
 
 		val _ = (TextIO.output (s, (pp ^" "^ name ^"\n")))
 		val _ = (dump_components s subj)
+		val _ = (app (dump_algorithm s) ee)
 		val _ = (TextIO.output (s, "end "^ name ^";\n"))
 		val _ = (TextIO.output (s, "\n"))
 	    in
 		()
 	    end)
 	  | _ => raise Match
-    end)
-
-fun for_index_to_string i = (
-    case i of
-	(v, Colon) => (id_to_string v)
-      | (v, e) => ((id_to_string v) ^" in "^ (expression_to_string 0 e)))
-
-fun dump_equation s q = (
-    let
-	fun dump_conditional key s ((e, qq), start) = (
-	    case e of
-		Otherwise => (
-		let
-		    val cc0 = if (start) then "" else ("else")
-		    val cc1 = if (cc0 = "") then "" else (cc0 ^"\n")
-		    val _ = (TextIO.output (s, cc1))
-		    val _ = (app (dump_equation s) qq)
-		in
-		    false
-		end)
-	      | _ => (
-		let
-		    val pp = if (start) then key else ("else"^ key)
-		    val cc = (pp ^" "^ (expression_to_string 0 e) ^" then")
-		    val _ = (TextIO.output (s, (cc ^"\n")))
-		    val _ = (app (dump_equation s) qq)
-		in
-		    false
-		end))
-    in
-	case q of
-	    Eq_Eq ((e0, e1), aa, ww) => (
-	    let
-		val ss = ((expression_to_string 0 e0)
-			  ^" = "^ (expression_to_string 0 e1))
-		val _ = (TextIO.output (s, (ss ^";\n")))
-	    in
-		()
-	    end)
-	  | Eq_Connect ((Cref (e0, side0), Cref (e1, side1)), aa, ww) => (
-	    let
-		val _ = (TextIO.output
-			     (s, ("/*connect("^
-				  (expression_to_string 0 e0)
-				  (*^(if side0 then "(+)" else "(-)")*)
-				  ^", "^
-				  (expression_to_string 0 e1)
-				  (*^(if side1 then "(+)" else "(-)")*)
-				  ^")*/\n")))
-	    in
-		()
-	    end)
-	  | Eq_Connect ((e0, e1), aa, ww) => (
-	    let
-		val _ = (TextIO.output
-			     (s, ("/*connect("^
-				  (expression_to_string 0 e0)
-				  ^", "^
-				  (expression_to_string 0 e1)
-				  ^")*/\n")))
-	    in
-		()
-	    end)
-	  | Eq_If (cc, aa, ww) => (
-	    let
-		val _ = (foldl (dump_conditional "if" s) true cc)
-		val _ = (TextIO.output (s, "end if;\n"))
-	    in
-		()
-	    end)
-	  | Eq_When (cc, aa, ww) => (
-	    let
-		val _ = (foldl (dump_conditional "when" s) true cc)
-		val _ = (TextIO.output (s, "end when;\n"))
-	    in
-		()
-	    end)
-	  | Eq_For ((ii, qq), aa, ww) => (
-	    let
-		val ss = ((String.concatWith ", ")
-			      (map for_index_to_string ii))
-		val _ = (TextIO.output (s, ("for "^ ss ^" loop\n")))
-		val _ = (app (dump_equation s) qq)
-		val _ = (TextIO.output (s, "end for;\n"))
-	    in
-		()
-	    end)
-	  | Eq_App ((f, ee), aa, ww) => (
-	    let
-		val nn = (expression_to_string 0 f)
-		val sa = ((String.concatWith ", ")
-			      (map (expression_to_string 0) ee))
-		val ss = (nn ^"("^ sa ^")")
-		val _ = (TextIO.output (s, (ss ^ ";\n")))
-	    in
-		()
-	    end)
-    end)
-
-fun dump_equations s (subj, ee) = (
-    let
-	fun dump_eqn0 s e = (
-	    case e of
-		Element_Equations (b, qq) => (
-		let
-		    val _ = if b then
-				(TextIO.output (s, "initial equation\n"))
-			    else
-				(TextIO.output (s, "equation\n"))
-		    val _ = (app (dump_equation s) qq)
-		in
-		    ()
-		end)
-	      | _ => raise Match)
-
-	fun dump_eqn1 s (tag, ee) = (
-	    let
-		val bn = (tag_to_string tag)
-		val _ = (TextIO.output (s, "/* Class "^ bn ^" */\n"))
-		val _ = (app (dump_eqn0 s) ee)
-	    in
-		()
-	    end)
-
-	val cn = (subject_to_string subj)
-	val _ = (TextIO.output (s, "\n"))
-	val _ = (TextIO.output (s, "/* Component "^ cn ^" */\n"))
-	val _ = (app (dump_eqn1 s) ee)
-    in
-	()
     end)
 
 fun dump_flat_model () = (
@@ -1266,7 +1369,7 @@ fun dump_flat_model () = (
 
 	val _ = (TextIO.output (s, "/* flat model x.mo */\n"))
 	val _ = (TextIO.output (s, "within ;\n"))
-	val _ = (TextIO.output (s, "model X\n"))
+	val _ = (TextIO.output (s, "model x\n"))
 
 	(* Constants. *)
 
@@ -1316,9 +1419,9 @@ fun dump_flat_model () = (
 	val _ = (TextIO.output (s, "\n"))
 
 	val funs0 = (collect_functions PKG)
-	val (funs1, funs2)  = (List.partition function_is_predefined funs0)
+	val (funs1, funs2) = (List.partition function_is_predefined funs0)
 	val funs3 = (collect_functions VAR)
-	val _ = (app (dump_predefined s) funs1)
+	val _ = (app (dump_predefined_function s) funs1)
 
 	val _ = if (null funs1) then ()
 		else (TextIO.output (s, "\n"))
@@ -1340,7 +1443,7 @@ fun dump_flat_model () = (
 
 	(* File epilogue. *)
 
-	val _ = (TextIO.output (s, "end X;\n"))
+	val _ = (TextIO.output (s, "end x;\n"))
 	val _ = (TextIO.closeOut s)
     in
 	()
