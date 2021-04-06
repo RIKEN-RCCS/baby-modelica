@@ -3376,23 +3376,26 @@ parameter subexpressions is a parameter expression.\end{qquote}
 \specref{3.8.1}\/ and \specref{3.8.2}\/ list constant expressions
 (functions and variables) which can take non-constant arguments:
 %%%%
-\begin{quote}\spaceskip=2em
-initial
-terminal
-der
-edge
-change
-sample
-pre
+\begin{quote}%\spaceskip=2em
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w initial
+\w terminal
+\w der
+\w edge
+\w change
+\w sample
+\w pre
 \end{quote}
 %%%%
-\begin{quote}\spaceskip=2em\let~=\enspace
-ndims(A)
-cardinality(c)
-end
-size(A) size(A,~j)
-Connections.isRoot(A.R)
-Connections.rooted(A.R)
+\begin{quote}%\spaceskip=2em
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w ndims(A)
+\w cardinality(c)
+\w end
+\w size(A)
+\w size(A,~j)
+   Connections.isRoot(A.R)
+   Connections.rooted(A.R)
 \end{quote}
 
 %%%%%%%%%%%%%%%%
@@ -3669,75 +3672,78 @@ etc.
 
 \subsubsection*{Syntactic keywords}
 
-\begin{quote}\widespacing
-algorithm
-and
-annotation
-block
-break
-class
-connect
-connector
-constant
-constrainedby
-der
-discrete
-each
-else
-elseif
-elsewhen
-encapsulated
-end
-enumeration
-equation
-expandable
-extends
-external
-false
-final
-flow
-for
-function
-if
-import
-impure
-in
-initial
-inner
-input
-loop
-model
-not
-operator
-or
-outer
-output
-package
-parameter
-partial
-protected
-public
-pure
-record
-redeclare
-replaceable
-return
-stream
-then
-true
-type
-when
-while
-within
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w algorithm
+\w and
+\w annotation
+\w block
+\w break
+\w class
+\w connect
+\w connector
+\w constant
+\w constrainedby
+\w der
+\w discrete
+\w each
+\w else
+\w elseif
+\w elsewhen
+\w encapsulated
+\w end
+\w enumeration
+\w equation
+\w expandable
+\w extends
+\w external
+\w false
+\w final
+\w flow
+\w for
+\w function
+\w if
+\w import
+\w impure
+\w in
+\w initial
+\w inner
+\w input
+\w loop
+\w model
+\w not
+\w operator
+\w or
+\w outer
+\w output
+\w package
+\w parameter
+\w partial
+\w protected
+\w public
+\w pure
+\w record
+\w redeclare
+\w replaceable
+\w return
+\w stream
+\w then
+\w true
+\w type
+\w when
+\w while
+\w within
+\hfill
 \end{quote}
 
 \subsubsection*{Reserved type names}
 
-\begin{quote}\widespacing
-Real
-Integer
-Boolean
-String
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w Real
+\w Integer
+\w Boolean
+\w String
 \end{quote}
 
 \noindent
@@ -3756,20 +3762,19 @@ These names have overloaded meanings.
 \subsubsection*{Classes}
 
 \begin{quote}
-\spaceskip=2em
-\sloppy\hyphenpenalty=10000\exhyphenpenalty=10000
-
-Real
-Integer
-Boolean
-String
-{\it{}enumeration}
-Clock
-StateSelect
-ExternalObject
-AssertionLevel
-Connections
-
+%\spaceskip=2em
+%\sloppy\hyphenpenalty=10000\exhyphenpenalty=10000
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w Real
+\w Integer
+\w Boolean
+\w String
+\w {\it{}enumeration}
+\w Clock
+\w StateSelect
+\w ExternalObject
+\w AssertionLevel
+\w Connections
 \end{quote}
 
 \noindent $\mathit{enumeration}$ means names of any enumeration.  All
@@ -3778,13 +3783,12 @@ enumerations are members of simple_types.  It may be referred to as
 
 \subsubsection*{Attributes}
 
-\begin{quote}\widespacing
-
-start
-fixed
-nominal
-unbounded
-
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w start
+\w fixed
+\w nominal
+\w unbounded
 \end{quote}
 
 %%%%%%%%%%%%%%%%
@@ -3795,8 +3799,9 @@ unbounded
 
 (\specref{3.6.7}\/)
 
-\begin{quote}\widespacing
-time
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w time
 \end{quote}
 %%%%
 
@@ -3804,8 +3809,9 @@ $\mathit{time}$ has a special scoping rule.
 
 \subsubsection*{end}
 
-\begin{quote}\widespacing
-end
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w end
 \end{quote}
 
 Variables $\mathit{end}$ have a special scoping rule.
@@ -3981,68 +3987,64 @@ variables. *)
 \subsubsection*{Numeric functions and conversion functions}
 (\specref{3.7.1}\/)
 
-\begin{quote}\widespacing
-
-abs(v)
-sign(v)
-sqrt(v)
-Integer(e)
-{\it{}enumeration}(i)
-String(...)
-
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w abs(v)
+\w sign(v)
+\w sqrt(v)
+\w Integer(e)
+\w {\it{}enumeration}(i)
+\w String(...)
 \end{quote}
 
 \subsubsection*{Event triggering mathematical functions}
 (\specref{3.7.1.1}\/)
 
-\begin{quote}\widespacing
-
-div(x,~y)
-mod(x,~y)
-rem(x,~y)
-ceil(x)
-floor(x)
-integer(x)
-
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w div(x,~y)
+\w mod(x,~y)
+\w rem(x,~y)
+\w ceil(x)
+\w floor(x)
+\w integer(x)
 \end{quote}
 
 \subsubsection*{Predefined mathematical functions}
 (\specref{3.7.1.2}\/)
 
-\begin{quote}\widespacing
-
-sin(x)
-cos(x)
-tan(x)
-asin(x)
-acos(x)
-atan(x)
-atan2(y,~x)
-sinh(x)
-cosh(x)
-tanh(x)
-exp(x)
-log(x)
-log10(x)
-
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w sin(x)
+\w cos(x)
+\w tan(x)
+\w asin(x)
+\w acos(x)
+\w atan(x)
+\w atan2(y,~x)
+\w sinh(x)
+\w cosh(x)
+\w tanh(x)
+\w exp(x)
+\w log(x)
+\w log10(x)
 \end{quote}
 
 \subsubsection*{Derivative and special purpose operators}
 (\specref{3.7.2}\/)
 
-\begin{quote}\widespacing
-
-der(expr)
-delay(expr,~delayTime,~delayMax)
-delay(expr,~delayTime)
-cardinality(c)
-homotopy(actual,~simplified)
-semiLinear(x,~positiveSlope,~negativeSlope)
-inStream(v)
-actualStream(v)
-spatialDistribution(in0,~in1,~x,~positiveVelocity,~initialPoints,~initialValues)
-getInstanceName()
-
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[14em][l]{#1} }\raggedright\let~=\enspace
+\w der(expr)
+\w delay(expr,~delayTime,~delayMax)
+\w delay(expr,~delayTime)
+\w cardinality(c)
+\w homotopy(actual,~simplified)
+   semiLinear(x,~positiveSlope,~negativeSlope)
+\w inStream(v)
+\w actualStream(v)
+   spatialDistribution(in0,~in1,~x,~positiveVelocity,~initialPoints,~initialValues)
+\w getInstanceName()
 \end{quote}
 
 \noindent $\mathrm{der}\,(...)$ accepts only one argument, although it
@@ -4054,47 +4056,41 @@ equations related to a given steam variable $v$.
 \subsubsection*{Event-related operators}
 (\specref{3.7.3}\/)
 
-\begin{quote}\widespacing
-
-initial()
-terminal()
-noEvent(expr)
-smooth(p,~expr)
-sample(start,~interval)
-pre(y)
-edge(b)
-change(v)
-reinit(x,~expr)
-
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[10em][l]{#1} }\raggedright\let~=\enspace
+\w initial()
+\w terminal()
+\w noEvent(expr)
+\w smooth(p,~expr)
+\w sample(start,~interval)
+\w pre(y)
+\w edge(b)
+\w change(v)
+\w reinit(x,~expr)
 \end{quote}
 
 \subsubsection*{Assert}
 (\specref{8.3.7}\/)
 
 \begin{quote}\widespacing
-
 assert(condition,~message,~level)
-
 \end{quote}
 
 \subsubsection*{Terminate}
 (\specref{8.3.8}\/)
 
 \begin{quote}\widespacing
-
 terminate(s)
-
 \end{quote}
 
 \subsubsection*{Array dimension and size functions}
 (\specref{10.3.1}\/)
 
-\begin{quote}\widespacing
-
-ndims(A)
-size(A,~i)
-size(A)
-
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w ndims(A)
+\w size(A,~i)
+\w size(A)
 \end{quote}
 
 \noindent See~\ref{sec:array-size}.
@@ -4102,12 +4098,11 @@ size(A)
 \subsubsection*{Dimensionality conversion functions}
 (\specref{10.3.2}\/)
 
-\begin{quote}\widespacing
-
-scalar(A)
-vector(A)
-matrix(A)
-
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w scalar(A)
+\w vector(A)
+\w matrix(A)
 \end{quote}
 
 \subsubsection*{Array constructor}
@@ -4122,13 +4117,14 @@ array(...)
 \subsubsection*{Specialized array constructor functions}
 (\specref{10.3.3}\/)
 
-\begin{quote}\widespacing
-identity(n)
-diagonal(v)
-zeros(n1,~n2,~n3,~...)
-ones(n1,~n2,~n3,~...)\\
-fill(e,~n1,~n2,~n3,~...)
-linspace(x1,~x2,~n)
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[10em][l]{#1} }\raggedright\let~=\enspace
+\w identity(n)
+\w diagonal(v)
+\w zeros(n1,~n2,~n3,~...)
+\w ones(n1,~n2,~n3,~...)
+\w fill(e,~n1,~n2,~n3,~...)
+\w linspace(x1,~x2,~n)
 \end{quote}
 
 \noindent See~\ref{sec:array-size}.
@@ -4155,30 +4151,30 @@ case.
 \subsubsection*{Matrix and vector algebra functions}
 (\specref{10.3.5}\/)
 
-\begin{quote}\widespacing
-transpose(A)
-outerProduct(v1,~v2)
-symmetric(A)
-cross(x,~y)
-skew(x)
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[10em][l]{#1} }\raggedright\let~=\enspace
+\w transpose(A)
+\w outerProduct(v1,~v2)
+\w symmetric(A)
+\w cross(x,~y)
+\w skew(x)
 \end{quote}
 
 \subsubsection*{Reduction functions and operators}
 (\specref{10.3.4}\/)
 
-\begin{quote}\widespacing
-
-min(A)
-min(x,~y)
-min(e(i,~...,~j)~for~i~in~u,~...,~j~in~v)
-max(A)
-max(x,~y)
-max(e(i,~...,~j)~for~i~in~u,~...,~j~in~v)
-sum(A)
-sum(e(i,~...,~j)~for~i~in~u,~...,~j~in~v)
-product(A)
-product(e(i,~...,~j)~for~i~in~u,~...,~j~in~v)
-
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w min(A)
+\w min(x,~y)
+   min(e(i,~...,~j)~for~i~in~u,~...,~j~in~v)
+\w max(A)
+\w max(x,~y)
+   max(e(i,~...,~j)~for~i~in~u,~...,~j~in~v)
+\w sum(A)
+   sum(e(i,~...,~j)~for~i~in~u,~...,~j~in~v)
+\w product(A)
+   product(e(i,~...,~j)~for~i~in~u,~...,~j~in~v)
 \end{quote}
 
 \subsubsection*{pure}
@@ -4197,9 +4193,7 @@ pure(...)
 \subsubsection*{Functions in types and records}
 
 \begin{quote}\widespacing
-
 equalityConstraint(x,~y)
-
 \end{quote}
 
 %%%%%%%%%%%%%%%%
@@ -4216,42 +4210,37 @@ class Clock;
 (\specref{16.4}\/)
 
 \begin{quote}\widespacing
-
 previous(u)
-
 \end{quote}
 
 \subsubsection*{Base-clock conversion operators}
 (\specref{16.5.1}\/)
 
-\begin{quote}\widespacing
-
-sample(u,~c)
-hold(u)
-
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w sample(u,~c)
+\w hold(u)
 \end{quote}
 
 \subsubsection*{Sub-clock conversion operators}
 (\specref{16.5.2}\/)
 
-\begin{quote}\widespacing
-
-subSample(u,~factor)
-superSample(u,~factor)
-shiftSample(u,~shiftCounter,~resolution)
-backSample(u,~backCounter,~resolution)
-noClock(u)
-
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[14em][l]{#1} }\raggedright\let~=\enspace
+\w subSample(u,~factor)
+\w superSample(u,~factor)
+   shiftSample(u,~shiftCounter,~resolution)
+   backSample(u,~backCounter,~resolution)
+\w noClock(u)
 \end{quote}
 
 \subsubsection*{Other operators}
 (\specref{16.10}\/)
 
-\begin{quote}\widespacing
-
-firstTick(u)
-interval(u)
-
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w firstTick(u)
+\w interval(u)
 \end{quote}
 
 %%%%%%%%%%%%%%%%
@@ -4261,14 +4250,13 @@ interval(u)
 \subsubsection*{Transitions}
 (\specref{17.1}\/)
 
-\begin{quote}\widespacing
-
-transition(from,~to,~condition,~immediate,~reset,~synchronize,~priority)
-initialState(state)
-activeState(state)
-ticksInState()
-timeInState()
-
+\begin{quote}%\widespacing
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+   transition(from,~to,~condition,~immediate,~reset,~synchronize,~priority)
+\w initialState(state)
+\w activeState(state)
+\w ticksInState()
+\w timeInState()
 \end{quote}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -4316,23 +4304,25 @@ arrayLayout
 \subsubsection*{External libraries}
 (\specref{12.9.4}\/)
 
-\begin{quote}\spaceskip=2em
-Library
-Include
-IncludeDirectory
-LibraryDirectory
+\begin{quote}%\spaceskip=2em
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w Library
+\w Include
+\w IncludeDirectory
+\w LibraryDirectory
 \end{quote}
 
 \subsubsection*{Code generation}
 (\specref{18.3}\/)
 
-\begin{quote}\spaceskip=2em
-Evaluate
-HideResult
-Inline
-LateInline
-GenerateEvents
-smoothOrder
+\begin{quote}%\spaceskip=2em
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w Evaluate
+\w HideResult
+\w Inline
+\w LateInline
+\w GenerateEvents
+\w smoothOrder
 \end{quote}
 
 $\mathit{Evaluate}$ and $\mathit{HideResult}$ affect component
@@ -4350,12 +4340,13 @@ It takes optional argument $\mathit{normallyConstant}$.
 \subsubsection*{Simulation setting}
 (\specref{18.4}\/)
 
-\begin{quote}\spaceskip=2em
-experiment
-StartTime
-StopTime
-Interval
-Toleranc
+\begin{quote}%\spaceskip=2em
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w experiment
+\w StartTime
+\w StopTime
+\w Interval
+\w Toleranc
 \end{quote}
 
 (?) $\mathit{experiment}$ is placed in class body elements.
@@ -4372,10 +4363,11 @@ singleInstance
 \subsubsection*{Diagnostics messages}
 (\specref{18.7}\/)
 
-\begin{quote}\spaceskip=2em
-missingInnerMessage
-obsolete
-unassignedMessage
+\begin{quote}%\spaceskip=2em
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w missingInnerMessage
+\w obsolete
+\w unassignedMessage
 \end{quote}
 
 $\mathit{obsolete}$ applies to classes.
@@ -4383,10 +4375,11 @@ $\mathit{obsolete}$ applies to classes.
 \subsubsection*{Version setting}
 (\specref{18.8.2}\/)
 
-\begin{quote}\spaceskip=2em
-version
-conversion
-uses
+\begin{quote}%\spaceskip=2em
+\def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
+\w version
+\w conversion
+\w uses
 \end{quote}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
