@@ -126,9 +126,9 @@ language specification.
 
 This random memo accompanies the source code.  This document was
 written as implementation notes but has grown with addendums to
-the_specification.  So, it is now renamed as a reference manual.  This
+the_specification.  It is now a kind of a reference manual.  This
 document often refers to the sections of the_specification.  We
-apologize if it is hard to read.
+apologize for poor understanding and poor English.
 
 %%%%%%%%%%%%%%%%
 
@@ -170,30 +170,33 @@ Some rules are assumed in the_implementation on syntaxing.
 
 \subsubsection*{Composite names}
 
-A variable (instance) reference is in the form like
+A non-constant variable (instance) reference is in the form like
 $x[...].y[...].z[...]$.  Subscripts are optional in a variable
 reference.  A class reference is like $A.B.C$.  Subscripts are not
 allowed in a class reference.  Classes $A$, $B$, and $C$ can be
-packages or non-packages.  A constant refererence in a class is like
+packages or non-packages, and classes except for the last one are
+treated as packages.  A constant refererence in a class is like
 $A.B.C.a[...].b[...].c[..]$, where all $a$, $b$, and $c$ are constants
 and subscripts are optional.
 
-A non-constant variable (instance) reference does not have any
-prefixes of classes nor a preceding dot.
+A non-constant variable reference does not have any prefixes of
+classes nor a preceding dot.  A class reference may be with a
+preceding dot, where the empty name refers to the package-root.  A
+class may be referred to via a variable reference, and in that case,
+the class is considered as a package.
 
-A class reference may be with a preceding dot, which refers to the
-unnamed root.  Or, a class reference may follow a variable reference,
-in that case classes are considered as packages.
-
-\begin{QRULE}\label{mixed-class-instance-reference} There is a single
-namespace for classes and variables.  It is allowed to refer to a
-constant in a package via a variable reference as $x.P.c$.  But, it is
-illegal to refer to a class via a variable reference in a declaration
-as (illegal) $x.C~v$.\end{QRULE}
+There is a single namespace for classes and variables.
+%%%%
+\begin{QRULE}\label{mixed-class-instance-reference} It is legal to
+refer to a class via a variable reference as $x.P$, but the class is
+treated as a package.  Thus, it is legal to refer to a constant via a
+variable reference as $x.P.c$, but, it is illegal to refer to a class
+via a variable reference in a declaration as (illegal)
+$x.C~v$.\end{QRULE}
 
 \begin{QFACT} An enclosing class is considered as a package in the
-nesting of class definitions, and the scope of an enclosing class only
-includes the constants but variables are ignored.\end{QFACT}
+nesting of class definitions, and the elements of an enclosing class
+only includes the constants but the variables are ignored.\end{QFACT}
 %%%%
 See Rule~\ref{model-nesting} for the binary roles of a class.
 
@@ -206,11 +209,11 @@ For example, (illegal) $\{1,2,3\}[1]$ is not allowed.
 
 \begin{QRULE}\label{time-and-end} A variable $\mathit{time}$ is
 visible everywhere.  Variables $\mathit{end}$ are visible in array
-indexing.  These are the only predefined_variables.  $\mathit{time}$
-is a variable, and thus, not defined in the unnamed-enclosing-class
-(it is a package).\end{QRULE}
+indexing.  These are the only predefined_variables.\end{QRULE}
+
+$\mathit{time}$ is a variable and not defined in the package-root (it
+is a package), Thus, $\mathit{time}$ cannot have a preceding dot.
 %%%%
-Thus, $\mathit{time}$ cannot have a preceding dot.
 \begin{quote}
 \begin{lstlisting}[aboveskip=-\baselineskip]
 /*ILLEGAL*/
@@ -222,42 +225,42 @@ end M;
 \end{lstlisting}
 \end{quote}
 
-\subsubsection*{(?) Scopes}
+\subsubsection*{Scopes}
 
 The scope is flat in most cases, spanning from the main (non-base)
-class to the base classes where the class and variable names are
-distinct.  However, class names and constants are visible via
-enclosing classes, and hiding some of the names in an enclosing class
-may happen.  An enclosing class is defined to each main and base
-class.
+class to the base classes.  The class and variable names should be
+distinct, or the definitions/declarations should be identical.
+However, class names and constants in the enclosing classes are
+visible hierarchically, and shadowing some of the names in an
+enclosing class may happen.  An enclosing class is defined to each
+main and base class.
 
 %%%%%%%%%%%%%%%%
 
 \subsection{Importing}
 
-\def\baseofbase{This inclusion recurses transitively to the base
+\def\baseimport{This inclusion recurses transitively to the base
 classes}
 
 \def\noimport{This inclusion does not include the imported names in
 the base classes nor the names in the enclosing classes in the base
 classes}
 
-Importing makes visible the names of the definition/declaration
-elements of the specified package to the present class.  The inclusion
-is from any classes but they are processed as packages.  The inclusion
-is limited to the public elements. \baseofbase. \noimport.
+Importing makes visible the names of the definitions/declarations of
+the specified package to the present class.  The inclusion is from any
+classes but they are treated as packages.  The inclusion is limited to
+the public elements. \baseimport. \noimport.
 
 \subsubsection*{Import-clause syntax}
 
-\def\packagenames{P_0.\,...\,.P_{n-1}}
-
-See \specref{13.2.1}.  A package name in an import-clause is
-considered as fully~qualified.  It can import only from packages.  In
-the following, $\mathit{package}$ is a sequence of identifiers
-$\mathit{package}=\packagenames$.  Each prefix in $P_0\,...\,.P_i$
-refers to a class, and $P_{n-1}$ refers to a package.
-$\mathit{package}$ can be empty.  Each $P_i$ and $N$ refers to an
-indentifier.
+See \specref{13.2.1}.  Importing is only from packages.  However,
+classes of any class_kinds are treated as packages.  A package name in
+an import-clause is considered as fully_qualified.  That is, a name
+search starts from the package-root.  In the following description,
+each $P_i$ and $N$ refers to an identifier, and $\mathit{package}$ is
+a sequence of identifiers $\mathit{package}={P_0.\,...\,.P_{n-1}}$.
+Each prefix $P_0\,...\,.P_i$ and $\mathit{package}$ refers to a
+package.  $\mathit{package}$ can be empty.
 
 \begin{quote}
 \begin{description}
@@ -269,8 +272,9 @@ syntactic difference when $N$ refers to a class/package or a constant.
 
 \item [$\mathbf{import}\;\mathit{package}.*$] (unqualified import):
 imports each public name visible in the package including one in the
-base_classes as "$\mathbf{import}\;N_i=\mathit{package}.N_i$" for
-$N_i$.  The package part can not be empty in this case.
+base_classes.  It equivalent to
+"$\mathbf{import}\;N_i=\mathit{package}.N_i$" for $N_i$ in the
+package.  The package part can not be empty in this case.
 
 \item [$\mathbf{import}\;\mathit{package}.N$] (qualified import/single
 definition import): is equivalent to
@@ -298,7 +302,7 @@ a package $P_{n-1}$ visible as an identifier $N$.
 \subsection{Extending}
 
 Extending includes the (definition/declaration) elements of the base
-classes to the present class.  \baseofbase.  \noimport.  The
+classes to the present class.  \baseimport.  \noimport.  The
 visibility is nothing to do with the bases because it is either
 $\mathbf{public}$ or $\mathbf{protected}$.
 
@@ -822,6 +826,7 @@ $a$ is resolved in the LHS rule, and $x$ in the RHS rule.
 \begin{quote}
 \begin{lstlisting}[aboveskip=-\baselineskip]
 /*LEGAL*/
+
 model A
     Real a=0;
     constant Real x=1;
@@ -932,6 +937,7 @@ A modifier $(x=20)$ is ignored in the following example.
 \begin{quote}
 \begin{lstlisting}[aboveskip=-\baselineskip]
 /*LEGAL*/
+
 model A
     Real x=10;
     Real y=10;
@@ -4513,6 +4519,8 @@ to a connection to an outside_connector.
 
 \item [merging_modifiers] is to merge a part of prefixes and modifiers
 in a redeclaration.  It is called inheriting in the_specification.
+
+\item [package-root] refers to the unamed-enclosing-class.
 
 \item [predefined_type{$\mbox{}^\top$}] is simple_types and classes
 defined in \specref{4.8.8}.  "Built-in_type" is synonymous and
