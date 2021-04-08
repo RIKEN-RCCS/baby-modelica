@@ -1299,7 +1299,7 @@ fun dump_predefined_function s k = (
     let
 	val _ = if (function_is_predefined k) then () else raise Match
 	val name = (subject_to_string (subject_of_class k))
-	val dummy = ("/* function (predefined) "^ name ^" */\n")
+	val dummy = ("/* function "^ name ^" */\n")
     in
 	(TextIO.output (s, dummy))
     end)
