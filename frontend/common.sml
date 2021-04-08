@@ -8,11 +8,6 @@ structure common = struct
 open plain
 open ast
 
-(* Prints a trace message. *)
-
-fun tr_tree (s : string) = if true then (print (s ^"\n")) else ()
-fun tr_tree_vvv (s : string) = if false then (print (s ^"\n")) else ()
-
 (* ================================================================ *)
 
 type cooker_t =
