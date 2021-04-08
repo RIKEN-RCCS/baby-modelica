@@ -308,13 +308,17 @@ $\mathbf{public}$ or $\mathbf{protected}$.
 
 \subsubsection*{Checks for extends clauses}
 
-\begin{QRULE}\label{uniqueness-after-extension} It is an error if a
+\begin{QRULE}\label{uniqueness-after-extension} It is illegal if a
 base class $A$ of $\mathbf{extends}\;A$ is defined in the class $A$
-itself or in other base classes.  This is broadly interpreted as a
-lookup of $A$ skips extends-clauses. \end{QRULE}
+itself or in its base classes.  This can be interpreted as a lookup of
+$A$ just ignores its extends-clauses.\end{QRULE}
 
-This may be a result of requiring the uniqueness of resolution of a
-class name.  When another class $A$ were defined in $A$ in the code
+\begin{qquote} (\specref{5.6.1.4}\/) The classes of extends-clauses
+are looked up before and after handling extends-clauses; and it is an
+error if those lookups generate different results.\end{qquote}
+%%%%
+This may be by the requirement of the uniqueness of class name
+resolution.  When another class $A$ were defined in $A$ in the code
 below, two occurrences of $A$ would refer to the different classes,
 which contradicts to an intuitive assumption that the both $A$ are the
 same.
@@ -328,60 +332,9 @@ end M;
 \end{lstlisting}
 \end{quote}
 
-\begin{qquote} (\specref{5.6.1.4}\/) The classes of extends-clauses
-are looked up before and after handling extends-clauses; and it is an
-error if those lookups generate different results.\end{qquote}
-
-\subsubsection*{Mutual dependence of extends-clauses}
-
-\begin{QRULE}\label{ban-mutual-inheritance} Mutual dependence of
-extends-clauses is prohibited.  \end{QRULE}
-
-(?) The_specification does not likely state it explicitly.
-The_specification states that inheritance is unified in cases where a
-class extends a common base_class through distinct intermediate
-base_classes.  Mutual dependence could be resolved by identifying.
-
-%% ("diamond"-paths of inheritance)
-
-\subsubsection*{Extending a single base multiple times (?)}
-
-\begin{QRULE}\label{multiple-extensions-of-single-base} (?) Extending
-a single class multiple times (usually via a common base class) is
-allowed only if the modifiers to it are identical.  It is an error if
-the modifiers differ.  \end{QRULE}
-
-It is ambiguous what identical means.  Textual equality may not be
-sufficient with class modifications.  Consider "extends~A(x=a)" and
-"extends~A(x=b)" with "a=0" and "b=0".
-
-(?) It may require {unifying inherited elements}.  Classes and
-variables multiply inherited are unified.
-
-\begin{qquote}\label{quo:unifying-inherited-elements} (\specref{5.6.1.4},
-in the paragraph {\it{}The inherited contents of the element\/}) At
-the end, the current instance is checked whether their children with
-the same name are identical and only the first one of them is kept.
-It is an error if they are not identical. (* A "child" means a
-component. *)\end{qquote}
-
-(* The_implementation does not check the equivalence of modifiers, and
-arbitrary selects one modification. *)
-
-\subsubsection*{Operator_record}
-
-Operator_records have restrictions on extends-clauses.
-
-\begin{qquote} (\specref{4.6}, in the table) (?) It is not legal to
-extend from any of its enclosing scopes.  (* {\it{}enclosing\/} likely
-refers to {\it{}enclosed} *).\end{qquote}
-
-\subsubsection*{No scopes of bases in a lookup of a base class}
-
-\begin{QRULE} A lookup of a base class name skips bases of the present
-class.  It applies to a lookup of both the first part and the
-remaining parts of a composite name. \end{QRULE}
-
+For more examples of skipping bases of the present class in looking up
+of a base class.  It applies to a lookup of both the first part and
+the remaining parts of a composite name.
 %%%%
 \begin{quote}
 \begin{lstlisting}[aboveskip=-\baselineskip]
@@ -406,20 +359,70 @@ end M1;
 
 \paragraph {Remark}
 
-Note the first case is accepted with warnings in some_implementations,
-and the both cases will be accepted, when the extends-clauses are
-swapped, i.e., when $\mathbf{extends}\;A$ comes early.
+Note that some_implementations accept the first case with warnings
+($M0$), and will accept the both cases ($M0$ and $M1$) when the
+extends-clauses are swapped, i.e., when $\mathbf{extends}\;A$ comes
+early.
+
+\subsubsection*{Mutual dependence of extends-clauses}
+
+\begin{QRULE}\label{ban-mutual-inheritance} Mutual dependence of
+extends-clauses is prohibited.\end{QRULE}
+%%%%
+The_specification does not likely state it explicitly.
+
+\paragraph {Remark}
+
+The_specification states that inheritance is unified in case a class
+extends a common base_class through distinct intermediate
+base_classes.  Thus, mutual dependence might be allowed by unifying
+the base classes.
+
+%% ("diamond"-paths of inheritance)
+
+\subsubsection*{Extending a single base multiple times (?)}
+
+\begin{QRULE}\label{multiple-extensions-of-single-base} (?) Extending
+a single class multiple times (usually via a common base class) is
+allowed only if the modifiers to it are identical.  It is illegal if
+the modifiers differ.\end{QRULE}
+
+\begin{qquote}\label{quo:unifying-inherited-elements}
+(\specref{5.6.1.4}, in the paragraph {\it{}The inherited contents of
+the element\/}) At the end, the current instance is checked whether
+their children with the same name are identical and only the first one
+of them is kept.  It is an error if they are not identical. (* A
+"child" means a component. *)\end{qquote}
+%%%%
+It requires unifying inherited elements.  Classes and variables
+multiply inherited are unified.
+
+\paragraph {Remark}
+
+It is ambiguous what identical means.  Textual equality may not be
+sufficient with class modifications.  Consider for example,
+$\mathbf{extends}\;A(x=a)$ and $\mathbf{extends}\;A(x=b)$ with $a=0$
+and $b=0$.
+
+\subsubsection*{Operator_record}
+
+Operator_records have restrictions on extends-clauses.
+
+\begin{qquote} (\specref{4.6}, in the table) An operator record can
+only extend from an operator record [as a short class definition, and
+not from another specialized class].  It is not legal to extend from
+any of its enclosing scopes.\end{qquote}
 
 \subsubsection*{Unifying defined classes}
 
-\begin{QRULE}\label{multiple-definitions} It is not an error if
-classes with the same name are defined multiple times in the main
-class and its bases, when the definitions are considered identical.
-Identical classes are a sort of unified.  It is defined in
-the_specification that classes are identical if they are textually
-identical after possible modifications. \end{QRULE}
-
-For example, in Fluid/Interfaces, the declarations of
+\begin{QRULE}\label{multiple-definitions} It is legal if classes with
+the same name are defined multiple times in the main class and its
+bases, when the definitions are considered identical.  Identical
+classes are a sort of unified.  It is defined that classes are
+identical if they are textually identical after possible
+modifications.\end{QRULE}
+%%%%
+For example in $\mathit{Fluid/Interfaces}$, the definitions of
 $\mathit{Medium}$ need be unified, when $\mathit{PartialPump}$ extends
 both $\mathit{PartialTwoPort}$ and $\mathit{PartialLumpedVolume}$.
 %%%%
@@ -440,18 +443,19 @@ end PartialLumpedVolume;
 \end{quote}
 %%%%
 $\mathit{PartialPump}$ is defined in
-$\mathit{Modelica.Fluid.Machines.BaseClasses}$.\\
+$\mathit{Modelica}.\mathit{Fluid}.\mathit{Machines}.\mathit{BaseClasses}$.\\
 $\mathit{PartialTwoPort}$ and $\mathit{PartialLumpedVolume}$ are
-defined in $\mathit{Modelica.Fluid.Interfaces}$.
+defined in $\mathit{Modelica}.\mathit{Fluid}.\mathit{Interfaces}$.
 
-\subsubsection*{Extending simple_types}
+\subsubsection*{Restrictions on adding elements}
 
 \begin{QFACT}\label{extending-simple-types} Extending simple_types is
-legal either by a short_class_definition or by an extends-clause.  But
-adding elements is illegal.\end{QFACT}
+legal either by a short_class_definition or by an extends-clause.
+But, adding elements (class/variable) is illegal.\end{QFACT}
 
-\subsubsection*{Restrictions on elements}
-
+Add elements is illegal to a class extending an array, a simple_type,
+or a class with an input/output prefix.
+%%%%
 \begin{qquote} (\specref{4.5.2}\/) It is not legal to combine other
 components or base-classes with an extends from an array class, a
 class with non-empty base-prefix, a simple_type...\end{qquote}
@@ -5019,7 +5023,7 @@ section~\ref{sec:lookup-cycle}.
 
 %%%%%%%%%%%%%%%%
 
-\subsection{Other specific behabiors}
+\subsection{Other specific behaviors}
 
 \subsubsection*{Class prefixes}
 
@@ -5046,6 +5050,12 @@ Fact~\ref{parameters}.
 The_implementation treats {time} and {end} as if they were defined in
 the unnamed-enclosing-class, because a look up of a name ends there.
 It violates the Rule~\ref{time-and-end}.
+
+\subsubsection*{Unifying multiply inherited classes/variables}
+
+The_implementation does not check the equivalence of modifiers, and
+arbitrary selects one modification.  See
+Rule~\ref{multiple-extensions-of-single-base}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -5271,7 +5281,6 @@ similarly after {\tt{}"fun~f~=~({\char`\\}n"}.
 \stepcounter{section}
 \addcontentsline{toc}{section}{\numberline{\arabic{section}}References}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \appendix
