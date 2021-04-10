@@ -495,7 +495,7 @@ and enum_list_t = (id_t * annotation_t * comment_t) list
 
 (* An entry of an element list (definitions/declarations).  It is
    stored in the class_bindings table.  The identifier slot is a
-   variable/class name.  The first subject slot is a composite name,
+   class/variable name.  The first subject slot is a composite name,
    which is a composition of a defining class and a name.  The second
    subject slot points to an inner when this element is an outer. *)
 

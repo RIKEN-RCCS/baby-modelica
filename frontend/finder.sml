@@ -9,7 +9,6 @@ sig
     type id_t
     type subject_t
     type definition_body_t
-    type cook_step_t
     type cooker_t
     type naming_t
 
@@ -44,8 +43,7 @@ val fetch_enclosing_class = loader.fetch_enclosing_class
 
 (* Prints a trace message. *)
 
-fun tr_find (s : string) = if true then (print (s ^"\n")) else ()
-fun tr_find_vvv (s : string) = if false then (print (s ^"\n")) else ()
+fun trace n (s : string) = if n <= 3 then (print (s ^"\n")) else ()
 
 (* ================================================================ *)
 
@@ -166,22 +164,19 @@ fun make_dummy_inner (cv0 : naming_element_t) subj = (
 		subject)
     end)
 
-(* Gathers variable/class names in a class including its imported and
+(* Gathers class/variable names in a class including its imported and
    base classes.  It incorporates the inner/outer relation.  It can be
    called with both main and base classes.  A returned list is
-   complete for a class at step=E3 or greater.  Yet, it may be called
-   with a class at step=E2 (from list_component_names) before applying
-   modifiers, but then the list of names is only usable.  It caches
-   the list for a class step=E3 or greater.  Note that the entries of
-   non-constant variables and outer classes are skipped when it is
-   processed as a package.  It is an error to call this with the
-   package-root. *)
+   complete for a class at step=E3 or greater.  It caches the list for
+   a class step=E3 or greater.  Note that the entries of non-constant
+   variables and outer classes are skipped when it is processed as a
+   package.  It is an error to call this with the package-root. *)
 
 fun list_elements exclude_imported kp = (
     let
-	(*val _ = tr_find (";; list_elements ("^ (class_print_name kp) ^")")*)
+	(*val _ = trace 3 (";; list_elements ("^ (class_print_name kp) ^")")*)
 	val _ = if (class_is_body kp) then () else raise Match
-	val _ = if (step_is_at_least E2 kp) then () else raise Match
+	val _ = if (step_is_at_least E3 kp) then () else raise Match
 
 	fun filter bb = (
 	    if (not exclude_imported) then
@@ -189,37 +184,38 @@ fun list_elements exclude_imported kp = (
 	    else
 		(List.filter (not o binding_is_imported) bb))
 
-	val caching = (step_is_at_least E3 kp)
+	(*val caching = (step_is_at_least E3 kp)*)
 	val subj = (subject_of_class kp)
 	val tag = (innate_tag kp)
 	val key = ((subject_to_string subj) ^"@"^ (tag_to_string tag))
-	fun faulting_cooker _ (_, _) = raise Match
     in
-	if (not caching) then
+	case (HashTable.find class_bindings key) of
+	    SOME bb => (filter bb)
+	  | NONE => (
 	    let
-		val bb = (gather_names_in_class faulting_cooker kp)
+		val bb = (gather_names_in_class true kp)
+		val _ = (HashTable.insert class_bindings (key, bb))
 	    in
 		(filter bb)
-	    end
-	else
-	    case (HashTable.find class_bindings key) of
-		SOME bb => (filter bb)
-	      | NONE => (
-		let
-		    val bb = (gather_names_in_class faulting_cooker kp)
-		    val _ = (HashTable.insert class_bindings (key, bb))
-		in
-		    (filter bb)
-		end)
+	    end)
     end)
 
-(* Gathers variable/class names in a class for list_elements.  See
-   comments of list_elements.  Note that the outer case handles the
-   inner-outer case as well. *)
+(* Gathers class/variable names in a class.  See the comments of
+   list_elements.  It unifies duplicates when unify=true, otherwise
+   some entries may have duplicates.  It can be called with unify=true
+   only for a class step=E3.  Note that the outer case handles the
+   inner-outer case as well.  It is called with a class at step=E2 via
+   list_component_names, or step=E3 via list_elements.  A class at
+   step=E2 is before applying modifiers, and then, the list of names
+   is only usable. *)
 
-and gather_names_in_class (cooker : cooker_t) kp : naming_t list = (
+and gather_names_in_class (unify : bool) kp : naming_t list = (
     let
+	fun faulting_cooker _ (_, _) = raise Match
+	val cooker : cooker_t = faulting_cooker
 	val _ = if (not (class_is_root kp)) then () else raise Match
+	val _ = if ((cook_step kp) <> E2 orelse not unify) then ()
+		else raise Match
 
 	val package = (class_is_package kp)
 	val function = (kind_is_function kp)
@@ -287,8 +283,8 @@ and gather_names_in_class (cooker : cooker_t) kp : naming_t list = (
 	      | Element_Annotation _ => []
 	      | Element_Import (z, tag, idxid, a, w) => (
 		let
-		    val _ = tr_find_vvv (";; gather_names_in_class import ("^
-					 (import_name_to_string tag idxid) ^")")
+		    val _ = trace 5 (";; gather_names_in_class import ("^
+				     (import_name_to_string tag idxid) ^")")
 
 		    val subj = (tag_to_subject tag)
 		    val x0 = surely (fetch_from_instance_tree subj)
@@ -322,7 +318,10 @@ and gather_names_in_class (cooker : cooker_t) kp : naming_t list = (
 	val bases = (list_base_classes kp)
 	val classes = [kp] @ bases
 	val vv0 = (List.concat (map list_names_in_class classes))
-	val vv1 = (drop_duplicate_declarations E3 vv0)
+	val vv1 = if unify then
+		      (drop_duplicate_declarations E3 vv0)
+		  else
+		      vv0
     in
 	vv1
     end)
@@ -343,7 +342,7 @@ and look_for_inner (cooker : cooker_t) cv (subj : subject_t) = (
 	(*val _ = if (inner = NONE) then () else raise Match*)
 	(*val binding1 = Naming (id, newsubj, SOME subsubj, i, e)*)
 
-	val _ = tr_find (";; Match inner-outer ("^
+	val _ = trace 3 (";; Match inner-outer ("^
 			 (subject_print_string inner) ^" for "^
 			 (subject_print_string newsubj) ^")")
     in
@@ -383,7 +382,7 @@ and look_for_inner_in_class (cooker : cooker_t) cv0 subj0 = (
 	      | EL_State (z, {Inner=i, ...}, _, _) => (
 		((x = id) andalso (z = Public) andalso (i = true))))
 
-	val _ = tr_find (";; look_for_inner ("^
+	val _ = trace 3 (";; look_for_inner ("^
 			 (id_to_string (name_of_naming_element cv0))
 			 ^" in "^ (subject_print_string subj0) ^")")
 
@@ -405,36 +404,38 @@ and look_for_inner_in_class (cooker : cooker_t) cv0 subj0 = (
 
 (* ================================================================ *)
 
-(* Lists names of components in the class.  This is called during
-   building a class at step=E2. *)
+(* Lists names of components in the class.  This is called with a
+   class at step=E2 during building. *)
 
 fun list_component_names kp = (
     let
 	val _ = if ((cook_step kp) = E2) then () else raise Match
 
-	val _ = tr_find_vvv (";; list_component_names ("^
-			     (class_print_name kp) ^")...")
+	val _ = trace 5 (";; list_component_names ("^
+			 (class_print_name kp) ^")...")
 
 	fun name (Naming (id, _, _, _, ne)) = (
 	    case ne of
 		EL_Class _ => raise Match
 	      | EL_State _ => id)
 
-	val bindings = (list_elements false kp)
-	val (classes, states) = (List.partition binding_is_class bindings)
-	val cc = (map name states)
+	(*val bindings = (list_elements false kp)*)
+	val bindings = (gather_names_in_class false kp)
+	val (_, states) = (List.partition binding_is_class bindings)
+	val cc0 = (map name states)
+	val cc1 = (list_uniquify (op =) cc0)
 
-	val _ = tr_find_vvv (";; list_component_names ("^
-			     (class_print_name kp) ^")... done")
+	val _ = trace 5 (";; list_component_names ("^
+			 (class_print_name kp) ^")... done")
     in
-	cc
+	cc1
     end)
 
 (* ================================================================ *)
 
-(* Looks for a name (variable/class) in a class.  Only classes and
+(* Looks for a name (class/variable) in a class.  Only classes and
    constants are searched for when a class is a package.  It returns a
-   variable/class as it is declared/defined (that is, it is not
+   class/variable as it is defined/declared (that is, it is not
    cooked). *)
 
 fun find_element exclude_imported kp id = (
@@ -474,7 +475,7 @@ fun find_element exclude_imported kp id = (
 
 (* ================================================================ *)
 
-(* Looks for a name (variable/class) in a class.  A search continues
+(* Looks for a name (class/variable) in a class.  A search continues
    in the enclosing classes if nothing is found in a given class.  It
    assumes the enclosing classes are already in step=E3 or greater.
    See find_element. *)

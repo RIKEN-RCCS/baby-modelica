@@ -41,8 +41,7 @@ type seek_context_t = {Scope : scope_t, Name : name_t, Mode : seek_mode_t}
 
 (* Prints a trace message. *)
 
-fun tr_seek (s : string) = if true then (print (s ^"\n")) else ()
-fun tr_seek_vvv (s : string) = if false then (print (s ^"\n")) else ()
+fun trace n (s : string) = if n <= 3 then (print (s ^"\n")) else ()
 
 (* ================================================================ *)
 
@@ -105,9 +104,9 @@ fun list_import_candidate_classes (cooker : cooker_t) kp id = (
 
 fun lookup_in_declared (cooker : cooker_t) ctx fullaccess kp id = (
     let
-	val _ = tr_seek_vvv (";; - lookup_in_declared ("^
-			     (id_to_string id) ^" in "^
-			     (class_print_name kp) ^")")
+	val _ = trace 5 (";; - lookup_in_declared ("^
+			 (id_to_string id) ^" in "^
+			 (class_print_name kp) ^")")
 
 	fun lookup id e = (
 	    case e of
@@ -175,9 +174,9 @@ fun lookup_in_declared (cooker : cooker_t) ctx fullaccess kp id = (
 
 fun lookup_in_main_and_bases (cooker : cooker_t) ctx kp id = (
     let
-	val _ = tr_seek_vvv (";; - lookup_in_main_and_bases ("^
-			     (id_to_string id) ^" in "^
-			     (class_print_name kp) ^")")
+	val _ = trace 5 (";; - lookup_in_main_and_bases ("^
+			 (id_to_string id) ^" in "^
+			 (class_print_name kp) ^")")
 
 	val _ = if (id <> (Id "")) then () else raise Match
 	val _ = if (class_is_body kp) then () else raise Match
@@ -259,9 +258,9 @@ fun lookup_composite_loop (cooker : cooker_t) ctx enclosing0 (subj0, k0) nn = (
 
 fun find_import_class (cooker : cooker_t) kp name = (
     let
-	val _ = tr_seek_vvv (";; find_import_class ("^
-			     (name_to_string name)
-			     ^" in "^ (body_name_at_step kp) ^")")
+	val _ = trace 5 (";; find_import_class ("^
+			 (name_to_string name)
+			 ^" in "^ (body_name_at_step kp) ^")")
 
 	fun drop_explicit_dot (Name nn) = (
 	    case nn of
@@ -287,9 +286,10 @@ fun find_import_class (cooker : cooker_t) kp name = (
 
 fun lookup_in_imported (cooker : cooker_t) ctx kp id = (
     let
-	val _ = tr_seek_vvv (";; - lookup_in_imported ("^
-			     (id_to_string id) ^" in "^
-			     (body_name_at_step kp) ^")")
+	val _ = trace 5 (";; - lookup_in_imported ("^
+			 (id_to_string id) ^" in "^
+			 (body_name_at_step kp) ^")")
+
 	val _ = if (class_is_body kp) then () else raise Match
 
 	val candidates = (list_import_candidate_classes cooker kp id)
@@ -303,9 +303,9 @@ fun lookup_in_imported (cooker : cooker_t) ctx kp id = (
 
 fun lookup_for_bases (cooker : cooker_t) ctx kp id = (
     let
-	val _ = tr_seek_vvv (";; - lookup_for_bases ("^
-			     (id_to_string id) ^" in "^
-			     (class_print_name kp) ^")")
+	val _ = trace 5 (";; - lookup_for_bases ("^
+			 (id_to_string id) ^" in "^
+			 (class_print_name kp) ^")")
 
 	val _ = if (class_is_body kp) then () else raise Match
 	val _ = if (id <> (Id "")) then () else raise Match
@@ -324,17 +324,11 @@ fun lookup_for_bases (cooker : cooker_t) ctx kp id = (
 		raise (error_name_not_found id kp)
 	    else
 		case (lookup_in_imported cooker ctx kp id) of
-		    SOME (enclosing, (subjx, kx)) => SOME (enclosing, (subjx, kx))
+		    SOME (enclosing, pair) => SOME (enclosing, pair)
 		  | NONE =>
 		    let
 			val _ = if (openscope) then () else raise Match
 			val x0 = (fetch_enclosing_class kp)
-
-			(*AHO*)
-			(*val pkg = (tag_of_enclosing_class kp)*)
-			(*val subj = (tag_to_subject pkg)*)
-			(*val x1 = (assemble_package_if_fresh cooker E2 (subj, x0)*)
-
 			val _ = (assert_cooked_at_least E2 x0)
 			val x1 = x0
 		    in
@@ -349,8 +343,8 @@ fun lookup_for_bases (cooker : cooker_t) ctx kp id = (
 
 fun find_base_class (cooker : cooker_t) kp name = (
     let
-	val _ = tr_seek_vvv (";; find_base_class ("^ (name_to_string name)
-			     ^" in "^ (body_name_at_step kp) ^")")
+	val _ = trace 5 (";; find_base_class ("^ (name_to_string name)
+			 ^" in "^ (body_name_at_step kp) ^")")
 
 	val _ = if (class_is_body kp) then () else raise Match
 	val _ = if (step_is_at_least E2 kp) then () else raise Match

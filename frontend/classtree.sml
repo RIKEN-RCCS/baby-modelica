@@ -8,7 +8,6 @@ sig
     type id_t
     type class_tag_t
     type definition_body_t
-    type class_definition_t
     type subject_t
     type naming_t
     type scope_t
@@ -173,8 +172,9 @@ fun store_to_loaded_classes overwrite k = (
 	Def_Displaced (tag, bad_subject)
     end)
 
-(* It may return a displaced-tag when a package is loaded but the
-   class is not yet loaded. *)
+(* Fetches a class from the loaded_classes table.  It may return a
+   displaced-tag when a package is loaded but the class is not yet
+   loaded. *)
 
 fun fetch_from_loaded_classes (tag : class_tag_t) = (
     if (tag_is_root tag) then

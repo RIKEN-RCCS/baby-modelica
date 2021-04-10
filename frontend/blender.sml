@@ -998,9 +998,7 @@ and cook_base pkg kp siblings (e, acc) = (
 		NONE => raise (error_class_name_not_found name kp)
 	      | SOME (defining, id) => (
 		let
-		    (*val _ = if (null ss) then () else raise Match*)
 		    val _ = (assert_modifiers_are_scoped mm)
-		    (*val _ = (assert_expressions_are_scoped ss)*)
 
 		    val subj = (subject_of_class kp)
 		    val k0 = (fetch_element_class cooker (defining, id))

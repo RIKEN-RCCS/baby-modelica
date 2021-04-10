@@ -17,7 +17,6 @@ open small1
 val fetch_from_instance_tree = classtree.fetch_from_instance_tree
 val store_to_instance_tree = classtree.store_to_instance_tree
 
-val find_element = finder.find_element
 val list_elements = finder.list_elements
 
 val assemble_instance = blender.assemble_instance
@@ -61,10 +60,10 @@ fun resolve_function_components kp = (
 		Naming (_, _, _, _, EL_Class (z, r, _, h)) => raise Match
 	      | Naming (id, subj, inner, _, EL_State (z, r, dx, h)) => (
 		let
-		    val Defvar (_, k0) = dx
 		    val _ = if (not (isSome (fetch_from_instance_tree subj)))
 			    then () else raise Match
 		    val _ = if (not (isSome inner)) then () else raise Match
+		    val Defvar (_, k0) = dx
 		    val (k1, ss1, mm1) = (strip_dimension k0)
 		    val k3 = (assemble_instance (subj, k1))
 		    val (k4, ss0, mm0) = (strip_dimension k3)
