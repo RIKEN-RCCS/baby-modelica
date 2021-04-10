@@ -150,7 +150,7 @@ fun record_of_connect k = (
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 fun unmark_expandable_connector k = (
@@ -168,7 +168,7 @@ fun unmark_expandable_connector k = (
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 fun connect_mode_marker k = (
@@ -284,7 +284,7 @@ fun instance_is_enabled k = (
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 (* ================================================================ *)
@@ -331,7 +331,7 @@ fun enable_instance enable0 k0 = (
 	      | Def_Extending _ => raise Match
 	      | Def_Replaced _ => raise Match
 	      | Def_Displaced _ => raise Match
-	      | Def_In_File => raise Match
+	      | Def_In_File _ => raise Match
 	      | Def_Mock_Array _ => raise Match
     end)
 

@@ -387,7 +387,7 @@ and definition_body_t
     | Def_Replaced of
       (definition_body_t * naming_element_t)
     | Def_Displaced of class_tag_t * (*enclosing*) subject_t
-    | Def_In_File
+    | Def_In_File of class_tag_t
     | Def_Mock_Array of
       (int list * definition_body_t list * definition_body_t option)
 
@@ -709,7 +709,7 @@ fun set_class_prefixes (t1, p1) (Defclass ((v, g), k0)) = (
 		Def_Extending (g, x, (set_prefixes (t1, p1) kx)))
 	      | Def_Replaced _ => raise Match
 	      | Def_Displaced _ => raise Match
-	      | Def_In_File => raise Match
+	      | Def_In_File _ => raise Match
 	      | Def_Mock_Array _ => raise Match)
     in
 	Defclass ((v, g), (set_prefixes (t1, p1) k0))
@@ -738,7 +738,7 @@ fun set_class_final (Defclass ((v, g), k0)) = (
 		Def_Extending (g, x, (set_body fix kx)))
 	      | Def_Replaced _ => raise Match
 	      | Def_Displaced _ => raise Match
-	      | Def_In_File => raise Match
+	      | Def_In_File _ => raise Match
 	      | Def_Mock_Array _ => raise Match)
     in
 	Defclass ((v, g), (set_body set_final k0))

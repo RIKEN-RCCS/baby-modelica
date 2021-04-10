@@ -188,7 +188,7 @@ fun assert_modifiers_are_scoped mm = (
 	      | Def_Extending _ => raise Match
 	      | Def_Replaced _ => raise Match
 	      | Def_Displaced _ => raise Match
-	      | Def_In_File => raise Match
+	      | Def_In_File _ => raise Match
 	      | Def_Mock_Array _ => raise Match)
 
 	and test_redeclare_is_scoped (Defvar (v, kx)) = (
@@ -301,7 +301,7 @@ fun record_defining_class (subj, k0) = (
 		in
 		    (assign_enclosing k0 enclosing)
 		end)
-	      | Def_In_File => raise Match
+	      | Def_In_File _ => raise Match
 	      | Def_Mock_Array _ => raise Match)
 
 	val ee0 = (body_elements k0)
@@ -419,7 +419,7 @@ and closure_class (scope : scope_t) k0 = (
 	end)
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => k0
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 and closure_annotation (scope : scope_t) (Annotation m) = (
@@ -532,7 +532,7 @@ fun prepare_for_modification main pkg (subj, k0) = (
 	  | Def_Extending _ => raise Match
 	  | Def_Replaced _ => raise Match
 	  | Def_Displaced _ => raise Match
-	  | Def_In_File => raise Match
+	  | Def_In_File _ => raise Match
 	  | Def_Mock_Array _ => raise Match
     end)
 
@@ -747,7 +747,7 @@ and collect_refining main pkg (subj, k0) (name1, (t1, p1, q1), mm1, cc1, aa1) si
 	    val x2 = (make_modified_class x1 mm0x (Annotation []) (Comment []))
 	    val x3 = (cook_class_refining false pkg (subj, x2) siblings)
 	    val x4 = (cook_class_body false pkg (subj, x3) siblings)
-	    val _ = (enclosing_of_body body1)
+	    val _ = (enclosing_class_of_body body1)
 	    val k3 = (insert_base_of_extends_redeclaration subj x4 body1)
 	in
 	    (collect_refining
@@ -767,7 +767,7 @@ and collect_refining main pkg (subj, k0) (name1, (t1, p1, q1), mm1, cc1, aa1) si
 		 main pkg (subj, x1)
 		 (name1, (t1, p1, q1), mm1, cc1, aa1) siblings)
 	end)
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 (* Calls cook_class_with_modifiers when a class is scalar, or returns
@@ -814,7 +814,7 @@ and cook_class_body main pkg (subj, k0) siblings = (
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 (* Transforms a class at the loaded-state (step=E0) to be ready for
@@ -835,7 +835,7 @@ and cook_class_with_modifiers main pkg (subj, k0) mm cc aa siblings0 = (
     let
 	val _ = if (class_is_body k0) then () else raise Match
 	val _ = (assert_modifiers_are_scoped mm)
-	val _ = (enclosing_of_body k0)
+	val _ = (enclosing_class_of_body k0)
 
 	val (t, p) = copy_type
 	val q = no_component_prefixes

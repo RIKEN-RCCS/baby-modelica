@@ -76,7 +76,7 @@ fun innate_tag k = (
       | Def_Extending (_, x, kx) => (innate_tag kx)
       | Def_Replaced (kx, _) => (innate_tag kx)
       | Def_Displaced (tag, _) => tag
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 fun body_elements (k : definition_body_t) = (
@@ -92,7 +92,7 @@ fun body_elements (k : definition_body_t) = (
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 (* Returns a list of the class body elements. *)
@@ -113,7 +113,7 @@ fun replace_body_elements (k : definition_body_t) ee = (
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 fun assert_match_subject_name id subj = (
@@ -293,8 +293,8 @@ fun classes_are_similar x y = (
       | (Def_Replaced _, _) => raise Match
       | (_, Def_Replaced _) => raise Match
       | (Def_Displaced _, Def_Displaced _) => (innate_tag x) = (innate_tag y)
-      | (Def_In_File, _) => raise Match
-      | (_, Def_In_File) => raise Match
+      | (Def_In_File _, _) => raise Match
+      | (_, Def_In_File _) => raise Match
       | (_, _) => false)
 
 (*AHO*)
@@ -345,7 +345,7 @@ fun declaration_is_constant (Defvar (v, k)) = (
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 (* Tests if the class is proper for variable declaration form. *)
@@ -364,7 +364,7 @@ fun body_is_declaration_form k = (
       | Def_Extending _ => false
       | Def_Replaced _ => false
       | Def_Displaced _ => false
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 (* ================================================================ *)
@@ -387,7 +387,7 @@ fun body_is_unmodifiable k = (
       | Def_Extending _ => false
       | Def_Replaced (kx, _) => (body_is_unmodifiable kx)
       | Def_Displaced _ => false
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 (* Tests if a definition is an extends-redeclaration. *)
@@ -405,7 +405,7 @@ fun body_is_extending k = (
       | Def_Extending _ => true
       | Def_Replaced _ => false
       | Def_Displaced _ => false
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 fun find_in_bindings id bindings = (

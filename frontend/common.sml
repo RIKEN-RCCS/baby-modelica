@@ -328,7 +328,7 @@ fun assert_proper_class (k : definition_body_t) = (
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 (* ================================================================ *)
@@ -350,7 +350,7 @@ fun cook_step (k : definition_body_t) = (
       | Def_Extending _ => raise Match
       | Def_Replaced _ => E0
       | Def_Displaced _ => E0 (*raise Match*)
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 fun set_cook_step step (k : definition_body_t) = (
@@ -367,7 +367,7 @@ fun set_cook_step step (k : definition_body_t) = (
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 fun cook_step_order step = (
@@ -408,7 +408,7 @@ fun body_of_argument k = (
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 (* ================================================================ *)
@@ -428,7 +428,7 @@ fun definition_is_displaceable (Defclass ((v, g), k)) = (
       | Def_Extending _ => false
       | Def_Replaced _ => false
       | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 fun class_is_body k = (
@@ -444,7 +444,7 @@ fun class_is_body k = (
       | Def_Extending _ => false
       | Def_Replaced _ => false
       | Def_Displaced _ => false
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 fun class_is_refining k0 = (
@@ -460,7 +460,7 @@ fun class_is_refining k0 = (
       | Def_Extending _ => raise Match
       | Def_Replaced (k1, _) => (class_is_refining k1)
       | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 fun class_is_argument k = (
@@ -476,7 +476,7 @@ fun class_is_argument k = (
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 fun body_is_displaced k = (
@@ -492,7 +492,7 @@ fun body_is_displaced k = (
       | Def_Extending _ => false
       | Def_Replaced _ => false
       | Def_Displaced _ => true
-      | Def_In_File => false
+      | Def_In_File _ => false
       | Def_Mock_Array _ => raise Match)
 
 fun body_is_in_file k = (
@@ -508,7 +508,7 @@ fun body_is_in_file k = (
       | Def_Extending _ => false
       | Def_Replaced _ => false
       | Def_Displaced _ => false
-      | Def_In_File => true
+      | Def_In_File _ => true
       | Def_Mock_Array _ => raise Match)
 
 fun assert_class_is_body k = (
@@ -543,7 +543,7 @@ fun class_is_outer_alias k = (
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 (* ================================================================ *)
@@ -607,7 +607,7 @@ fun body_is_package_root k = (
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 fun class_is_root k = (
@@ -623,7 +623,7 @@ fun class_is_root k = (
       | Def_Extending _ => false
       | Def_Replaced _ => false
       | Def_Displaced _ => false
-      | Def_In_File => false
+      | Def_In_File _ => false
       | Def_Mock_Array _ => raise Match)
 
 fun variability_order v = (
@@ -748,7 +748,7 @@ fun marker_of_body k = (
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 fun class_is_main k = ((marker_of_body k) <> BASE)
@@ -778,7 +778,7 @@ fun subject_of_class k = (
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 fun naming_of_class k = (
@@ -800,7 +800,7 @@ fun naming_of_class k = (
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 (* Returns a class name.  It is a class name when redeclarations are
@@ -824,7 +824,7 @@ fun class_name_of_body k = (
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 fun tag_of_body k = (
@@ -845,7 +845,7 @@ fun tag_of_body k = (
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
       | Def_Displaced (tag, enclosing_) => tag
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 fun tag_of_displaced k = (
@@ -861,12 +861,12 @@ fun tag_of_displaced k = (
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
       | Def_Displaced (tag, _) => tag
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 fun name_of_displaced k = (tag_to_string (tag_of_displaced k))
 
-fun enclosing_of_body k = (
+fun enclosing_class_of_body k = (
     case k of
 	Def_Body (mk, cs, (j, n, c, enclosing), cc, ee, aa, ww) => (
 	let
@@ -884,7 +884,7 @@ fun enclosing_of_body k = (
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 fun class_specifier_of_body k = (
@@ -900,7 +900,7 @@ fun class_specifier_of_body k = (
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 (* Records a defining class to a definition body, which indicates
@@ -936,7 +936,7 @@ fun assign_enclosing k enclosing = (
 	in
 	    Def_Displaced (tag, enclosing)
 	end)
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 (* ================================================================ *)
@@ -954,7 +954,7 @@ fun kind_of_class k = (
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 fun kind_is_function k = (
@@ -984,7 +984,7 @@ fun class_is_enum k = (
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 (* Tests if a class is an enumerator definition in the instance_tree.
@@ -1004,7 +1004,7 @@ fun class_is_enumerator k = (
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 (* Tests if a class is an (internal) primitive type. *)
@@ -1022,7 +1022,7 @@ fun class_is_primitive k = (
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 (* Tests if a class is a simple-type, that is, Real, Integer, Boolean,
@@ -1058,7 +1058,7 @@ fun class_is_simple_type k = (
 	  | Def_Extending _ => raise Match
 	  | Def_Replaced _ => raise Match
 	  | Def_Displaced (tag, _) => (tag_is_simple_type tag)
-	  | Def_In_File => raise Match
+	  | Def_In_File _ => raise Match
 	  | Def_Mock_Array _ => raise Match
     end)
 
@@ -1091,7 +1091,7 @@ fun class_is_package k = (
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 fun class_is_instance k = (not (class_is_package k))
@@ -1129,7 +1129,7 @@ fun class_is_connector expandable k = (
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array (_, [], SOME x) => (class_is_connector expandable x)
       | Def_Mock_Array (_, array, dummy) => (
 	(List.all (class_is_connector expandable) array)))
@@ -1149,7 +1149,7 @@ fun variable_is_monomer k = (
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => false)
 
 fun variable_is_simple_type k = (
@@ -1165,7 +1165,7 @@ fun variable_is_simple_type k = (
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => false)
 
 (* Returns true if a subject j0 contains j1 as a subcomponet (that is,
@@ -1238,7 +1238,7 @@ fun class_is_encapsulated k = (
 	  | Def_Extending _ => raise Match
 	  | Def_Replaced _ => raise Match
 	  | Def_Displaced _ => raise Match
-	  | Def_In_File => raise Match
+	  | Def_In_File _ => raise Match
 	  | Def_Mock_Array _ => raise Match
     end)
 
@@ -1267,7 +1267,7 @@ fun class_print_name k = (
       | Def_Extending (_, x, kx) => (class_print_name kx)
       | Def_Replaced (kx, _) => (class_print_name kx)
       | Def_Displaced (tag, _) => (tag_to_string tag)
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 fun body_name_at_step k = (

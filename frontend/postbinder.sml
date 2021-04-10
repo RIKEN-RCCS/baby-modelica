@@ -111,7 +111,7 @@ fun bind_in_class ctx binder k0 = (
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 and bind_in_class_element ctx binder e0 = (
@@ -257,7 +257,7 @@ and bind_in_constraint kp binder (r : constraint_t) = (
 	  | Def_Extending _ => raise Match
 	  | Def_Replaced _ => raise Match
 	  | Def_Displaced _ => raise Match
-	  | Def_In_File => raise Match
+	  | Def_In_File _ => raise Match
 	  | Def_Mock_Array _ => raise Match
     end)
 

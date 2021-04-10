@@ -399,7 +399,7 @@ fun walk_in_class (vamp : 'a vamper_t) (k0 : definition_body_t, acc0) = (
 	  | Def_Extending _ => raise Match
 	  | Def_Replaced _ => raise Match
 	  | Def_Displaced _ => raise Match
-	  | Def_In_File => raise Match
+	  | Def_In_File _ => raise Match
 	  | Def_Mock_Array _ => raise Match)
 
 and walk_in_class_element (vamp : 'a vamper_t) kp (e0 : element_t, acc0) = (

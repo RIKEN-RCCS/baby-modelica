@@ -250,7 +250,7 @@ fun simplify_simple_type (k0 : definition_body_t) = (
 	      | Def_Extending _ => raise Match
 	      | Def_Replaced _ => raise Match
 	      | Def_Displaced _ => raise Match
-	      | Def_In_File => raise Match
+	      | Def_In_File _ => raise Match
 	      | Def_Mock_Array _ => raise Match)
 
 	fun set_value_to_fixed_slot v k value = (
@@ -319,7 +319,7 @@ fun simplify_simple_type (k0 : definition_body_t) = (
 	  | Def_Extending _ => raise Match
 	  | Def_Replaced _ => raise Match
 	  | Def_Displaced _ => raise Match
-	  | Def_In_File => raise Match
+	  | Def_In_File _ => raise Match
 	  | Def_Mock_Array _ => raise Match
     end)
 
@@ -397,7 +397,7 @@ fun insert_attributes_to_enumeration k0 = (
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 (* ================================================================ *)
@@ -459,7 +459,7 @@ fun type_of_simple_type k = (
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 end

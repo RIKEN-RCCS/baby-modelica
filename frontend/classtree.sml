@@ -25,7 +25,7 @@ sig
     val package_root_node : instance_node_t
     val model_root_node : instance_node_t
 
-    val loaded_classes : (string, class_definition_t) HashTable.hash_table
+    val loaded_classes : (string, definition_body_t) HashTable.hash_table
     val class_bindings : (string, naming_t list) HashTable.hash_table
     val dummy_inners : (string, naming_t) HashTable.hash_table
 
@@ -124,12 +124,13 @@ fun trace n (s : string) = if (n <= 1) then (print (s ^"\n")) else ()
 val table_size_hint = 500
 
 (* The loaded_classes table contains all loaded classes.  It is not
-   the "class-tree".  It is keyed by a class-tag (a qualified name,
-   such as ".Modelica.Fluid").  All the names have an initial dot.
-   Nested definitions in a class are displaced (which are stored in
-   their own entries).  The classes in this table are at step=E0. *)
+   the "class-tree".  It is keyed by a class-tag (a fully qualified
+   name, such as ".Modelica.Fluid").  A name string has an initial
+   dot.  Nested definitions in a class are displaced (which are stored
+   in their own entries).  The classes in this table are at
+   step=E0. *)
 
-val loaded_classes : (string, class_definition_t) HashTable.hash_table = (
+val loaded_classes : (string, definition_body_t) HashTable.hash_table = (
     HashTable.mkTable (table_size_hint, error_not_found_in_table))
 
 (* The class_bindings table maps a class to its list of bindings.
@@ -163,10 +164,10 @@ fun store_to_loaded_classes overwrite (d as Defclass ((v, pkg), k)) = (
 	val s = (tag_to_string tag)
 	val _ = case (HashTable.find loaded_classes s) of
 		    NONE => ()
-		  | SOME x => (
-		    if ((class_is_in_file x) orelse overwrite) then ()
+		  | SOME kx => (
+		    if ((body_is_in_file kx) orelse overwrite) then ()
 		    else raise (error_duplicate_definitions d))
-	val _ = ignore (HashTable.insert loaded_classes (s, d))
+	val _ = ignore (HashTable.insert loaded_classes (s, k))
 	val _ = trace 5 (";; - Loaded ("^ s ^")")
     in
 	Defclass ((v, pkg), Def_Displaced (tag, bad_subject))
@@ -184,9 +185,17 @@ fun fetch_from_loaded_classes (tag : class_tag_t) = (
 	in
 	    case (HashTable.find loaded_classes s) of
 		NONE => NONE
-	      | SOME (d as Defclass ((v, g), k)) => (
+	      | SOME k => (
 		case k of
-		    Def_Body _ => SOME d
+		    Def_Body _ => (
+		    let
+			val _ = if ((tag_of_body k) = tag) then ()
+				else raise Match
+			val (v, g) = (tag_prefix tag)
+			val d = Defclass ((v, g), k)
+		    in
+			SOME d
+		    end)
 		  | Def_Der _ => raise Match
 		  | Def_Primitive _ => raise Match
 		  | Def_Outer_Alias _ => raise Match
@@ -197,9 +206,15 @@ fun fetch_from_loaded_classes (tag : class_tag_t) = (
 		  | Def_Extending _ => raise Match
 		  | Def_Replaced _ => raise Match
 		  | Def_Displaced _ => raise Match
-		  | Def_In_File => (
-		    SOME (Defclass ((v, g),
-				    Def_Displaced (tag, bad_subject))))
+		  | Def_In_File tag1 => (
+		    let
+			val _ = if (tag = tag1) then () else raise Match
+			val (v, g) = (tag_prefix tag)
+			val d = Defclass ((v, g),
+					  Def_Displaced (tag, bad_subject))
+		    in
+			SOME d
+		    end)
 		  | Def_Mock_Array _ => raise Match)
 	end)
 
@@ -222,7 +237,7 @@ val class_tree : instance_node_t =
    may generate multiple instances at step=E5. *)
 
 val instance_tree : instance_node_t =
-      (the_model_subject, ref Def_In_File, ref [])
+      (the_model_subject, ref (Def_In_File bad_tag), ref [])
 
 val package_root_node = class_tree
 val model_root_node = instance_tree
@@ -560,7 +575,7 @@ fun store_to_instance_tree subj kp = (
 		  | Def_Replaced _ => raise Match
 		  | Def_Displaced _ => (
 		    (store_scalar upnode node id (subj, kp)))
-		  | Def_In_File => raise Match
+		  | Def_In_File _ => raise Match
 		  | Def_Mock_Array (dim, classes, dummy) => (
 		    let
 			val _ = if (null ss) then () else raise Match
@@ -584,7 +599,7 @@ fun clear_instance_tree () = (
 	val _ = kx0 := the_package_root
 	val _ = cx0 := []
 	val (_, kx1, cx1) = instance_tree
-	val _ = kx1 := Def_In_File
+	val _ = kx1 := Def_In_File bad_tag
 	val _ = cx1 := []
     in () end)
 
@@ -1062,7 +1077,7 @@ fun dummy_scope () = (
 (* ================================================================ *)
 
 fun dump_table t = (
-    (HashTable.appi (fn (n, d) => (print (n ^ "\n"))) t))
+    (HashTable.appi (fn (n, k) => (print (n ^ "\n"))) t))
 
 fun dump_loaded_classes () = (dump_table loaded_classes)
 

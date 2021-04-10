@@ -44,7 +44,6 @@ open ast
 open small0
 
 val instance_tree = classtree.instance_tree
-val fetch_from_loaded_classes = classtree.fetch_from_loaded_classes
 val fetch_from_instance_tree = classtree.fetch_from_instance_tree
 val store_to_instance_tree = classtree.store_to_instance_tree
 val list_base_names = classtree.list_base_names
@@ -347,7 +346,7 @@ fun make_refining_class_choose_order replacing k0 mm1 cc1 aa1 ww1 = (
 		    Def_Replaced (x1, kold)
 		end)
 	      | Def_Displaced _ => kx
-	      | Def_In_File => raise Match
+	      | Def_In_File _ => raise Match
 	      | Def_Mock_Array _ => raise Match
 	end)
 
@@ -373,7 +372,7 @@ fun assert_class_is_good_to_dispatch k = (
       | Def_Extending _ => ()
       | Def_Replaced _ => ()
       | Def_Displaced _ => ()
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 fun assert_class_is_good_to_modify k = (
@@ -389,7 +388,7 @@ fun assert_class_is_good_to_modify k = (
       | Def_Extending _ => ()
       | Def_Replaced _ => ()
       | Def_Displaced _ => ()
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 (* Extracts redeclarations in a class and returns them as a list of
@@ -494,7 +493,7 @@ fun switch_class_for_redeclaration state ctx k0 k1 = (
       | Def_Replaced (x0, _) => (
 	(switch_class_for_redeclaration state ctx x0 k1))
       | Def_Displaced _ => k1
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 (* Replaces a replaceable (k0) by an extends-redeclaration (k1). *)
@@ -561,7 +560,7 @@ fun attach_modifiers_to_body ctx k0 mm1 = (
 	    Def_Replaced (x1, ko)
 	end)
       | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 fun merge_element_prefixes q0 q1 = (
@@ -1001,7 +1000,7 @@ fun record_new_class_names k0 = (
 		    Def_Replaced (x1, origin)
 		end)
 	      | Def_Displaced _ => k0
-	      | Def_In_File => raise Match
+	      | Def_In_File _ => raise Match
 	      | Def_Mock_Array _ => raise Match)
 
 	and record_new_class_names_in_element subj e = (
@@ -1081,7 +1080,7 @@ fun rectify_modified_class (k0, q1) (t1, p1) aa1 = (
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
       | Def_Displaced _ => raise Match
-      | Def_In_File => raise Match
+      | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
 end

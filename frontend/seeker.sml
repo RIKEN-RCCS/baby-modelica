@@ -143,7 +143,7 @@ fun lookup_in_declared (cooker : cooker_t) ctx fullaccess kp id = (
 			      | Def_Extending _ => raise Match
 			      | Def_Replaced _ => SOME (subsubj, k0)
 			      | Def_Displaced _ => SOME (subsubj, k0)
-			      | Def_In_File => raise Match
+			      | Def_In_File _ => raise Match
 			      | Def_Mock_Array _ => raise Match
 			end
 		end)
