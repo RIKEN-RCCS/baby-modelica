@@ -844,9 +844,27 @@ fun tag_of_body k = (
       | Def_Refine _ => raise Match
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
-      | Def_Displaced _ => raise Match
+      | Def_Displaced (tag, enclosing_) => tag
       | Def_In_File => raise Match
       | Def_Mock_Array _ => raise Match)
+
+fun tag_of_displaced k = (
+    case k of
+	Def_Body _ => raise Match
+      | Def_Der _ => raise Match
+      | Def_Primitive _ => raise Match
+      | Def_Outer_Alias _ => raise Match
+      | Def_Argument _ => raise Match
+      | Def_Named _ => raise Match
+      | Def_Scoped _ => raise Match
+      | Def_Refine _ => raise Match
+      | Def_Extending _ => raise Match
+      | Def_Replaced _ => raise Match
+      | Def_Displaced (tag, _) => tag
+      | Def_In_File => raise Match
+      | Def_Mock_Array _ => raise Match)
+
+fun name_of_displaced k = (tag_to_string (tag_of_displaced k))
 
 fun enclosing_of_body k = (
     case k of

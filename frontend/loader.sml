@@ -1,7 +1,7 @@
 (* loader.sml -*-Coding: us-ascii-unix;-*- *)
 (* Copyright (C) 2018-2021 RIKEN R-CCS *)
 
-(* PARSER CALLER. *)
+(* A PARSER CALLER. *)
 
 structure loader :
 sig
@@ -12,7 +12,7 @@ sig
     type class_definition_t
     type cook_step_t
 
-    val load_class_by_name : class_tag_t -> class_definition_t option
+    val load_class_by_name : class_tag_t -> definition_body_t option
     val load_file : string -> definition_body_t list
     val lookup_class_in_package_root :
 	id_t -> (subject_t * definition_body_t) option
@@ -31,8 +31,7 @@ val fetch_from_loaded_classes = classtree.fetch_from_loaded_classes
 val store_to_loaded_classes = classtree.store_to_loaded_classes
 val fetch_base_class = classtree.fetch_base_class
 
-fun tr_load (s : string) = if true then (print (s ^"\n")) else ()
-fun tr_load_vvv (s : string) = if false then (print (s ^"\n")) else ()
+fun trace n (s : string) = if (n <= 3) then (print (s ^"\n")) else ()
 
 (* ================================================================ *)
 
@@ -230,8 +229,8 @@ and record_class_body (id, pkg) k0 = (
 
 fun load_class_in_file (tag0 : class_tag_t) = (
     let
-	val _ = tr_load_vvv (";; load_class_in_file ("^
-			     (tag_to_string tag0) ^")")
+	val _ = trace 5 (";; load_class_in_file ("^
+			 (tag_to_string tag0) ^")")
     in
 	case (check_library_paths tag0) of
 	    NONE => NONE
@@ -241,7 +240,12 @@ fun load_class_in_file (tag0 : class_tag_t) = (
 	    in
 		case (HashTable.find loaded_classes (tag_to_string tag1)) of
 		    NONE => NONE
-		  | SOME k => SOME k
+		  | SOME d => (
+		    let
+			val Defclass ((v, g), k) = d
+		    in
+			SOME k
+		    end)
 	    end)
     end)
 
@@ -254,7 +258,7 @@ and load_file_or_directory pkgmo (qn : class_tag_t) path = (
 	    val qs = quote_string
 	    val f = path
 	    val msg = ((qs (tag_to_string qn)) ^" in "^ (qs f))
-	    val _ = tr_load (";; - [load] Load ("^ msg ^")")
+	    val _ = trace 3 (";; - [load] Load ("^ msg ^")")
 	    val _ = (record_classes (lexer.parse_file f))
 	in
 	    ()
@@ -264,7 +268,7 @@ and load_file_or_directory pkgmo (qn : class_tag_t) path = (
 	    val qs = quote_string
 	    val f = (path ^ "/package.mo")
 	    val msg = ((qs (tag_to_string qn)) ^" in "^ (qs f))
-	    val _ = tr_load (";; - [load] Load (" ^ msg ^ ")")
+	    val _ = trace 3 (";; - [load] Load (" ^ msg ^ ")")
 	    val _ = (record_classes (lexer.parse_file f))
 	    val pkg = qn
 	    val _ = (insert_package_directory_entries pkg path)
@@ -274,15 +278,13 @@ and load_file_or_directory pkgmo (qn : class_tag_t) path = (
 
 (* Adds the classes that are defined in separate files into the
    package definition (e.g., files are either "A" or "A.mo" in the
-   package directory).  Note that it skips entries if there are
-   existing entries with the same names, in case that the classes may
-   be loaded early explicitly (possibly to change some
-   definitions). *)
+   package directory).  Note that it skips an entry if there is an
+   existing entry with the same name, in case that a class may be
+   loaded early explicitly. *)
 
 and insert_package_directory_entries (pkg : class_tag_t) (path : string) = (
     let
-	(* test_body is definition_is_body but a bit more strict. *)
-	fun test_body (Defclass ((v, g), k)) = (
+	fun test_body k = (
 	    case k of
 		Def_Body _ => true
 	      | Def_Der _ => false
@@ -321,80 +323,72 @@ and insert_package_directory_entries (pkg : class_tag_t) (path : string) = (
 		val id = Id v
 		val tag = (qualify_name (id, pkg))
 	    in
-		Defclass ((id, pkg), Def_Displaced (tag, bad_subject))
+		Def_Displaced (tag, bad_subject)
 	    end)
 
-	fun make_element_class c = (
-	    Element_Class (Public, no_element_prefixes, c, NONE))
-
-	fun test_not_existing d = (
+	fun make_element_class k = (
 	    let
-		val s = (tag_to_string (tag_of_definition d))
+		val tag = (tag_of_displaced k)
+		val (v, g) = (tag_prefix tag)
+		val d = Defclass ((v, g), k)
+	    in
+		Element_Class (Public, no_element_prefixes, d, NONE)
+	    end)
+
+	fun test_not_member k = (
+	    let
+		val s = (tag_to_string (tag_of_body k))
 	    in
 		case (HashTable.find loaded_classes s) of
 		    NONE => true
-		  | SOME _ => (
-		    let
-			val _ = (warn_skip_defined d)
-		    in
+                  | SOME _ => (
+                    let
+			val _ = (warn_skip_file_in_package_directory k)
+                    in
 			false
-		    end)
+                    end)
 	    end)
 
-	fun drop_already_loaded kp classes0 = (
-	    (List.filter test_not_existing classes0))
+	(* This test_non_member is redundant. *)
 
-	fun test_non_member cc d = (
+	fun test_non_member existings k = (
 	    let
-		val tag = (tag_of_definition d)
+		val tag = (tag_of_body k)
 	    in
-		if (not (List.exists (fn x => (x = tag)) cc)) then
+		if (not (List.exists (fn x => (x = tag)) existings)) then
 		    true
 		else
 		    let
-			val _ = (warn_drop_duplicate_definitions d)
+			val _ = (warn_skip_file_in_package_directory k)
 		    in
 			false
 		    end
 	    end)
 
-	fun drop_duplicate dx c1 = (
+	fun drop_duplicate kp kk0 = (
 	    let
-		val Defclass (_, kp) = dx
 		val existings = (gather_in_body_elements member_class kp)
-		val filtered = (List.filter (test_non_member existings) c1)
+		val kk1 = (List.filter test_not_member kk0)
+		val kk2 = (List.filter (test_non_member existings) kk1)
 	    in
-		filtered
+		kk2
 	    end)
 
-	fun change_displaced_to_filed (Defclass ((v, pkg), k)) = (
-	    case k of
-		Def_Body _ => raise Match
-	      | Def_Der _ => raise Match
-	      | Def_Primitive _ => raise Match
-	      | Def_Outer_Alias _ => raise Match
-	      | Def_Argument _ => raise Match
-	      | Def_Named _ => raise Match
-	      | Def_Scoped _ => raise Match
-	      | Def_Refine _ => raise Match
-	      | Def_Extending _ => raise Match
-	      | Def_Replaced _ => raise Match
-	      | Def_Displaced _ => Defclass ((v, pkg), Def_In_File)
-	      | Def_In_File => raise Match
-	      | Def_Mock_Array _ => raise Match)
-
-	fun store_in_file_marker (d0 as Defclass ((v, pkg), b)) = (
+	fun store_in_file_marker k0 = (
 	    let
-		val d1 = (change_displaced_to_filed d0)
-		val s = (tag_to_string (tag_of_definition d1))
-		val _ = ignore (HashTable.insert loaded_classes (s, d1))
+		val tag = (tag_of_displaced k0)
+		val (v, g) = (tag_prefix tag)
+		val dx = Defclass ((v, g), Def_In_File)
+		val s = (tag_to_string tag)
+		val _ = ignore (HashTable.insert loaded_classes (s, dx))
 	    in
 		()
 	    end)
 
-	fun merge_and_store d0 classes = (
+	fun merge_and_store k0 classes = (
 	    let
-		val Defclass ((v, g), k0) = d0
+		val tag = (tag_of_body k0)
+		val (v, g) = (tag_prefix tag)
 		val ee0 = (body_elements k0)
 		val ee1 = (ee0 @ (map make_element_class classes))
 		val k1 = (replace_body_elements k0 ee1)
@@ -405,31 +399,36 @@ and insert_package_directory_entries (pkg : class_tag_t) (path : string) = (
 		()
 	    end)
 
-	val _ = tr_load_vvv (";; - Reading a package directory ("^
-			     path ^")...")
+	val _ = trace 5 (";; - Reading a package directory ("^
+			 path ^")...")
+
 	val entries = (list_directory_entries path)
 	val s = (tag_to_string pkg)
-	val d0 =
+	val kp =
 	      case (HashTable.find loaded_classes s) of
 		  NONE => (raise (error_class_loaded_but_missing s))
-		| SOME dx => dx
+		| SOME dx => (
+		  let
+		      val Defclass ((v, g), kx) = dx
+		  in
+		      kx
+		  end)
 	val classes0 = (map (make_placeholder pkg) entries)
-	val classes1 = (drop_already_loaded d0 classes0)
-	val classes2 = (drop_duplicate d0 classes1)
+	val classes2 = (drop_duplicate kp classes0)
 
-	val _ = tr_load_vvv (";; AHO pkg entries={"^
-			     ((String.concatWith " ")
-				  (map name_of_definition classes2)) ^"}")
+	val _ = trace 5 (";; AHO pkg entries={"^
+			 ((String.concatWith " ")
+			      (map name_of_displaced classes2)) ^"}")
 
 	val _ = if (null classes2) then
 		    ()
-		else if (not (test_body d0)) then
-		    ignore (warn_skip_directory_entries d0)
+		else if (not (test_body kp)) then
+		    ignore (warn_skip_directory_entries kp)
 		else
-		    ignore (merge_and_store d0 classes2)
+		    ignore (merge_and_store kp classes2)
 
-	val _ = tr_load_vvv (";; - Reading a package directory ("^
-			     path ^")... done")
+	val _ = trace 5 (";; - Reading a package directory ("^
+			 path ^")... done")
     in
 	()
     end)
@@ -460,22 +459,26 @@ and check_library_paths (qn : class_tag_t) : (bool * class_tag_t * string) optio
    that finding a displaced-tag in the table means the file is not
    loaded yet. *)
 
-fun load_class_by_name (tag : class_tag_t) : class_definition_t option = (
+fun load_class_by_name (tag : class_tag_t) : definition_body_t option = (
     let
 	val s = (tag_to_string tag)
     in
 	case (HashTable.find loaded_classes s) of
-	    SOME k1 => (
-	    if (not (class_is_in_file k1)) then
-		SOME k1
+	    SOME d0 => (
+	    if (not (class_is_in_file d0)) then
+		let
+		    val Defclass ((v, g), k0) = d0
+		in
+		    SOME k0
+		end
 	    else
 		case (load_class_in_file tag) of
-		    SOME kx => SOME kx
+		    SOME k1 => SOME k1
 		  | NONE => (raise (error_file_for_class_not_found tag)))
 	  | NONE => (
 	    if (class_is_at_top_level tag) then
 		case (load_class_in_file tag) of
-		    SOME kx => SOME kx
+		    SOME k2 => SOME k2
 		  | NONE => raise (error_name_not_found_up_to_top_level tag)
 	    else
 		raise Match)
@@ -498,25 +501,19 @@ fun load_displaced_body (k : definition_body_t) = (
       | Def_Replaced _ => k
       | Def_Displaced (tag, _) => (
 	case (load_class_by_name tag) of
-	    SOME dx => (
-	    let
-		val Defclass ((v, g), kx) = dx
-	    in
-		kx
-	    end)
+	    SOME kx => kx
 	  | NONE => raise Match)
       | Def_In_File => raise Match
       | Def_Mock_Array _ => raise Match)
 
-fun fetch_or_load_class_in_root (tag : class_tag_t) : class_definition_t option = (
+fun fetch_or_load_class_in_root (tag : class_tag_t) : definition_body_t option = (
     case (fetch_from_loaded_classes tag) of
 	SOME d0 => (
 	let
 	    val Defclass ((v, g), k0) = d0
 	    val k1 = (load_displaced_body k0)
-	    val d1 = Defclass ((v, g), k1)
 	in
-	    SOME d1
+	    SOME k1
 	end)
       | NONE => (
 	case (load_class_by_name tag) of
@@ -525,14 +522,14 @@ fun fetch_or_load_class_in_root (tag : class_tag_t) : class_definition_t option 
 
 fun lookup_class_in_package_root (Id v) = (
     let
-	val _ = tr_load_vvv (";; - lookup_class_in_package_root ("^ v ^")")
+	val _ = trace 5 (";; - lookup_class_in_package_root ("^ v ^")")
+
 	val tag = (Ctag [v])
     in
 	case (fetch_or_load_class_in_root tag) of
 	    NONE => raise (error_name_not_found (Id v) the_package_root)
-	  | SOME d => (
+	  | SOME k => (
 	    let
-		val Defclass ((v_, g_), k) = d
 		val subj = (tag_to_subject tag)
 	    in
 		SOME (subj, k)
@@ -554,7 +551,8 @@ fun fetch_loaded_class (ci : class_tag_t) : definition_body_t = (
 
 fun fetch_enclosing_class (kp : definition_body_t) = (
     let
-	val _ = tr_load_vvv (";; fetch_enclosing_class")
+	val _ = trace 5 (";; fetch_enclosing_class")
+
 	val _ = if (class_is_body kp) then () else raise Match
     in
 	if (class_is_encapsulated kp) then
@@ -603,7 +601,7 @@ fun fetch_displaced_class wantedstep (k : definition_body_t) = (
 fun load_file (filename : string) = (
     let
 	val msg = (quote_string filename)
-	val _ = tr_load (";; - [load] Load (" ^ msg ^ ")")
+	val _ = trace 3 (";; - [load] Load (" ^ msg ^ ")")
 	val kk = (record_classes (lexer.parse_file filename))
     in
 	kk

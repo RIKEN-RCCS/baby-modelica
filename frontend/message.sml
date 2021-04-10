@@ -93,17 +93,13 @@ fun warn_no_array_compatibility_test () = (
     else
 	())
 
-fun warn_skip_defined d = (
+fun warn_skip_file_in_package_directory k = (
     print (";; "^ "Warning: Package directory entry is skipped for "^
-	   (name_of_definition d) ^"\n"))
+	   (name_of_displaced k) ^"\n"))
 
-fun warn_drop_duplicate_definitions d = (
-    print (";; "^ "Warning: Drop duplicate definition "^
-	   (name_of_definition d) ^"\n"))
-
-fun warn_skip_directory_entries d = (
+fun warn_skip_directory_entries k = (
     print (";; "^ "Warning: Ignore directory entries for "^
-	   (name_of_definition d) ^"\n"))
+	   (tag_to_string (tag_of_body k)) ^"\n"))
 
 fun warn_drop_annotations () = (
     print (";; "^ "Warning: Drop annotations\n"))
