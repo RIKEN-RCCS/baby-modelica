@@ -52,4 +52,5 @@ use "postbinder.sml" ;
 use "syntaxer.sml" ;
 use "connector.sml" ;
 
+use "pseudodumper.sml" ;
 use "flatdumper.sml" ;

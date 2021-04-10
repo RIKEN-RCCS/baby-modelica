@@ -69,7 +69,7 @@ builder.xreset () ;
 builder.xbuild "Modelica.Fluid.Examples.HeatingSystem" ;
 connector.xbind () ;
 connector.xconnect () ;
-flatdumper.xdump () ;
+pseudodumper.xdump () ;
 valOf (classtree.xfetch1 "tank") ;
 valOf (classtree.xfetch1 "wall.G") ;
 valOf (classtree.xfetch1 "") ;

@@ -1,13 +1,12 @@
-(* pseudodumper.sml -*-Coding: us-ascii-unix;-*- *)
+(* flatdumper.sml -*-Coding: us-ascii-unix;-*- *)
 (* Copyright (C) 2018-2021 RIKEN R-CCS *)
 
-(* A PSEUDO-CODE DUMPER.  It dumps non-readable by machines nor
-   humans. *)
+(* A DUMPER IN A SUBSET OF MODELICA. *)
 
 (* The dumper does not dump empty arrays (dimension-size=0), so it is
    needed to remove the references to them. *)
 
-structure pseudodumper :
+structure flatdumper :
 sig
     val xdump : unit -> unit
 end = struct

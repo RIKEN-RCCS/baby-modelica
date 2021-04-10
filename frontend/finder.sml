@@ -193,29 +193,27 @@ fun list_elements exclude_imported kp = (
 	    SOME bb => (filter bb)
 	  | NONE => (
 	    let
-		val bb = (gather_names_in_class true kp)
-		val _ = (HashTable.insert class_bindings (key, bb))
+		val bb0 = (gather_names_in_class kp)
+		val bb1 = (drop_duplicate_declarations E3 bb0)
+		val _ = (HashTable.insert class_bindings (key, bb1))
 	    in
-		(filter bb)
+		(filter bb1)
 	    end)
     end)
 
 (* Gathers class/variable names in a class.  See the comments of
-   list_elements.  It unifies duplicates when unify=true, otherwise
-   some entries may have duplicates.  It can be called with unify=true
-   only for a class step=E3.  Note that the outer case handles the
+   list_elements.  The returned list may have duplicates, and the
+   caller should unified them.  Note that the outer case handles the
    inner-outer case as well.  It is called with a class at step=E2 via
    list_component_names, or step=E3 via list_elements.  A class at
    step=E2 is before applying modifiers, and then, the list of names
    is only usable. *)
 
-and gather_names_in_class (unify : bool) kp : naming_t list = (
+and gather_names_in_class kp : naming_t list = (
     let
 	fun faulting_cooker _ (_, _) = raise Match
 	val cooker : cooker_t = faulting_cooker
 	val _ = if (not (class_is_root kp)) then () else raise Match
-	val _ = if ((cook_step kp) <> E2 orelse not unify) then ()
-		else raise Match
 
 	val package = (class_is_package kp)
 	val function = (kind_is_function kp)
@@ -318,12 +316,8 @@ and gather_names_in_class (unify : bool) kp : naming_t list = (
 	val bases = (list_base_classes kp)
 	val classes = [kp] @ bases
 	val vv0 = (List.concat (map list_names_in_class classes))
-	val vv1 = if unify then
-		      (drop_duplicate_declarations E3 vv0)
-		  else
-		      vv0
     in
-	vv1
+	vv0
     end)
 
 (* Returns a matching inner for a class or variable name cv from the
@@ -420,7 +414,7 @@ fun list_component_names kp = (
 	      | EL_State _ => id)
 
 	(*val bindings = (list_elements false kp)*)
-	val bindings = (gather_names_in_class false kp)
+	val bindings = (gather_names_in_class kp)
 	val (_, states) = (List.partition binding_is_class bindings)
 	val cc0 = (map name states)
 	val cc1 = (list_uniquify (op =) cc0)
