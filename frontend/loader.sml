@@ -13,7 +13,7 @@ sig
     type cook_step_t
 
     val load_class_by_name : class_tag_t -> class_definition_t option
-    val load_file : string -> class_definition_t list
+    val load_file : string -> definition_body_t list
     val lookup_class_in_package_root :
 	id_t -> (subject_t * definition_body_t) option
     val fetch_enclosing_class : definition_body_t -> definition_body_t
@@ -97,14 +97,22 @@ fun test_file_path_as_class (path : string) : (bool * string) option = (
 	    NONE
     end)
 
-(* Stores class definitions in the class-table.  It takes the result
-   of parsing. *)
+(* Stores class definitions in the loaded_classes table.  It takes the
+   result of parsing. *)
 
 fun record_classes ((enclosing, dd) : class_definition_list_t) = (
     let
+	fun record pkg1 d = (
+	    let
+		val Defclass ((id, pkg0), k0) = d
+		val _ = if (pkg0 = bad_tag) then () else raise Match
+	    in
+		(record_class_body (id, pkg1) k0)
+	    end)
+
 	val pkg = (make_name_qualified enclosing)
     in
-	(map (record_class_body pkg) dd)
+	(map (record pkg) dd)
     end)
 
 (* Stores a class definition in the loaded_classes table.  It sets an
@@ -115,7 +123,7 @@ fun record_classes ((enclosing, dd) : class_definition_list_t) = (
    class name.  Note that some additional elements may be added later
    from the directory entries under the package name. *)
 
-and record_class_body pkg (d0 as Defclass _) = (
+and record_class_body (id, pkg) k0 = (
     let
 	fun name_of_extends_redeclaration (x, m) = (
 	    case x of
@@ -132,14 +140,20 @@ and record_class_body pkg (d0 as Defclass _) = (
 	      | Extends_Clause _ => e
 	      | Element_Class (z, r, d0, h) => (
 		let
-		    val d1 = (record_class_body pkg d0)
+		    val Defclass ((id, pkg_), k0) = d0
+		    val _ = if (pkg_ = bad_tag) then () else raise Match
+		    val k1 = (record_class_body (id, pkg) k0)
+		    val d1 = Defclass ((id, pkg), k1)
 		in
 		    Element_Class (z, r, d1, h)
 		end)
 	      | Element_State _ => e
 	      | Redefine_Class (z, r, d0, h) => (
 		let
-		    val d1 = (record_class_body pkg d0)
+		    val Defclass ((id, pkg_), k0) = d0
+		    val _ = if (pkg_ = bad_tag) then () else raise Match
+		    val k1 = (record_class_body (id, pkg) k0)
+		    val d1 = Defclass ((id, pkg), k1)
 		in
 		    Redefine_Class (z, r, d1, h)
 		end)
@@ -161,22 +175,12 @@ and record_class_body pkg (d0 as Defclass _) = (
 		case x0 of
 		    Def_Body _ => (
 		    let
-			(*
-			val _ = if (j = bad_subject) then () else raise Match
-			val tag = (qualify_name (id, pkg))
-			val ee1 = (map (record_e tag) ee0)
-			val k1 = Def_Body (mk, j, cs, (tag, n, x), ee1, aa, ww)
-			*)
-			val e0 = Defclass ((id, bad_tag), x0)
-			val e1 = (record_class_body pkg e0)
-			val Defclass ((_, _), x1) = e1
+			val x1 = (record_class_body (id, pkg) x0)
 		    in
 			Def_Extending (false, bx, x1)
 		    end)
 		  | _ => raise Match
 	    end)
-
-	val Defclass ((id, _), k0) = d0
     in
 	case k0 of
 	    Def_Body (mk, cs, (j, n, c_, x), cc, ee0, aa, ww) => (
@@ -191,32 +195,28 @@ and record_class_body pkg (d0 as Defclass _) = (
 		val d1 = Defclass ((id, pkg), k1)
 		val d2 = (store_to_loaded_classes false d1)
 	    in
-		d2
+		Def_Displaced (tag, bad_subject)
 	    end)
 	  | Def_Der (c, cs, n, vv, a, w) => (
 	    let
 		val tag = (qualify_name (id, pkg))
 		val k1 = Def_Der (tag, cs, n, vv, a, w)
-		val d1 = Defclass ((id, pkg), k1)
 	    in
-		d1
+		k1
 	    end)
 	  | Def_Primitive _ => raise Match
 	  | Def_Outer_Alias _ => raise Match
 	  | Def_Argument _ => raise Match
-	  | Def_Named _ => (
-	    Defclass ((id, pkg), k0))
+	  | Def_Named _ => k0
 	  | Def_Scoped _ => raise Match
-	  | Def_Refine (kx, NONE, ts, q, (ss, mm), cc, aa, ww) => (
-	    Defclass ((id, pkg), k0))
-	  | Def_Refine (kx, SOME _, ts, q, (ss, mm), cc, aa, ww) => raise Match
+	  | Def_Refine (_, NONE, _, _, _, _, _, _) => k0
+	  | Def_Refine (_, SOME _, _, _, _, _, _, _) => raise Match
 	  | Def_Extending (true, bx, kx) => raise Match
 	  | Def_Extending (false, bx, kx) => (
 	    let
 		val k1 = (record_extends_redeclaration pkg (false, bx, kx))
-		val d1 = Defclass ((id, pkg), k1)
 	    in
-		d1
+		k1
 	    end)
 	  | Def_Replaced _ => raise Match
 	  | Def_Displaced _ => raise Match
@@ -358,9 +358,10 @@ and insert_package_directory_entries (pkg : class_tag_t) (path : string) = (
 		    end
 	    end)
 
-	fun drop_duplicate kp c1 = (
+	fun drop_duplicate dx c1 = (
 	    let
-		val existings = (gather_in_elements member_class kp)
+		val Defclass (_, kp) = dx
+		val existings = (gather_in_body_elements member_class kp)
 		val filtered = (List.filter (test_non_member existings) c1)
 	    in
 		filtered
@@ -391,12 +392,14 @@ and insert_package_directory_entries (pkg : class_tag_t) (path : string) = (
 		()
 	    end)
 
-	fun merge_and_store k0 classes = (
+	fun merge_and_store d0 classes = (
 	    let
-		val ee0 = (class_elements k0)
+		val Defclass ((v, g), k0) = d0
+		val ee0 = (body_elements k0)
 		val ee1 = (ee0 @ (map make_element_class classes))
-		val k1 = (replace_class_elements k0 ee1)
-		val _ = (store_to_loaded_classes true k1)
+		val k1 = (replace_body_elements k0 ee1)
+		val d1 = Defclass ((v, g), k1)
+		val _ = (store_to_loaded_classes true d1)
 		val _ = (app store_in_file_marker classes)
 	    in
 		()
@@ -495,7 +498,12 @@ fun load_displaced_body (k : definition_body_t) = (
       | Def_Replaced _ => k
       | Def_Displaced (tag, _) => (
 	case (load_class_by_name tag) of
-	    SOME kx => (definition_body kx)
+	    SOME dx => (
+	    let
+		val Defclass ((v, g), kx) = dx
+	    in
+		kx
+	    end)
 	  | NONE => raise Match)
       | Def_In_File => raise Match
       | Def_Mock_Array _ => raise Match)
@@ -524,7 +532,7 @@ fun lookup_class_in_package_root (Id v) = (
 	    NONE => raise (error_name_not_found (Id v) the_package_root)
 	  | SOME d => (
 	    let
-		val Defclass ((v_, g), k) = d
+		val Defclass ((v_, g_), k) = d
 		val subj = (tag_to_subject tag)
 	    in
 		SOME (subj, k)
@@ -533,7 +541,12 @@ fun lookup_class_in_package_root (Id v) = (
 
 fun fetch_loaded_class (ci : class_tag_t) : definition_body_t = (
     case (fetch_from_loaded_classes ci) of
-	SOME k => (load_displaced_body (definition_body k))
+	SOME d => (
+	let
+	    val Defclass ((v_, g_), k) = d
+	in
+	    (load_displaced_body k)
+	end)
       | NONE => raise error_never_happen)
 
 (* Fetches an enclosing class.  It respects the lexical enclosing
@@ -591,9 +604,9 @@ fun load_file (filename : string) = (
     let
 	val msg = (quote_string filename)
 	val _ = tr_load (";; - [load] Load (" ^ msg ^ ")")
-	val dd = (record_classes (lexer.parse_file filename))
+	val kk = (record_classes (lexer.parse_file filename))
     in
-	dd
+	kk
     end)
 
 end

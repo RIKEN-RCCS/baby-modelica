@@ -19,7 +19,7 @@ sig
     val instantiate_components : definition_body_t -> unit
 
     val xreset : unit -> unit
-    val xload : string -> class_definition_t
+    val xload : string -> definition_body_t
     val xfind : string -> definition_body_t
     val xbuild : string -> unit
 end = struct

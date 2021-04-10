@@ -54,12 +54,12 @@ fun tag_as_name tag = (
       | Ctag [] => raise Match
       | Ctag nn => Name ("" :: nn))
 
-fun declaration_id (Defvar (v, _)) = v
+fun declaration_id__ (Defvar (v, _)) = v
 
 fun same_class k0 k1 = (
     (tag_of_definition k0) = (tag_of_definition k1))
 
-fun definition_body (Defclass ((v, g), b)) = b
+fun definition_body__ (Defclass ((v, g), b)) = b
 
 (* Returns a TAG from which a class is modified. *)
 
@@ -97,7 +97,7 @@ fun body_elements (k : definition_body_t) = (
 
 (* Returns a list of the class body elements. *)
 
-fun class_elements (Defclass ((v, g), k)) = (body_elements k)
+fun class_elements__ (Defclass ((v, g), k)) = (body_elements k)
 
 fun replace_body_elements (k : definition_body_t) ee = (
     case k of
@@ -219,46 +219,44 @@ fun outer_but_not_inner (q : element_prefixes_t) = (
 
 (* Returns a new class with replacing body elements. *)
 
-fun replace_class_elements (Defclass ((v, g), k)) ee = (
+fun replace_class_elements__ (Defclass ((v, g), k)) ee = (
     Defclass ((v, g), (replace_body_elements k ee)))
 
-(* ??? *)
-
 (* Gathers what (f e) returns for each class element. *)
-
-fun gather_in_elements f (d as Defclass ((v, g), k)) = (
-    (foldl (fn (e, acc) => (acc @ (f e))) [] (class_elements d)))
 
 fun gather_in_body_elements f (k : definition_body_t) = (
     (foldl (fn (e, acc) => (acc @ (f e))) [] (body_elements k)))
 
+fun gather_in_elements__ f (d as Defclass ((v, g), k)) = (
+    (foldl (fn (e, acc) => (acc @ (f e))) [] (class_elements__ d)))
+
 (* Substitutes elements e0 by e1,... (by appending) if f e0 returns
    [e1,...]. *)
 
-fun subst_element f (d as Defclass _) = (
-    (replace_class_elements d (gather_in_elements f d)))
+fun subst_element__ f (d as Defclass _) = (
+    (replace_class_elements__ d (gather_in_elements__ f d)))
 
 (* Substitutes elements e0 by e1,... if f (e0,a0) returns
    ([e1,...],a1).  f is called along with passing around an argument
    a0. *)
 
-fun subst_element_along f (k0, a0) = (
+fun subst_element_along__ f (k0, a0) = (
     let
 	val (ee3, a3) =
 	      (foldl
 		   (fn (e1, (ee1, a1)) =>
 		       let val (ee2, a2) = (f (e1, a1)) in (ee1 @ ee2, a2) end)
 		   ([], a0)
-		   (class_elements k0))
+		   (class_elements__ k0))
     in
-	((replace_class_elements k0 ee3), a3)
+	((replace_class_elements__ k0 ee3), a3)
     end)
 
 fun subst_body_element f (k : definition_body_t) = (
     (replace_body_elements k (gather_in_body_elements f k)))
 
 fun app_in_element__ f (d as Defclass ((v, g), k)) = (
-    (app f (class_elements d)))
+    (app f (class_elements__ d)))
 
 (* Tests if modifiers is empty or a single value. *)
 

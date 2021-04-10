@@ -64,16 +64,18 @@ fun clear_inner {Final=f, Replaceable=p, Inner=i, Outer=j} = (
     {Final=f, Replaceable=p, Inner=false, Outer=j} : element_prefixes_t)
 
 fun find_predefined_variable v = (
-    (List.find (fn d => (declaration_id d = v)) predefined_variables))
+    let
+	fun id_of_declaration (Defvar (v, _)) = v
+    in
+	(List.find (fn d => (id_of_declaration d = v)) predefined_variables)
+    end)
 
 fun import_name_to_string tag idxid = (
     case idxid of
 	NONE => (tag_to_string tag)
       | SOME (id, _) => ((tag_to_string tag) ^"."^ (id_to_string id)))
 
-(*AHO*)
-
-(* CLASS SIMILARITY IS NOT IMPLEMENTED. *)
+(*AHO*) (* CLASS SIMILARITY IS NOT IMPLEMENTED. *)
 
 (* Drops duplicate declarations.  It does not matter about variable
    declarations at step=E3. *)
