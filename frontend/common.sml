@@ -53,7 +53,7 @@ val the_package_root = Def_Body ((E5, PKG, MAIN),
 				 NIL,
 				 [], Annotation [], Comment [])
 
-val the_package_root_definition =
+val the_package_root_definition__ =
       Defclass ((Id the_package_root_print_name, bad_tag), the_package_root)
 
 fun void_predefined_body x = (
@@ -415,7 +415,7 @@ fun body_of_argument k = (
 
 (* True if definitions can be displaced. *)
 
-fun definition_is_displaceable (Defclass ((v, g), k)) = (
+fun body_is_displaceable k = (
     case k of
 	Def_Body _ => true
       | Def_Der _ => false
@@ -518,9 +518,9 @@ fun assert_class_is_body k = (
 
 (* Tests if a class is a dummy definition. *)
 
-fun class_is_displaced (Defclass ((v, g), k)) = (body_is_displaced k)
+fun class_is_displaced__ (Defclass ((v, g), k)) = (body_is_displaced k)
 
-fun class_is_in_file (Defclass ((v, g), k)) = (body_is_in_file k)
+fun class_is_in_file__ (Defclass ((v, g), k)) = (body_is_in_file k)
 
 fun tag_is_root tag = (
     case tag of

@@ -190,8 +190,7 @@ and record_class_body (id, pkg) k0 = (
 		val tag = (qualify_name (id, pkg))
 		val ee1 = (map (record_e tag) ee0)
 		val k1 = Def_Body (mk, cs, (j, n, tag, x), cc, ee1, aa, ww)
-		val d1 = Defclass ((id, pkg), k1)
-		val d2 = (store_to_loaded_classes false d1)
+		val _ = (store_to_loaded_classes false k1)
 	    in
 		Def_Displaced (tag, bad_subject)
 	    end)
@@ -386,8 +385,7 @@ and insert_package_directory_entries (pkg : class_tag_t) (path : string) = (
 		val ee0 = (body_elements k0)
 		val ee1 = (ee0 @ (map make_element_class classes))
 		val k1 = (replace_body_elements k0 ee1)
-		val d1 = Defclass ((v, g), k1)
-		val _ = (store_to_loaded_classes true d1)
+		val _ = (store_to_loaded_classes true k1)
 		val _ = (app store_in_file_marker classes)
 	    in
 		()
@@ -491,18 +489,17 @@ fun load_displaced_body (k : definition_body_t) = (
       | Def_In_File _ => raise Match
       | Def_Mock_Array _ => raise Match)
 
-fun fetch_or_load_class_in_root (tag : class_tag_t) : definition_body_t option = (
+fun fetch_or_load_class_in_root (tag : class_tag_t) = (
     case (fetch_from_loaded_classes tag) of
-	SOME d0 => (
+	SOME k0 => (
 	let
-	    val Defclass ((v, g), k0) = d0
 	    val k1 = (load_displaced_body k0)
 	in
 	    SOME k1
 	end)
       | NONE => (
 	case (load_class_by_name tag) of
-	    SOME k => SOME k
+	    SOME k2 => SOME k2
 	  | NONE => NONE))
 
 fun lookup_class_in_package_root (Id v) = (
@@ -523,11 +520,11 @@ fun lookup_class_in_package_root (Id v) = (
 
 fun fetch_loaded_class (tag : class_tag_t) : definition_body_t = (
     case (fetch_from_loaded_classes tag) of
-	SOME d => (
+	SOME k0 => (
 	let
-	    val Defclass ((v_, g_), k) = d
+	    val k1 = (load_displaced_body k0)
 	in
-	    (load_displaced_body k)
+	    k1
 	end)
       | NONE => raise error_never_happen)
 

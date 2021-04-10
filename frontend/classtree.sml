@@ -32,9 +32,9 @@ sig
     val inner_outer_table : inner_outer_slot_t ref
 
     val fetch_from_loaded_classes :
-	class_tag_t -> class_definition_t option
+	class_tag_t -> definition_body_t option
     val store_to_loaded_classes :
-	bool -> class_definition_t -> class_definition_t
+	bool -> definition_body_t -> definition_body_t
 
     val fetch_from_instance_tree :
 	subject_t -> definition_body_t option
@@ -155,22 +155,22 @@ fun clear_table t = (
    displaced-tag.  It replaces an existing one when overwrite=true, or
    raise an error. *)
 
-fun store_to_loaded_classes overwrite (d as Defclass ((v, pkg), k)) = (
+fun store_to_loaded_classes overwrite k = (
     let
-	val _ = if (definition_is_displaceable d) then () else raise Match
-	val _ = if (not (class_is_in_file d)) then () else raise Match
-	val _ = if (not (class_is_displaced d)) then () else raise Match
-	val tag = (tag_of_definition d)
+	val _ = if (body_is_displaceable k) then () else raise Match
+	val _ = if (not (body_is_in_file k)) then () else raise Match
+	val _ = if (not (body_is_displaced k)) then () else raise Match
+	val tag = (tag_of_body k)
 	val s = (tag_to_string tag)
 	val _ = case (HashTable.find loaded_classes s) of
 		    NONE => ()
 		  | SOME kx => (
 		    if ((body_is_in_file kx) orelse overwrite) then ()
-		    else raise (error_duplicate_definitions d))
+		    else raise (error_duplicate_definitions k))
 	val _ = ignore (HashTable.insert loaded_classes (s, k))
 	val _ = trace 5 (";; - Loaded ("^ s ^")")
     in
-	Defclass ((v, pkg), Def_Displaced (tag, bad_subject))
+	Def_Displaced (tag, bad_subject)
     end)
 
 (* It may return a displaced-tag when a package is loaded but the
@@ -178,7 +178,7 @@ fun store_to_loaded_classes overwrite (d as Defclass ((v, pkg), k)) = (
 
 fun fetch_from_loaded_classes (tag : class_tag_t) = (
     if (tag_is_root tag) then
-	SOME the_package_root_definition
+	SOME the_package_root
     else
 	let
 	    val s = (tag_to_string tag)
@@ -191,10 +191,8 @@ fun fetch_from_loaded_classes (tag : class_tag_t) = (
 		    let
 			val _ = if ((tag_of_body k) = tag) then ()
 				else raise Match
-			val (v, g) = (tag_prefix tag)
-			val d = Defclass ((v, g), k)
 		    in
-			SOME d
+			SOME k
 		    end)
 		  | Def_Der _ => raise Match
 		  | Def_Primitive _ => raise Match
@@ -209,11 +207,9 @@ fun fetch_from_loaded_classes (tag : class_tag_t) = (
 		  | Def_In_File tag1 => (
 		    let
 			val _ = if (tag = tag1) then () else raise Match
-			val (v, g) = (tag_prefix tag)
-			val d = Defclass ((v, g),
-					  Def_Displaced (tag, bad_subject))
+			val kx = Def_Displaced (tag, bad_subject)
 		    in
-			SOME d
+			SOME kx
 		    end)
 		  | Def_Mock_Array _ => raise Match)
 	end)
@@ -1082,15 +1078,9 @@ fun dump_table t = (
 fun dump_loaded_classes () = (dump_table loaded_classes)
 
 fun xfetch0 (s : string) = (
-    let
-	val d0 = (fetch_from_loaded_classes
-		      (make_name_qualified
-			   (Name (String.fields (fn c => (c = #".")) s))))
-    in
-	case d0 of
-	    NONE => NONE
-	  | SOME (Defclass ((v, g), k0)) => SOME k0
-    end)
+    (fetch_from_loaded_classes
+	 (make_name_qualified
+	      (Name (String.fields (fn c => (c = #".")) s)))))
 
 (* Returns a subject for name, where a dot prefix of a name indicates
    a package-root. *)

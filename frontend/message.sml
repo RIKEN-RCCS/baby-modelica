@@ -310,8 +310,8 @@ val error_no_instantiated_instance = Match
 
 val error_not_found_in_table = Fail "(internal) not found"
 
-fun error_duplicate_definitions d = (
-    Fail ("duplicate definitions ("^ (name_of_definition d) ^")"))
+fun error_duplicate_definitions k = (
+    Fail ("duplicate definitions ("^ (tag_to_string (tag_of_body k)) ^")"))
 
 val error_duplicate_inner_outer = Match
 

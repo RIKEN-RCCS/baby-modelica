@@ -84,9 +84,8 @@ fun fetch_element_class cooker_ (defining, id) : definition_body_t = (
 	val tagopt = (subject_to_tag subj)
     in
 	case (Option.join (Option.map fetch_from_loaded_classes tagopt)) of
-	    SOME d => (
+	    SOME k0 => (
 	    let
-		val Defclass (_, k0) = d
 		val k2 = (assign_enclosing k0 defining)
 	    in
 		k2
