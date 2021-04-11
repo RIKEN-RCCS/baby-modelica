@@ -20,14 +20,14 @@ sig
 	cook_step_t -> definition_body_t -> definition_body_t
 end = struct
 
-open plain ast common message small0 setting
+open plain ast common message small0
 
 val loaded_classes = classtree.loaded_classes
 val fetch_from_loaded_classes = classtree.fetch_from_loaded_classes
 val store_to_loaded_classes = classtree.store_to_loaded_classes
 val fetch_base_class = classtree.fetch_base_class
 
-fun trace n (s : string) = if (n <= 3) then (print (s ^"\n")) else ()
+fun trace n (s : string) = if n <= 3 then (print (s ^"\n")) else ()
 
 (* ================================================================ *)
 
@@ -178,7 +178,7 @@ and record_class_body (id, pkg) k0 = (
 	    end)
     in
 	case k0 of
-	    Def_Body (mk, cs, (j, n, c_, x), cc, ee0, aa, ww) => (
+	    Def_Body (mk, cs, (j, n, c_, x), cc, ii, ee0, (aa, ww)) => (
 	    let
 		val _ = if (c_ = bad_tag) then () else raise Match
 		val _ = if (j = bad_subject) then () else raise Match
@@ -186,15 +186,15 @@ and record_class_body (id, pkg) k0 = (
 		val _ = if (x = bad_subject) then () else raise Match
 		val tag = (qualify_name (id, pkg))
 		val ee1 = (map (record_e tag) ee0)
-		val k1 = Def_Body (mk, cs, (j, n, tag, x), cc, ee1, aa, ww)
+		val k1 = Def_Body (mk, cs, (j, n, tag, x), cc, ii, ee1, (aa, ww))
 		val _ = (store_to_loaded_classes false k1)
 	    in
 		Def_Displaced (tag, bad_subject)
 	    end)
-	  | Def_Der (c, cs, n, vv, a, w) => (
+	  | Def_Der (c, cs, n, vv, (aa, ww)) => (
 	    let
 		val tag = (qualify_name (id, pkg))
-		val k1 = Def_Der (tag, cs, n, vv, a, w)
+		val k1 = Def_Der (tag, cs, n, vv, (aa, ww))
 	    in
 		k1
 	    end)
@@ -203,8 +203,8 @@ and record_class_body (id, pkg) k0 = (
 	  | Def_Argument _ => raise Match
 	  | Def_Named _ => k0
 	  | Def_Scoped _ => raise Match
-	  | Def_Refine (_, NONE, _, _, _, _, _, _) => k0
-	  | Def_Refine (_, SOME _, _, _, _, _, _, _) => raise Match
+	  | Def_Refine (_, NONE, _, _, _, _, (_, _)) => k0
+	  | Def_Refine (_, SOME _, _, _, _, _, (_, _)) => raise Match
 	  | Def_Extending (true, bx, kx) => raise Match
 	  | Def_Extending (false, bx, kx) => (
 	    let
@@ -424,13 +424,13 @@ and insert_package_directory_entries (pkg : class_tag_t) (path : string) = (
 and check_library_paths (qn : class_tag_t) : (bool * class_tag_t * string) option = (
     let
 	val (Name nn) = (tag_as_name qn)
-	val path = Name (make_modelica_versioned_path nn)
+	val path = Name (setting.make_modelica_versioned_path nn)
     in
 	case (list_find_some
 		  (fn rootpath =>
 		      (test_file_path_as_class
 			   (make_file_path rootpath path)))
-		  modelica_paths) of
+		  setting.modelica_paths) of
 	    SOME (b, s) => SOME (b, qn, s)
 	  | NONE => NONE
     end)

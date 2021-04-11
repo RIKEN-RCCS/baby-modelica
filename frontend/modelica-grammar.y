@@ -543,7 +543,7 @@ der_class_specifier
 		    val (aa, ww) = $9
 		in
 		    Defclass ((Id $1, bad_tag),
-			      Def_Der (bad_tag, bad_class, $5, $7, aa, ww))
+			      Def_Der (bad_tag, bad_class, $5, $7, (aa, ww)))
 		end}
 	;
 
@@ -574,7 +574,7 @@ enumeration_literal
 		let
 		    val (aa, ww) = $2
 		in
-		    [(Id $1, aa, ww)]
+		    [(Id $1, (aa, ww))]
 		end}
 	;
 
@@ -633,16 +633,16 @@ language_specification
 external_function_call
 	: IDENT "(" ")" {
 		St_Call (([], Vref (NONE, [(Id $1, [])]), []),
-			 Annotation [], Comment [])}
+			 (Annotation [], Comment []))}
 	| IDENT "(" expression_list ")" {
 		St_Call (([], Vref (NONE, [(Id $1, [])]), $3),
-			 Annotation [], Comment [])}
+			 (Annotation [], Comment []))}
 	| component_reference "=" IDENT "(" ")" {
 		St_Call (([$1], Vref (NONE, [(Id $3, [])]), []),
-			 Annotation [], Comment [])}
+			 (Annotation [], Comment []))}
 	| component_reference "=" IDENT "(" expression_list ")" {
 		St_Call (([$1], Vref (NONE, [(Id $3, [])]), $5),
-			 Annotation [], Comment [])}
+			 (Annotation [], Comment []))}
 	;
 
 element_list
@@ -682,7 +682,7 @@ element
 		    val r = (set_element_prefix_replaceable $2)
 		    val (t, m) = $5
 		    val (aa, ww) = $6
-		    val h = SOME (t, m, aa, ww)
+		    val h = SOME (t, m, (aa, ww))
 		in
 		    if (#Redeclare $1) then
 			(map (fn c => Redeclare_State (Public, r, c, h)) $4)
@@ -714,7 +714,7 @@ element
 		    val r = (set_element_prefix_replaceable $2)
 		    val (t, m) = $5
 		    val (aa, ww) = $6
-		    val h = SOME (t, m, aa, ww)
+		    val h = SOME (t, m, (aa, ww))
 		in
 		    if (#Redeclare $1) then
 			[Redefine_Class (Public, r, $4, h)]
@@ -763,14 +763,14 @@ import_clause
 		    val (p, v) = (name_prefix $2)
 		    val (aa, ww) = $3
 		in
-		    [Import_Clause (Public, p, SOME (v, v), aa, ww)]
+		    [Import_Clause (Public, p, SOME (v, v), (aa, ww))]
 		end}
 	| IMPORT name "." "*" comment {
 		let
 		    val (p, v) = (name_prefix $2)
 		    val (aa, ww) = $5
 		in
-		    [Import_Clause (Public, $2, NONE, aa, ww)]
+		    [Import_Clause (Public, $2, NONE, (aa, ww))]
 		end}
 	| IMPORT name "." "{" import_list "}" comment {
 		let
@@ -779,7 +779,7 @@ import_clause
 		    (map
 			(fn v =>
 			    (Import_Clause
-				(Public, $2, SOME (v, v), aa, ww)))
+				(Public, $2, SOME (v, v), (aa, ww))))
 		    $5)
 		end}
 	| IMPORT IDENT "=" name comment {
@@ -788,7 +788,7 @@ import_clause
 		    val (aa, ww) = $5
 		in
 		    [Import_Clause
-			(Public, p, SOME (v, (Id $2)), aa, ww)]
+			(Public, p, SOME (v, (Id $2)), (aa, ww))]
 		end}
 	;
 
@@ -874,8 +874,8 @@ component_declaration
 		    val (aa, ww) = $2
 		in
 		    case $1 of
-			(v, s, m, NONE, Annotation [], Comment []) =>
-			    (v, s, m, NONE, aa, ww)
+			(v, s, m, NONE, (Annotation [], Comment [])) =>
+			    (v, s, m, NONE, (aa, ww))
 		      | _ => raise Match
 		end}
 	| declaration condition_attribute comment {
@@ -883,8 +883,8 @@ component_declaration
 		    val (aa, ww) = $3
 		in
 		    case $1 of
-			(v, s, m, NONE, Annotation [], Comment []) =>
-			    (v, s, m, SOME $2, aa, ww)
+			(v, s, m, NONE, (Annotation [], Comment [])) =>
+			    (v, s, m, SOME $2, (aa, ww))
 		      | _ => raise Match
 		end}
 	;
@@ -896,13 +896,13 @@ condition_attribute
 
 declaration
 	: IDENT {
-		(Id $1, [], [], NONE, Annotation [], Comment [])}
+		(Id $1, [], [], NONE, (Annotation [], Comment []))}
 	| IDENT modification {
-		(Id $1, [], $2, NONE, Annotation [], Comment [])}
+		(Id $1, [], $2, NONE, (Annotation [], Comment []))}
 	| IDENT array_subscripts {
-		(Id $1, $2, [], NONE, Annotation [], Comment [])}
+		(Id $1, $2, [], NONE, (Annotation [], Comment []))}
 	| IDENT array_subscripts modification {
-		(Id $1, $2, $3, NONE, Annotation [], Comment [])}
+		(Id $1, $2, $3, NONE, (Annotation [], Comment []))}
 	;
 
 /* B.2.5 Modification */
@@ -1008,7 +1008,7 @@ element_replaceable
 		in
 		    Mod_Redefine (modifier_prefixes_replaceable,
 				  $2,
-				  SOME (t, m, Annotation [], Comment []))
+				  SOME (t, m, (Annotation [], Comment [])))
 		end}
 	| REPLACEABLE component_clause_1 {
 		Mod_Redeclare (modifier_prefixes_replaceable,
@@ -1019,7 +1019,7 @@ element_replaceable
 		in
 		    Mod_Redeclare (modifier_prefixes_replaceable,
 				   $2,
-				   SOME (t, m, Annotation [], Comment []))
+				   SOME (t, m, (Annotation [], Comment [])))
 		end}
 	;
 
@@ -1034,8 +1034,8 @@ component_declaration_1
 		    val (aa, ww) = $2
 		in
 		    case $1 of
-			(v, s, m, NONE, Annotation [], Comment []) =>
-			    (v, s, m, NONE, aa, ww)
+			(v, s, m, NONE, (Annotation [], Comment [])) =>
+			    (v, s, m, NONE, (aa, ww))
 		      | _ => raise Match
 		end}
 	;
@@ -1093,13 +1093,13 @@ equation
 
 equation_body_
 	: simple_expression "=" expression {
-		Eq_Eq (($1, $3), Annotation [], Comment [])}
+		Eq_Eq (($1, $3), (Annotation [], Comment []))}
 	| if_equation
 	| for_equation
 	| connect_clause
 	| when_equation
 	| component_reference function_call_args {
-		Eq_App (($1, $2), Annotation [], Comment [])}
+		Eq_App (($1, $2), (Annotation [], Comment []))}
 	;
 
 statement
@@ -1109,12 +1109,12 @@ statement
 
 statement_body_
 	: component_reference DEF expression {
-		St_Assign (($1, $3), Annotation [], Comment [])}
+		St_Assign (($1, $3), (Annotation [], Comment []))}
 	| component_reference function_call_args {
-		St_Call (([], $1, $2), Annotation [], Comment [])}
+		St_Call (([], $1, $2), (Annotation [], Comment []))}
 	| "(" output_expression_list ")" DEF component_reference
 		function_call_args {
-		St_Call (($2, $5, $6), Annotation [], Comment [])}
+		St_Call (($2, $5, $6), (Annotation [], Comment []))}
 	| BREAK {
 		St_Break (Annotation [], Comment [])}
 	| RETURN {
@@ -1128,7 +1128,7 @@ statement_body_
 if_equation
 	: IF expression THEN equation_loop_ elseif_equation_loop_
 		else_part_equation_ END IF {
-		Eq_If (([($2, $4)] ++ $5 ++ $6), Annotation [], Comment [])}
+		Eq_If (([($2, $4)] ++ $5 ++ $6), (Annotation [], Comment []))}
 	;
 
 elseif_equation_loop_
@@ -1148,7 +1148,7 @@ else_part_equation_
 if_statement
 	: IF expression THEN statement_loop_ elseif_statement_loop_
 		else_part_statement_ END IF {
-		St_If ([($2, $4)] ++ $5 ++ $6, Annotation [], Comment [])}
+		St_If ([($2, $4)] ++ $5 ++ $6, (Annotation [], Comment []))}
 	;
 
 elseif_statement_loop_
@@ -1167,12 +1167,12 @@ else_part_statement_
 
 for_equation
 	: FOR for_indices LOOP equation_loop_ END FOR {
-		Eq_For (($2, $4), Annotation [], Comment [])}
+		Eq_For (($2, $4), (Annotation [], Comment []))}
 	;
 
 for_statement
 	: FOR for_indices LOOP statement_loop_ END FOR {
-		St_For (($2, $4), Annotation [], Comment [])}
+		St_For (($2, $4), (Annotation [], Comment []))}
 	;
 
 for_indices
@@ -1191,13 +1191,13 @@ for_index
 
 while_statement
 	: WHILE expression LOOP statement_loop_ END WHILE {
-		St_While (($2, $4), Annotation [], Comment [])}
+		St_While (($2, $4), (Annotation [], Comment []))}
 	;
 
 when_equation
 	: WHEN expression THEN equation_loop_
 		elsewhen_equation_loop_ END WHEN {
-		Eq_When (([($2, $4)] ++ $5), Annotation [], Comment [])}
+		Eq_When (([($2, $4)] ++ $5), (Annotation [], Comment []))}
 	;
 
 elsewhen_equation_loop_
@@ -1210,7 +1210,7 @@ elsewhen_equation_loop_
 when_statement
 	: WHEN expression THEN statement_loop_
 		elsewhen_statement_loop_ END WHEN {
-		St_When ([($2, $4)] ++ $5, Annotation [], Comment [])}
+		St_When ([($2, $4)] ++ $5, (Annotation [], Comment []))}
 	;
 
 elsewhen_statement_loop_
@@ -1222,7 +1222,7 @@ elsewhen_statement_loop_
 
 connect_clause
 	: CONNECT "(" component_reference "," component_reference ")" {
-		Eq_Connect (($3, $5), Annotation [], Comment [])}
+		Eq_Connect (($3, $5), (Annotation [], Comment []))}
 	;
 
 /* B.2.7 Expressions */

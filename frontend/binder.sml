@@ -369,7 +369,7 @@ and bind_in_expression ctx buildphase binder w0 = (
 
 and bind_in_simple_type buildphase binder k0 = (
     case k0 of
-	Def_Body (mk, cs, nm, cc0, ee0, aa, ww) => (
+	Def_Body (mk, cs, nm, cc0, ii, ee0, (aa, ww)) => (
 	let
 	    (*val attributes = not buildphase*)
 	    val _ = if (class_is_simple_type k0) then () else raise Match
@@ -380,7 +380,7 @@ and bind_in_simple_type buildphase binder k0 = (
 	    val cc1 = (walk_x cc0)
 	    val walk_p = (bind_in_simple_type_element buildphase k0)
 	    val ee1 = (map walk_p ee0)
-	    val k1 = Def_Body (mk, cs, nm, cc1, ee1, aa, ww)
+	    val k1 = Def_Body (mk, cs, nm, cc1, ii, ee1, (aa, ww))
 	    val k2 = (set_cook_step E5 k1)
 	    val _ = (store_to_instance_tree subj k2)
 	in

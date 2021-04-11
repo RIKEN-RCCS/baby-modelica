@@ -277,7 +277,7 @@ and gather_names_in_class kp : naming_t list = (
 	      | Element_Algorithms _ => []
 	      | Element_External _ => []
 	      | Element_Annotation _ => []
-	      | Element_Import (z, tag, idxid, a, w) => (
+	      | Element_Import (z, tag, idxid, (aa, ww)) => (
 		let
 		    val _ = trace 5 (";; gather_names_in_class import ("^
 				     (import_name_to_string tag idxid) ^")")

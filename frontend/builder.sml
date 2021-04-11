@@ -156,7 +156,7 @@ and instantiate_with_dimension (subj, k0) = (
 	val k1 = (assemble_instance (subj, k0))
     in
 	case k1 of
-	    Def_Body ((u, f, b), cs, nm, cc, ee, aa, ww) => (
+	    Def_Body ((u, f, b), cs, nm, cc, ii, ee, (aa, ww)) => (
 	    let
 		val _= if (f = VAR) then () else raise Match
 		val _ = (assert_cook_step E3 k1)
@@ -169,13 +169,13 @@ and instantiate_with_dimension (subj, k0) = (
 	    in
 		([], [k1], NONE)
 	    end)
-	  | Def_Refine (x0, rn, ts0, q0, (ss0, mm0), cc0, aa0, ww0) => (
+	  | Def_Refine (x0, rn, ts0, q0, (ss0, mm0), cc0, (aa0, ww0)) => (
 	    let
 		val _ = if (rn = NONE) then () else raise Match
 		val _ = if (not (null ss0)) then () else raise Match
 		val ss1 = (map (simplify_expression k0 true) ss0)
 		val dim1 = (settle_dimension k1 ss1 mm0)
-		val k2 = Def_Refine (x0, rn, ts0, q0, ([], []), cc0, aa0, ww0)
+		val k2 = Def_Refine (x0, rn, ts0, q0, ([], []), cc0, (aa0, ww0))
 		val f = (instantiate_at_index (subj, k2) mm0)
 		val dimarraylist = (fill_dimension f [] dim1)
 		val (dimlist, arraylist) = (ListPair.unzip dimarraylist)
@@ -195,14 +195,14 @@ and instantiate_with_dimension (subj, k0) = (
 
 and instantiate_at_index (subj0, k0) mm0 index = (
     case k0 of
-	Def_Refine (x0, rn, ts0, q0, (ss_, mm_), cc0, aa0, ww0) => (
+	Def_Refine (x0, rn, ts0, q0, (ss_, mm_), cc0, (aa0, ww0)) => (
 	let
 	    val _ = if (rn = NONE) then () else raise Match
 	    val _ = if (null ss_) then () else raise Match
 	    val _ = if (null mm_) then () else raise Match
 	    val subj1 = (compose_subject_with_index subj0 index)
 	    val mm1 = (commute_modifier_over_subscript index mm0)
-	    val k1 = Def_Refine (x0, rn, ts0, q0, ([], mm1), cc0, aa0, ww0)
+	    val k1 = Def_Refine (x0, rn, ts0, q0, ([], mm1), cc0, (aa0, ww0))
 	    val (dim, array, dummy) = (instantiate_with_dimension (subj1, k1))
 	in
 	    (dim, array)

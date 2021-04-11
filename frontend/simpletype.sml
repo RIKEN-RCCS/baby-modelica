@@ -38,8 +38,6 @@ open plain ast common message small0
 val store_to_instance_tree = classtree.store_to_instance_tree
 val assert_stored_in_instance_tree = classtree.assert_stored_in_instance_tree
 
-(*fun trace n (s : string) = if n <= 3 then (print (s ^"\n")) else ()*)
-
 (* ================================================================ *)
 
 fun take_enumarator_element kp = (
@@ -112,7 +110,7 @@ fun unify_value_and_initializer kp mm0 = (
 
 	val (v, mm1) = (foldl select (NONE, []) mm0)
     in
-	((option_as_list v) @ mm1)
+	((list_from_option v) @ mm1)
     end)
 
 (* ================================================================ *)
@@ -134,7 +132,7 @@ fun register_enumerators_for_enumeration kp = (
 		Def_Primitive (P_Enum tag, value, Constant)
 	    end)
 
-	fun enumerate kp tag (v, a, w) = (
+	fun enumerate kp tag (v, (aa, ww)) = (
 	    let
 		val subj = (subject_of_class kp)
 		val subsubj = (compose_subject subj v [])
@@ -229,7 +227,7 @@ fun simplify_simple_type (k0 : definition_body_t) = (
 			[s] => (make_primitive_type_by_name s)
 		      | _ => raise Match
 		end)
-	      | Def_Refine (x1, v, ts, q, (ss, mm), cc, aa, ww) => (
+	      | Def_Refine (x1, v, ts, q, (ss, mm), cc, (aa, ww)) => (
 		let
 		    val _ = if (v = NONE) then () else raise Match
 		    val _ = if (cc = NIL) then () else raise Match
@@ -292,7 +290,7 @@ fun simplify_simple_type (k0 : definition_body_t) = (
 	      | Base_Classes x => if (null x) then e else raise Match)
     in
 	case k0 of
-	    Def_Body (mk, cs, nm, cc, ee0, aa, ww) => (
+	    Def_Body (mk, cs, nm, cc, ii, ee0, (aa, ww)) => (
 	    if (not (class_is_simple_type k0)) then
 		k0
 	    else if (class_is_enum k0) then
@@ -303,7 +301,7 @@ fun simplify_simple_type (k0 : definition_body_t) = (
 		    val fixed = L_Bool (variability = Parameter
 					orelse variability = Constant)
 		    val ee1 = (map (resolve fixed) ee0)
-		    val k1 = Def_Body (mk, cs, nm, cc, ee1, aa, ww)
+		    val k1 = Def_Body (mk, cs, nm, cc, ii, ee1, (aa, ww))
 		in
 		    k1
 		end)
@@ -335,8 +333,8 @@ fun enumeration_bounds kp = (
 	  | SOME [] => (NIL, NIL)
 	  | SOME vv => (
 	    let
-		val (v0, a0, w0) = (hd vv)
-		val (vn, an, wn) = (List.last vv)
+		val (v0, (aa0, ww0)) = (hd vv)
+		val (vn, (aan, wwn)) = (List.last vv)
 	    in
 		(L_Enum (tag, v0), L_Enum (tag, vn))
 	    end)
@@ -372,7 +370,7 @@ fun enumeration_attributes kp = (
 
 fun insert_attributes_to_enumeration k0 = (
     case k0 of
-	Def_Body (mk, cs, nm, cc, ee0, aa, ww) => (
+	Def_Body (mk, cs, nm, cc, ii, ee0, (aa, ww)) => (
 	if (not (class_is_enum k0)) then
 	    k0
 	else
@@ -380,7 +378,7 @@ fun insert_attributes_to_enumeration k0 = (
 		val _ = if ((cook_step k0) = E1) then () else raise Match
 		val attributes = (enumeration_attributes k0)
 		val ee1 = ee0 @ attributes
-		val k1 = Def_Body (mk, cs, nm, cc, ee1, aa, ww)
+		val k1 = Def_Body (mk, cs, nm, cc, ii, ee1, (aa, ww))
 		val k2 = (set_cook_step E2 k1)
 	    in
 		k2
@@ -450,7 +448,7 @@ fun type_of_simple_type k = (
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
-      | Def_Argument (kx, sm, aa, ww) => (type_of_simple_type kx)
+      | Def_Argument (kx, sm, (aa, ww)) => (type_of_simple_type kx)
       | Def_Named _ => raise Match
       | Def_Scoped _ => raise Match
       | Def_Refine _ => raise Match

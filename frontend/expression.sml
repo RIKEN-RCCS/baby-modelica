@@ -31,8 +31,6 @@ end = struct
 
 open plain ast common message
 
-(*fun trace n (s : string) = if n <= 3 then (print (s ^"\n")) else ()*)
-
 val fetch_from_instance_tree = classtree.fetch_from_instance_tree
 val instance_tree = classtree.instance_tree
 val class_tree = classtree.class_tree
@@ -82,7 +80,7 @@ fun enumerator_order x = (
 		NONE => raise error_enum_unspecified
 	      | SOME [] => raise Match
 	      | SOME vv => (
-		case (list_index (fn (k, a, w) => (v = k)) vv 0) of
+		case (list_index (fn (k, (aa, ww)) => (v = k)) vv 0) of
 		    NONE => raise Match
 		  | SOME index => index)
 	end)
@@ -110,7 +108,7 @@ fun enumerator_nth x i = (
 	      | SOME [] => raise Match
 	      | SOME vv => (
 		let
-		    val (k, a, w) = (List.nth (vv, i))
+		    val (k, (aa, ww)) = (List.nth (vv, i))
 		in
 		    L_Enum (tag, k)
 		end)
@@ -372,19 +370,19 @@ fun scan_for_iterator_q v (f, g) (q, acc0) = (
 		end))
     in
 	case q of
-	    Eq_Eq ((x, y), _, _) => (foldl scan_x acc0 [x, y])
-	  | Eq_Connect ((x, y), _, _) => (foldl scan_x acc0 [x, y])
-	  | Eq_If (cc, _, _) => (
+	    Eq_Eq ((x, y), (_, _)) => (foldl scan_x acc0 [x, y])
+	  | Eq_Connect ((x, y), (_, _)) => (foldl scan_x acc0 [x, y])
+	  | Eq_If (cc, (_, _)) => (
 	    (foldl
 		 (fn ((x, qq), acc) => (foldl scan_q (scan_x (x, acc)) qq))
 		 acc0 cc))
-	  | Eq_When (cc, _, _) => (
+	  | Eq_When (cc, (_, _)) => (
 	    (foldl
 		 (fn ((x, qq), acc) => (foldl scan_q (scan_x (x, acc)) qq))
 		 acc0 cc))
-	  | Eq_For ((uu, qq), _, _) => (
+	  | Eq_For ((uu, qq), (_, _)) => (
 	    (scan_may_be_hidden_q ((qq, uu), acc0)))
-	  | Eq_App ((e, ee), _, _) => (
+	  | Eq_App ((e, ee), (_, _)) => (
 	    (foldl scan_x acc0 (e :: ee)))
     end)
 

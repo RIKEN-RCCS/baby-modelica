@@ -360,7 +360,7 @@ fun list_count_true f ee = (
 
 (* Makes a singleton or empty list for an option. *)
 
-fun option_as_list x = (if (isSome x) then [valOf x] else [])
+fun list_from_option x = (if (isSome x) then [valOf x] else [])
 
 (* Chooses SOME of options x or y, favoring x. *)
 

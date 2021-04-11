@@ -26,20 +26,20 @@ open plain ast common message
 val fetch_from_instance_tree = classtree.fetch_from_instance_tree
 
 val simple_type_attribute = simpletype.simple_type_attribute
+val take_enumarator_element = simpletype.take_enumarator_element
 
 val simplify_ite = walker.simplify_ite
 
 val expression_is_literal = expression.expression_is_literal
 val triple_value = expression.triple_value
+val bool_order = expression.bool_order
+val enumerator_order = expression.enumerator_order
 
 (*val unary_operator = operator.unary_operator*)
 (*val binary_operator = operator.binary_operator*)
 (*val relational_operator = operator.relational_operator*)
 val fold_operator_application = operator.fold_operator_application
 val fold_pseudo_split = operator.fold_pseudo_split
-val bool_order = operator.bool_order
-val enumerator_order = operator.enumerator_order
-val take_enumarator_element = simpletype.take_enumarator_element
 
 val expression_to_string = dumper.expression_to_string
 

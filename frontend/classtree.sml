@@ -113,7 +113,7 @@ end = struct
 
 open plain ast common message small0
 
-fun trace n (s : string) = if (n <= 1) then (print (s ^"\n")) else ()
+fun trace n (s : string) = if n <= 1 then (print (s ^"\n")) else ()
 
 (* ================================================================ *)
 

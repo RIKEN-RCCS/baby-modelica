@@ -8,7 +8,11 @@ sig
     val modelica_paths : string list
     val modelica_msl : string
     val make_modelica_versioned_path : string list -> string list
+
+    val aggregate_initializer : bool
 end = struct
+
+(* ================================================================ *)
 
 fun get_paths () = (
     let
@@ -45,5 +49,12 @@ fun make_modelica_versioned_path qn = (
 	(("ModelicaServices" ^" "^ modelica_msl) :: nn))
       | "" :: name => name
       | _ => raise Match)
+
+(* ================================================================ *)
+
+(* A flag to control decomposing an initializer (C~x=w) to each
+   component for records. *)
+
+val aggregate_initializer = false
 
 end

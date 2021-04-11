@@ -33,21 +33,22 @@ sig
     val fold_pseudo_split :
 	expression_t -> expression_t
 
-    val bool_order : expression_t -> int
-    val enumerator_order : expression_t -> int
-
     val operator_type : predefined_operator_t -> operator_type_t
 end = struct
 
-open plain ast common message expression
+open plain ast common message
 
 val fetch_from_instance_tree = classtree.fetch_from_instance_tree
 
 val take_enumarator_element = simpletype.take_enumarator_element
 
+val triple_size = expression.triple_size
+val bool_size = expression.bool_size
+val enumerator_size = expression.enumerator_size
+val enumerator_compare = expression.enumerator_compare
+val triple_nth = expression.triple_nth
+val range_nth = expression.range_nth
 val expression_is_literal = expression.expression_is_literal
-
-(*fun trace 3 (s : string) = if n <= 3 then (print (s ^"\n")) else ()*)
 
 datatype operator_type_t
     = ARITHMETIC_UOP | ARITHMETIC_BOP
@@ -91,7 +92,7 @@ fun operator_is_concat f = ((operator_type f) = STRING_CONCAT_OP)
 (*
 fun global_function_name k = (
     case k of
-	Def_Body (mk, j, cs, (tag, n, x), ee, aa, ww) => (
+	Def_Body (mk, j, cs, (tag, n, x), ii, ee, (aa, ww)) => (
 	case tag of
 	    Ctag [name] => SOME name
 	  | _ => NONE)
@@ -120,9 +121,9 @@ fun empty_global_function__ name = (
 		   no_component_prefixes),
 		  (subj, the_package_root_subject, tag,
 		   the_package_root_subject),
-		  NIL,
+		  NIL, Mod_Value NIL,
 		  [Base_List [], Base_Classes []],
-		  Annotation [], Comment [])
+		  (Annotation [], Comment []))
     end)
 
 (* Tests equality of reals.  It compares their string

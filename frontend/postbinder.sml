@@ -65,7 +65,7 @@ fun trace n (s : string) = if n <= 3 then (print (s ^"\n")) else ()
 
 fun bind_in_class ctx binder k0 = (
     case k0 of
-	Def_Body (mk, cs, nm, cc0, ee0, aa, ww) => (
+	Def_Body (mk, cs, nm, cc0, ii, ee0, (aa, ww)) => (
 	if (class_is_simple_type k0) then
 	    let
 		val buildphase = false
@@ -84,7 +84,7 @@ fun bind_in_class ctx binder k0 = (
 		val walk_e = (bind_in_class_element ctx binder)
 		val cc1 = (walk_x cc0)
 		val ee1 = (map walk_e ee0)
-		val k1 = Def_Body (mk, cs, nm, cc1, ee1, aa, ww)
+		val k1 = Def_Body (mk, cs, nm, cc1, ii, ee1, (aa, ww))
 		val k2 = (set_cook_step E5 k1)
 	    in
 		k2
@@ -92,7 +92,7 @@ fun bind_in_class ctx binder k0 = (
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
-      | Def_Argument (x0, (ss0, mm0), aa, ww) => (
+      | Def_Argument (x0, (ss0, mm0), (aa, ww)) => (
 	let
 	    val {k = kp} = ctx
 	    val walk_x = (bind_in_expression ctx false binder)
@@ -101,7 +101,7 @@ fun bind_in_class ctx binder k0 = (
 	    val ss1 = (map walk_x ss0)
 	    val mm1 = (map walk_m mm0)
 	in
-	    Def_Argument (x1, (ss1, mm1), aa, ww)
+	    Def_Argument (x1, (ss1, mm1), (aa, ww))
 	end)
       | Def_Named _ => raise Match
       | Def_Scoped _ => raise Match
@@ -233,7 +233,7 @@ and bind_in_constraint kp binder (r : constraint_t) = (
 	val walk_m = (bind_in_modifier kp binder)
 
 	val subj = (subject_of_class kp)
-	val (k0, mm0, aa, ww) = r
+	val (k0, mm0, (aa, ww)) = r
     in
 	case k0 of
 	    Def_Body _ => raise Match
@@ -248,7 +248,7 @@ and bind_in_constraint kp binder (r : constraint_t) = (
 		let
 		    val mm1 = (map walk_m mm0)
 		in
-		    (k1, mm1, aa, ww)
+		    (k1, mm1, (aa, ww))
 		end))
 	  | Def_Scoped _ => raise Match
 	  | Def_Refine _ => raise Match
@@ -269,10 +269,10 @@ and bind_in_equation kp binder q0 = (
 	val walk_x_qq = (fn (e, qq) => ((walk_x e), (map walk_q qq)))
     in
 	case q0 of
-	    Eq_Eq ((x0, y0), Annotation aa0, ww) => (
+	    Eq_Eq ((x0, y0), (Annotation aa0, ww)) => (
 	    Eq_Eq (((walk_x x0), (walk_x y0)),
-		   Annotation (map walk_m aa0), ww))
-	  | Eq_Connect ((x0, y0), Annotation aa0, ww) => (
+		   (Annotation (map walk_m aa0), ww)))
+	  | Eq_Connect ((x0, y0), (Annotation aa0, ww)) => (
 	    let
 		val subj = (subject_of_class kp)
 		val x1 = (walk_x x0)
@@ -282,17 +282,17 @@ and bind_in_equation kp binder q0 = (
 		val sidey = (discern_connector_component subj y1)
 		val x2 = Cref (x1, sidex)
 		val y2 = Cref (y1, sidey)
-		val q1 = Eq_Connect ((x2, y2), Annotation aa1, ww)
+		val q1 = Eq_Connect ((x2, y2), (Annotation aa1, ww))
 	    in
 		q1
 	    end)
-	  | Eq_If (c0, Annotation aa0, ww) => (
+	  | Eq_If (c0, (Annotation aa0, ww)) => (
 	    Eq_If ((map walk_x_qq c0),
-		   Annotation (map walk_m aa0), ww))
-	  | Eq_When (c0, Annotation aa0, ww) => (
+		   (Annotation (map walk_m aa0), ww)))
+	  | Eq_When (c0, (Annotation aa0, ww)) => (
 	    Eq_When ((map walk_x_qq c0),
-		     Annotation (map walk_m aa0), ww))
-	  | Eq_For ((ii0, qq0), Annotation aa0, ww) => (
+		     (Annotation (map walk_m aa0), ww)))
+	  | Eq_For ((ii0, qq0), (Annotation aa0, ww)) => (
 	    let
 		val (binder1, ii1) = (make_iterator_binder
 					  {k = kp} false binder ii0)
@@ -301,11 +301,11 @@ and bind_in_equation kp binder q0 = (
 		val qq1 = (map walk_q qq0)
 		val aa1 = (map walk_m aa0)
 	    in
-		Eq_For ((ii1, qq1), Annotation aa1, ww)
+		Eq_For ((ii1, qq1), (Annotation aa1, ww))
 	    end)
-	  | Eq_App ((x0, yy0), Annotation aa0, ww) => (
+	  | Eq_App ((x0, yy0), (Annotation aa0, ww)) => (
 	    Eq_App (((walk_x x0), (map walk_x yy0)),
-		    Annotation (map walk_m aa0), ww))
+		    (Annotation (map walk_m aa0), ww)))
     end)
 
 and bind_in_statement kp binder s0 = (
@@ -322,16 +322,16 @@ and bind_in_statement kp binder s0 = (
 	    St_Break (Annotation (map walk_m aa0), ww))
 	  | St_Return (Annotation aa0, ww) => (
 	    St_Return (Annotation (map walk_m aa0), ww))
-	  | St_Assign ((x0, y0), Annotation aa0, ww) => (
+	  | St_Assign ((x0, y0), (Annotation aa0, ww)) => (
 	    St_Assign (((walk_x x0), (walk_x y0)),
-		       Annotation (map walk_m aa0), ww))
-	  | St_Call ((x0, y0, z0), Annotation aa0, ww) => (
+		       (Annotation (map walk_m aa0), ww)))
+	  | St_Call ((x0, y0, z0), (Annotation aa0, ww)) => (
 	    St_Call (((map walk_x x0), (walk_x y0), (map walk_x z0)),
-		     Annotation (map walk_m aa0), ww))
-	  | St_If (c0, Annotation aa0, ww) => (
+		     (Annotation (map walk_m aa0), ww)))
+	  | St_If (c0, (Annotation aa0, ww)) => (
 	    St_If ((map walk_x_ss c0),
-		   Annotation (map walk_m aa0), ww))
-	  | St_For ((ii0, ss0), Annotation aa0, ww) => (
+		   (Annotation (map walk_m aa0), ww)))
+	  | St_For ((ii0, ss0), (Annotation aa0, ww)) => (
 	    let
 		val (binder1, ii1) = (make_iterator_binder
 					  ctx false binder ii0)
@@ -340,14 +340,14 @@ and bind_in_statement kp binder s0 = (
 		val ss1 = (map walk_s ss0)
 		val aa1 = (map walk_m aa0)
 	    in
-		St_For ((ii1, ss1), Annotation aa1, ww)
+		St_For ((ii1, ss1), (Annotation aa1, ww))
 	    end)
-	  | St_While ((e0, ss0), Annotation aa0, ww) => (
+	  | St_While ((e0, ss0), (Annotation aa0, ww)) => (
 	    St_While (((walk_x e0), (map walk_s ss0)),
-		      Annotation (map walk_m aa0), ww))
-	  | St_When (cc0, Annotation aa0, ww) => (
+		      (Annotation (map walk_m aa0), ww)))
+	  | St_When (cc0, (Annotation aa0, ww)) => (
 	    St_When ((map walk_x_ss cc0),
-		     Annotation (map walk_m aa0), ww))
+		     (Annotation (map walk_m aa0), ww)))
     end)
 
 (* ================================================================ *)

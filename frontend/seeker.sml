@@ -74,7 +74,7 @@ fun list_import_candidate_classes (cooker : cooker_t) kp id = (
 	      | Element_Algorithms _ => NONE
 	      | Element_External _ => NONE
 	      | Element_Annotation _ => NONE
-	      | Element_Import (z, tag, SOME (v0, v1), a, w) => (
+	      | Element_Import (z, tag, SOME (v0, v1), (aa, ww)) => (
 		if (id <> v1) then
 		    NONE
 		else
@@ -84,7 +84,7 @@ fun list_import_candidate_classes (cooker : cooker_t) kp id = (
 		    in
 			SOME (x0, v0)
 		    end)
-	      | Element_Import (z, tag, NONE, a, w) => (
+	      | Element_Import (z, tag, NONE, (aa, ww)) => (
 		let
 		    val subjx = (tag_to_subject tag)
 		    val x0 = surely (fetch_from_instance_tree subjx)

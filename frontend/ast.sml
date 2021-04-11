@@ -271,17 +271,18 @@ type name_tuple_t = (subject_t * (*class*) subject_t
 
 datatype equation_t
     = Eq_Eq of ((expression_t * expression_t)
-		* annotation_t * comment_t)
-    | Eq_Connect of ((expression_t * expression_t) * annotation_t * comment_t)
+		* (annotation_t * comment_t))
+    | Eq_Connect of ((expression_t * expression_t)
+		     * (annotation_t * comment_t))
     | Eq_If of ((expression_t * equation_t list) list
-		* annotation_t * comment_t)
+		* (annotation_t * comment_t))
     | Eq_When of ((expression_t * equation_t list) list
-		  * annotation_t * comment_t)
+		  * (annotation_t * comment_t))
     | Eq_For of ((for_index_t list * equation_t list)
-		 * annotation_t * comment_t)
+		 * (annotation_t * comment_t))
     | Eq_App of ((expression_t * expression_t list)
-		 * annotation_t * comment_t)
-    (*| Eq_List of equation_t list * annotation_t * comment_t*)
+		 * (annotation_t * comment_t))
+    (*| Eq_List of equation_t list * (annotation_t * comment_t)*)
 
 (* Statements.  Call has a form: "(v):=f(a)".  A comment on statements
    has a separate entry, while most comments are stored in syntax
@@ -291,17 +292,17 @@ and statement_t
     = St_Break of annotation_t * comment_t
     | St_Return of annotation_t * comment_t
     | St_Assign of ((expression_t * expression_t)
-		    * annotation_t * comment_t)
+		    * (annotation_t * comment_t))
     | St_Call of ((expression_t list * expression_t * expression_t list)
-		  * annotation_t * comment_t)
+		  * (annotation_t * comment_t))
     | St_If of ((expression_t * statement_t list) list
-		* annotation_t * comment_t)
+		* (annotation_t * comment_t))
     | St_When of ((expression_t * statement_t list) list
-		  * annotation_t * comment_t)
+		  * (annotation_t * comment_t))
     | St_For of ((for_index_t list * statement_t list)
-		 * annotation_t * comment_t)
+		 * (annotation_t * comment_t))
     | St_While of ((expression_t * statement_t list)
-		   * annotation_t * comment_t)
+		   * (annotation_t * comment_t))
     (*| St_Comment of (annotation_t * comment_t)*)
 
 (* A variable declaration.  Its body is always a Def_Refine (or a
@@ -320,16 +321,17 @@ and variable_declaration_t
 and class_definition_t
     = Defclass of ((id_t * class_tag_t) * definition_body_t)
 
-and type_marker_t = ENUM | MAIN | BASE | SIMP
+and body_marker_t = ENUM | MAIN | BASE
 
 (* Def_Body, Def_Der, Def_Primitive, and Def_Argument are the only
    classes that appear after syntactic processing.  Def_Body is a
    class definition.  The name-tuple is name information.  Its first
    slot is a unique name which is set when it is associated to a
-   package/instance.  Field abbreviation is:
-   Def_Body(mk,cs,nm,cc,ee,aa,ww).  Def_Der is a derivative
-   definition.  Def_Body and Def_Der represent classes after
-   syntaxing.  Def_Primitive represents a primitive type.
+   package/instance.  The modifier slot is an initializer only by a
+   Mod_Value, and its value can be non-NIL only for a record.  Field
+   abbreviation is: Def_Body(mk,cs,nm,cc,ii,ee,aa).  Def_Der is a
+   derivative definition.  Def_Body and Def_Der represent classes
+   after syntaxing.  Def_Primitive represents a primitive type.
    Def_Outer_Alias is a record left in the instance_tree to map an
    outer reference to an inner.  It is a pair of an outer reference
    and a matching inner reference.  Def_Argument represents an
@@ -360,19 +362,21 @@ and type_marker_t = ENUM | MAIN | BASE | SIMP
 
 and definition_body_t
     = Def_Body of
-      ((cook_step_t * instantiation_t * type_marker_t)
+      ((cook_step_t * instantiation_t * body_marker_t)
        * class_specifier_t * name_tuple_t
        * (*conditional*) expression_t
-       * element_t list * annotation_t * comment_t)
+       * (*initializer*) modifier_t
+       * element_t list
+       * (annotation_t * comment_t))
     | Def_Der of
-      (class_tag_t * class_specifier_t
-       * name_t * id_t list * annotation_t * comment_t)
+      (class_tag_t * class_specifier_t * name_t * id_t list
+       * (annotation_t * comment_t))
     | Def_Primitive of
       (primitive_type_t * (*value*) expression_t * variability_t)
     | Def_Outer_Alias of instantiation_t * subject_t * subject_t
     | Def_Argument of
       (definition_body_t * (subscripts_t * modifier_t list)
-       * annotation_t * comment_t)
+       * (annotation_t * comment_t))
     | Def_Named of name_t
     | Def_Scoped of (name_t * scope_t)
     | Def_Refine of
@@ -380,7 +384,7 @@ and definition_body_t
        * subject_t option * type_prefixes_t * component_prefixes_t
        * (subscripts_t * modifier_t list)
        * (*conditional*) expression_t
-       * annotation_t * comment_t)
+       * (annotation_t * comment_t))
     | Def_Extending of
       ((*extended*) bool * (definition_body_t * modifier_t list)
        * definition_body_t)
@@ -410,7 +414,7 @@ and definition_body_t
 and element_t
     = Import_Clause of
       (visibility_t * name_t * (id_t * id_t) option
-       * annotation_t * comment_t)
+       * (annotation_t * comment_t))
     | Extends_Clause of
       visibility_t * (name_t * modifier_t list) * annotation_t
     | Element_Class of
@@ -436,7 +440,7 @@ and element_t
     | Element_Annotation of annotation_t
     | Element_Import of
       (visibility_t * class_tag_t * (id_t * id_t) option
-       * annotation_t * comment_t)
+       * (annotation_t * comment_t))
     | Element_Base of
       visibility_t * scope_t * annotation_t
     | Base_List of
@@ -489,9 +493,9 @@ and naming_element_t
        * class_definition_t * constraint_t option)
 
 withtype constraint_t = (definition_body_t * modifier_t list
-			 * annotation_t * comment_t)
+			 * (annotation_t * comment_t))
 
-and enum_list_t = (id_t * annotation_t * comment_t) list
+and enum_list_t = (id_t * (annotation_t * comment_t)) list
 
 (* An entry of an element list (definitions/declarations).  It is
    stored in the class_bindings table.  The identifier slot is a
@@ -507,7 +511,7 @@ datatype naming_t
 
 type declaration_with_subscripts_t
      = (id_t * (*subscripts*) (expression_t list) * modifier_t list
-	* expression_t option * annotation_t * comment_t)
+	* expression_t option * (annotation_t * comment_t))
 
 type constraint_no_comment_t = (definition_body_t * modifier_t list)
 
@@ -602,11 +606,11 @@ fun syntax_error (s : string) = (raise (Fail s))
 fun make_predefinition_body enum body aa ww = (
     Def_Body ((E0, PKG, enum), bad_class,
 	      (bad_subject, bad_subject, bad_tag, bad_subject),
-	      NIL, body, aa, ww))
+	      NIL, Mod_Value NIL, body, (aa, ww)))
 
 fun make_short_predefinition k io (ss, mm) aa ww = (
     Def_Refine (k, NONE, bad_type,
-		(Effort, Continuous, io), (ss, mm), NIL, aa, ww))
+		(Effort, Continuous, io), (ss, mm), NIL, (aa, ww)))
 
 fun name_append (Name ss) (Id s) = (Name (ss @ [s]))
 
@@ -632,10 +636,10 @@ fun merge_subscripts s0 s1 = (s1 @ s0)
 
 fun set_visibility z e = (
     case e of
-	Import_Clause (_, n, v, a, w) =>
-	Import_Clause (z, n, v, a, w)
-      | Extends_Clause (_, (n, mm), a) =>
-	Extends_Clause (z, (n, mm), a)
+	Import_Clause (_, n, v, (aa, ww)) =>
+	Import_Clause (z, n, v, (aa, ww))
+      | Extends_Clause (_, (n, mm), aa) =>
+	Extends_Clause (z, (n, mm), aa)
       | Element_Class (_, r, d, h) =>
 	Element_Class (z, r, d, h)
       | Element_State (_, r, d, h) =>
@@ -677,33 +681,33 @@ fun set_class_prefixes (t1, p1) (Defclass ((v, g), k0)) = (
     let
 	fun set_prefixes (t1, p1) k = (
 	    case k of
-		Def_Body ((u, f, b), cs0, nm, cc, ee, aa, ww) => (
+		Def_Body ((u, f, b), cs0, nm, cc, ii, ee, (aa, ww)) => (
 		let
 		    val _ = if (cs0 = bad_class) then () else raise Match
 		    val (t0, p0, q) = cs0
 		    val cs1 = (t1, p1, q)
 		in
-		    Def_Body ((u, f, b), cs1, nm, cc, ee, aa, ww)
+		    Def_Body ((u, f, b), cs1, nm, cc, ii, ee, (aa, ww))
 		end)
-	      | Def_Der (c, cs0, n, vv, aa, ww) => (
+	      | Def_Der (c, cs0, n, vv, (aa, ww)) => (
 		let
 		    val _ = if (cs0 = bad_class) then () else raise Match
 		    val (t0, p0, q) = cs0
 		    val cs1 = (t1, p1, q)
 		in
-		    Def_Der (c, cs1, n, vv, aa, ww)
+		    Def_Der (c, cs1, n, vv, (aa, ww))
 		end)
 	      | Def_Primitive _ => raise Match
 	      | Def_Outer_Alias _ => raise Match
 	      | Def_Argument _ => raise Match
 	      | Def_Named _ => raise Match
 	      | Def_Scoped _ => raise Match
-	      | Def_Refine (kx, rn, ts0, q, (ss, mm), cc, aa, ww) => (
+	      | Def_Refine (kx, rn, ts0, q, (ss, mm), cc, (aa, ww)) => (
 		let
 		    val _ = if (ts0 = bad_type) then () else raise Match
 		    val ts1 = (t1, p1)
 		in
-		    Def_Refine (kx, rn, ts1, q, (ss, mm), cc, aa, ww)
+		    Def_Refine (kx, rn, ts1, q, (ss, mm), cc, (aa, ww))
 		end)
 	      | Def_Extending (g, x, kx) => (
 		Def_Extending (g, x, (set_prefixes (t1, p1) kx)))
@@ -723,17 +727,17 @@ fun set_class_final (Defclass ((v, g), k0)) = (
 
 	fun set_body fix k = (
 	    case k of
-		Def_Body (mk, (t, p, q), nm, cc, ee, aa, ww) => (
-		Def_Body (mk, (t, (fix p), q), nm, cc, ee, aa, ww))
-	      | Def_Der (c, (t, p, q), n, vv, aa, ww) => (
-		Def_Der (c, (t, (fix p), q), n, vv, aa, ww))
+		Def_Body (mk, (t, p, q), nm, cc, ii, ee, (aa, ww)) => (
+		Def_Body (mk, (t, (fix p), q), nm, cc, ii, ee, (aa, ww)))
+	      | Def_Der (c, (t, p, q), n, vv, (aa, ww)) => (
+		Def_Der (c, (t, (fix p), q), n, vv, (aa, ww)))
 	      | Def_Primitive _ => raise Match
 	      | Def_Outer_Alias _ => raise Match
 	      | Def_Argument _ => raise Match
 	      | Def_Named _ => raise Match
 	      | Def_Scoped _ => raise Match
-	      | Def_Refine (kx, rn, (t, p), q, (ss, mm), cc, aa, ww) => (
-		Def_Refine (kx, rn, (t, (fix p)), q, (ss, mm), cc, aa, ww))
+	      | Def_Refine (kx, rn, (t, p), q, (ss, mm), cc, (aa, ww)) => (
+		Def_Refine (kx, rn, (t, (fix p)), q, (ss, mm), cc, (aa, ww)))
 	      | Def_Extending (g, x, kx) => (
 		Def_Extending (g, x, (set_body fix kx)))
 	      | Def_Replaced _ => raise Match
@@ -752,35 +756,35 @@ fun set_class_final (Defclass ((v, g), k0)) = (
 fun make_component_clause
 	((q, n) : component_type_specifier_t)
 	(ss0 : subscripts_t)
-	((v, ss1, mm, cc, aa, ww) : declaration_with_subscripts_t) = (
+	((v, ss1, mm, cc, (aa, ww)) : declaration_with_subscripts_t) = (
     let
 	val ssx = (merge_subscripts ss0 ss1)
 	val ccx = (getOpt (cc, NIL))
 	val k0 = Def_Refine (Def_Named n, NONE, copy_type, q,
-			     (ssx, mm), ccx, aa, ww)
+			     (ssx, mm), ccx, (aa, ww))
     in
 	Defvar (v, k0)
     end)
 
 fun attach_comment_to_equation q (aa, ww) = (
     case q of
-	Eq_Eq ((x, y), _, _) => Eq_Eq ((x, y), aa, ww)
-      | Eq_Connect ((x, y), _, _) => Eq_Connect ((x, y), aa, ww)
-      | Eq_If (cc, _, _) => Eq_If (cc, aa, ww)
-      | Eq_When (cc, _, _) => Eq_When (cc, aa, ww)
-      | Eq_For ((rr, qq), _, _) => Eq_For ((rr, qq), aa, ww)
-      | Eq_App ((e, ee), _, _) => Eq_App ((e, ee), aa, ww))
+	Eq_Eq ((x, y), (_, _)) => Eq_Eq ((x, y), (aa, ww))
+      | Eq_Connect ((x, y), (_, _)) => Eq_Connect ((x, y), (aa, ww))
+      | Eq_If (cc, (_, _)) => Eq_If (cc, (aa, ww))
+      | Eq_When (cc, (_, _)) => Eq_When (cc, (aa, ww))
+      | Eq_For ((rr, qq), (_, _)) => Eq_For ((rr, qq), (aa, ww))
+      | Eq_App ((e, ee), (_, _)) => Eq_App ((e, ee), (aa, ww)))
 
 fun attach_comment_to_statement s (aa, ww) = (
     case s of
 	St_Break (_, _) => St_Break (aa, ww)
       | St_Return (_, _) => St_Return (aa, ww)
-      | St_Assign ((x, y), _, _) => St_Assign ((x, y), aa, ww)
-      | St_Call ((vv, f, ee), _, _) => St_Call ((vv, f, ee), aa, ww)
-      | St_If (cc, _, _) => St_If (cc, aa, ww)
-      | St_When (cc, _, _) => St_When (cc, aa, ww)
-      | St_For ((rr, ss), _, _) => St_For ((rr, ss), aa, ww)
-      | St_While ((e, ss), _, _) => St_While ((e, ss), aa, ww))
+      | St_Assign ((x, y), (_, _)) => St_Assign ((x, y), (aa, ww))
+      | St_Call ((vv, f, ee), (_, _)) => St_Call ((vv, f, ee), (aa, ww))
+      | St_If (cc, (_, _)) => St_If (cc, (aa, ww))
+      | St_When (cc, (_, _)) => St_When (cc, (aa, ww))
+      | St_For ((rr, ss), (_, _)) => St_For ((rr, ss), (aa, ww))
+      | St_While ((e, ss), (_, _)) => St_While ((e, ss), (aa, ww)))
 
 (* Makes if-then-else, by simply concatenating an else-if part to
    reduce nesting. *)

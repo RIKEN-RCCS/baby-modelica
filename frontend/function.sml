@@ -31,15 +31,15 @@ val obtain_array_dimension = operator.obtain_array_dimension
 
 val bind_in_scoped_expression = binder.bind_in_scoped_expression
 
-fun trace 3 (s : string) = if true then (print (s ^"\n")) else ()
+fun trace n (s : string) = if n <= 3 then (print (s ^"\n")) else ()
 
 fun strip_dimension k0 = (
     case k0 of
 	Def_Body _ => (k0, [], [])
       | Def_Der _ => raise Match
-      | Def_Refine (kx, rn, ts, q, (ss, mm), cc, aa, ww) => (
+      | Def_Refine (kx, rn, ts, q, (ss, mm), cc, (aa, ww)) => (
 	let
-	    val k1 = Def_Refine (kx, rn, ts, q, ([], []), cc, aa, ww)
+	    val k1 = Def_Refine (kx, rn, ts, q, ([], []), cc, (aa, ww))
 	in
 	    (k1, ss, mm)
 	end)
@@ -67,7 +67,8 @@ fun resolve_function_components kp = (
 		    val ctx = k0
 		    val ssx = (merge_subscripts ss0 ss1)
 		    val mmx = (merge_modifiers ctx mm1 mm0)
-		    val k5 = Def_Argument (k4, (ssx, mmx), Annotation [], Comment [])
+		    val k5 = Def_Argument (k4, (ssx, mmx),
+					   (Annotation [], Comment []))
 		    val _ = (store_to_instance_tree subj k5)
 		in
 		    ()

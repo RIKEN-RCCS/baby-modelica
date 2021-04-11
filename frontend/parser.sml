@@ -1585,7 +1585,7 @@ and yyreduce (yylex : yylexstate_t -> int * yyv_t * yylexstate_t)
 		    val (aa, ww) = (case (yyvs_ref yysm (0)) of (VS_COMMENT x) => x | _ => raise (bad_parser (yyvs_ref yysm (0))))
 		in
 		    Defclass ((Id (case (yyvs_ref yysm (~8)) of (VS_TOKEN x) => x | _ => raise (bad_parser (yyvs_ref yysm (~8)))), bad_tag),
-			      Def_Der (bad_tag, bad_class, (case (yyvs_ref yysm (~4)) of (VS_NAME x) => x | _ => raise (bad_parser (yyvs_ref yysm (~4)))), (case (yyvs_ref yysm (~2)) of (VS_ID_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~2)))), aa, ww))
+			      Def_Der (bad_tag, bad_class, (case (yyvs_ref yysm (~4)) of (VS_NAME x) => x | _ => raise (bad_parser (yyvs_ref yysm (~4)))), (case (yyvs_ref yysm (~2)) of (VS_ID_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~2)))), (aa, ww)))
 		end)
 | 42 =>
 (* line 551 "modelica-grammar.y" *)
@@ -1617,7 +1617,7 @@ and yyreduce (yylex : yylexstate_t -> int * yyv_t * yylexstate_t)
 		let
 		    val (aa, ww) = (case (yyvs_ref yysm (0)) of (VS_COMMENT x) => x | _ => raise (bad_parser (yyvs_ref yysm (0))))
 		in
-		    [(Id (case (yyvs_ref yysm (~1)) of (VS_TOKEN x) => x | _ => raise (bad_parser (yyvs_ref yysm (~1)))), aa, ww)]
+		    [(Id (case (yyvs_ref yysm (~1)) of (VS_TOKEN x) => x | _ => raise (bad_parser (yyvs_ref yysm (~1)))), (aa, ww))]
 		end)
 | 51 =>
 (* line 583 "modelica-grammar.y" *)
@@ -1687,22 +1687,22 @@ and yyreduce (yylex : yylexstate_t -> int * yyv_t * yylexstate_t)
 (* line 634 "modelica-grammar.y" *)
 (#yyval yysm) := VS_STATEMENT (
 		St_Call (([], Vref (NONE, [(Id (case (yyvs_ref yysm (~2)) of (VS_TOKEN x) => x | _ => raise (bad_parser (yyvs_ref yysm (~2)))), [])]), []),
-			 Annotation [], Comment []))
+			 (Annotation [], Comment [])))
 | 69 =>
 (* line 637 "modelica-grammar.y" *)
 (#yyval yysm) := VS_STATEMENT (
 		St_Call (([], Vref (NONE, [(Id (case (yyvs_ref yysm (~3)) of (VS_TOKEN x) => x | _ => raise (bad_parser (yyvs_ref yysm (~3)))), [])]), (case (yyvs_ref yysm (~1)) of (VS_EXPRESSION_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~1))))),
-			 Annotation [], Comment []))
+			 (Annotation [], Comment [])))
 | 70 =>
 (* line 640 "modelica-grammar.y" *)
 (#yyval yysm) := VS_STATEMENT (
 		St_Call (([(case (yyvs_ref yysm (~4)) of (VS_EXPRESSION x) => x | _ => raise (bad_parser (yyvs_ref yysm (~4))))], Vref (NONE, [(Id (case (yyvs_ref yysm (~2)) of (VS_TOKEN x) => x | _ => raise (bad_parser (yyvs_ref yysm (~2)))), [])]), []),
-			 Annotation [], Comment []))
+			 (Annotation [], Comment [])))
 | 71 =>
 (* line 643 "modelica-grammar.y" *)
 (#yyval yysm) := VS_STATEMENT (
 		St_Call (([(case (yyvs_ref yysm (~5)) of (VS_EXPRESSION x) => x | _ => raise (bad_parser (yyvs_ref yysm (~5))))], Vref (NONE, [(Id (case (yyvs_ref yysm (~3)) of (VS_TOKEN x) => x | _ => raise (bad_parser (yyvs_ref yysm (~3)))), [])]), (case (yyvs_ref yysm (~1)) of (VS_EXPRESSION_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~1))))),
-			 Annotation [], Comment []))
+			 (Annotation [], Comment [])))
 | 72 =>
 (* line 649 "modelica-grammar.y" *)
 (#yyval yysm) := VS_ELEMENT_LIST (
@@ -1749,7 +1749,7 @@ and yyreduce (yylex : yylexstate_t -> int * yyv_t * yylexstate_t)
 		    val r = (set_element_prefix_replaceable (case (yyvs_ref yysm (~4)) of (VS_ELEMENT_PREFIXES x) => x | _ => raise (bad_parser (yyvs_ref yysm (~4)))))
 		    val (t, m) = (case (yyvs_ref yysm (~1)) of (VS_CONSTRAINT x) => x | _ => raise (bad_parser (yyvs_ref yysm (~1))))
 		    val (aa, ww) = (case (yyvs_ref yysm (0)) of (VS_COMMENT x) => x | _ => raise (bad_parser (yyvs_ref yysm (0))))
-		    val h = SOME (t, m, aa, ww)
+		    val h = SOME (t, m, (aa, ww))
 		in
 		    if (#Redeclare (case (yyvs_ref yysm (~5)) of (VS_PREFIX_REDECLARE x) => x | _ => raise (bad_parser (yyvs_ref yysm (~5))))) then
 			(map (fn c => Redeclare_State (Public, r, c, h)) (case (yyvs_ref yysm (~2)) of (VS_COMPONENT_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~2)))))
@@ -1786,7 +1786,7 @@ and yyreduce (yylex : yylexstate_t -> int * yyv_t * yylexstate_t)
 		    val r = (set_element_prefix_replaceable (case (yyvs_ref yysm (~4)) of (VS_ELEMENT_PREFIXES x) => x | _ => raise (bad_parser (yyvs_ref yysm (~4)))))
 		    val (t, m) = (case (yyvs_ref yysm (~1)) of (VS_CONSTRAINT x) => x | _ => raise (bad_parser (yyvs_ref yysm (~1))))
 		    val (aa, ww) = (case (yyvs_ref yysm (0)) of (VS_COMMENT x) => x | _ => raise (bad_parser (yyvs_ref yysm (0))))
-		    val h = SOME (t, m, aa, ww)
+		    val h = SOME (t, m, (aa, ww))
 		in
 		    if (#Redeclare (case (yyvs_ref yysm (~5)) of (VS_PREFIX_REDECLARE x) => x | _ => raise (bad_parser (yyvs_ref yysm (~5))))) then
 			[Redefine_Class (Public, r, (case (yyvs_ref yysm (~2)) of (VS_CLASS_DEFINITION x) => x | _ => raise (bad_parser (yyvs_ref yysm (~2)))), h)]
@@ -1848,7 +1848,7 @@ and yyreduce (yylex : yylexstate_t -> int * yyv_t * yylexstate_t)
 		    val (p, v) = (name_prefix (case (yyvs_ref yysm (~1)) of (VS_NAME x) => x | _ => raise (bad_parser (yyvs_ref yysm (~1)))))
 		    val (aa, ww) = (case (yyvs_ref yysm (0)) of (VS_COMMENT x) => x | _ => raise (bad_parser (yyvs_ref yysm (0))))
 		in
-		    [Import_Clause (Public, p, SOME (v, v), aa, ww)]
+		    [Import_Clause (Public, p, SOME (v, v), (aa, ww))]
 		end)
 | 93 =>
 (* line 768 "modelica-grammar.y" *)
@@ -1857,7 +1857,7 @@ and yyreduce (yylex : yylexstate_t -> int * yyv_t * yylexstate_t)
 		    val (p, v) = (name_prefix (case (yyvs_ref yysm (~3)) of (VS_NAME x) => x | _ => raise (bad_parser (yyvs_ref yysm (~3)))))
 		    val (aa, ww) = (case (yyvs_ref yysm (0)) of (VS_COMMENT x) => x | _ => raise (bad_parser (yyvs_ref yysm (0))))
 		in
-		    [Import_Clause (Public, (case (yyvs_ref yysm (~3)) of (VS_NAME x) => x | _ => raise (bad_parser (yyvs_ref yysm (~3)))), NONE, aa, ww)]
+		    [Import_Clause (Public, (case (yyvs_ref yysm (~3)) of (VS_NAME x) => x | _ => raise (bad_parser (yyvs_ref yysm (~3)))), NONE, (aa, ww))]
 		end)
 | 94 =>
 (* line 775 "modelica-grammar.y" *)
@@ -1868,7 +1868,7 @@ and yyreduce (yylex : yylexstate_t -> int * yyv_t * yylexstate_t)
 		    (map
 			(fn v =>
 			    (Import_Clause
-				(Public, (case (yyvs_ref yysm (~5)) of (VS_NAME x) => x | _ => raise (bad_parser (yyvs_ref yysm (~5)))), SOME (v, v), aa, ww)))
+				(Public, (case (yyvs_ref yysm (~5)) of (VS_NAME x) => x | _ => raise (bad_parser (yyvs_ref yysm (~5)))), SOME (v, v), (aa, ww))))
 		    (case (yyvs_ref yysm (~2)) of (VS_ID_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~2)))))
 		end)
 | 95 =>
@@ -1879,7 +1879,7 @@ and yyreduce (yylex : yylexstate_t -> int * yyv_t * yylexstate_t)
 		    val (aa, ww) = (case (yyvs_ref yysm (0)) of (VS_COMMENT x) => x | _ => raise (bad_parser (yyvs_ref yysm (0))))
 		in
 		    [Import_Clause
-			(Public, p, SOME (v, (Id (case (yyvs_ref yysm (~3)) of (VS_TOKEN x) => x | _ => raise (bad_parser (yyvs_ref yysm (~3)))))), aa, ww)]
+			(Public, p, SOME (v, (Id (case (yyvs_ref yysm (~3)) of (VS_TOKEN x) => x | _ => raise (bad_parser (yyvs_ref yysm (~3)))))), (aa, ww))]
 		end)
 | 97 =>
 (* line 802 "modelica-grammar.y" *)
@@ -1968,8 +1968,8 @@ and yyreduce (yylex : yylexstate_t -> int * yyv_t * yylexstate_t)
 		    val (aa, ww) = (case (yyvs_ref yysm (0)) of (VS_COMMENT x) => x | _ => raise (bad_parser (yyvs_ref yysm (0))))
 		in
 		    case (case (yyvs_ref yysm (~1)) of (VS_DECLARATION x) => x | _ => raise (bad_parser (yyvs_ref yysm (~1)))) of
-			(v, s, m, NONE, Annotation [], Comment []) =>
-			    (v, s, m, NONE, aa, ww)
+			(v, s, m, NONE, (Annotation [], Comment [])) =>
+			    (v, s, m, NONE, (aa, ww))
 		      | _ => raise Match
 		end)
 | 117 =>
@@ -1979,8 +1979,8 @@ and yyreduce (yylex : yylexstate_t -> int * yyv_t * yylexstate_t)
 		    val (aa, ww) = (case (yyvs_ref yysm (0)) of (VS_COMMENT x) => x | _ => raise (bad_parser (yyvs_ref yysm (0))))
 		in
 		    case (case (yyvs_ref yysm (~2)) of (VS_DECLARATION x) => x | _ => raise (bad_parser (yyvs_ref yysm (~2)))) of
-			(v, s, m, NONE, Annotation [], Comment []) =>
-			    (v, s, m, SOME (case (yyvs_ref yysm (~1)) of (VS_EXPRESSION x) => x | _ => raise (bad_parser (yyvs_ref yysm (~1)))), aa, ww)
+			(v, s, m, NONE, (Annotation [], Comment [])) =>
+			    (v, s, m, SOME (case (yyvs_ref yysm (~1)) of (VS_EXPRESSION x) => x | _ => raise (bad_parser (yyvs_ref yysm (~1)))), (aa, ww))
 		      | _ => raise Match
 		end)
 | 118 =>
@@ -1990,19 +1990,19 @@ and yyreduce (yylex : yylexstate_t -> int * yyv_t * yylexstate_t)
 | 119 =>
 (* line 898 "modelica-grammar.y" *)
 (#yyval yysm) := VS_DECLARATION (
-		(Id (case (yyvs_ref yysm (0)) of (VS_TOKEN x) => x | _ => raise (bad_parser (yyvs_ref yysm (0)))), [], [], NONE, Annotation [], Comment []))
+		(Id (case (yyvs_ref yysm (0)) of (VS_TOKEN x) => x | _ => raise (bad_parser (yyvs_ref yysm (0)))), [], [], NONE, (Annotation [], Comment [])))
 | 120 =>
 (* line 900 "modelica-grammar.y" *)
 (#yyval yysm) := VS_DECLARATION (
-		(Id (case (yyvs_ref yysm (~1)) of (VS_TOKEN x) => x | _ => raise (bad_parser (yyvs_ref yysm (~1)))), [], (case (yyvs_ref yysm (0)) of (VS_MODIFIER_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (0)))), NONE, Annotation [], Comment []))
+		(Id (case (yyvs_ref yysm (~1)) of (VS_TOKEN x) => x | _ => raise (bad_parser (yyvs_ref yysm (~1)))), [], (case (yyvs_ref yysm (0)) of (VS_MODIFIER_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (0)))), NONE, (Annotation [], Comment [])))
 | 121 =>
 (* line 902 "modelica-grammar.y" *)
 (#yyval yysm) := VS_DECLARATION (
-		(Id (case (yyvs_ref yysm (~1)) of (VS_TOKEN x) => x | _ => raise (bad_parser (yyvs_ref yysm (~1)))), (case (yyvs_ref yysm (0)) of (VS_EXPRESSION_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (0)))), [], NONE, Annotation [], Comment []))
+		(Id (case (yyvs_ref yysm (~1)) of (VS_TOKEN x) => x | _ => raise (bad_parser (yyvs_ref yysm (~1)))), (case (yyvs_ref yysm (0)) of (VS_EXPRESSION_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (0)))), [], NONE, (Annotation [], Comment [])))
 | 122 =>
 (* line 904 "modelica-grammar.y" *)
 (#yyval yysm) := VS_DECLARATION (
-		(Id (case (yyvs_ref yysm (~2)) of (VS_TOKEN x) => x | _ => raise (bad_parser (yyvs_ref yysm (~2)))), (case (yyvs_ref yysm (~1)) of (VS_EXPRESSION_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~1)))), (case (yyvs_ref yysm (0)) of (VS_MODIFIER_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (0)))), NONE, Annotation [], Comment []))
+		(Id (case (yyvs_ref yysm (~2)) of (VS_TOKEN x) => x | _ => raise (bad_parser (yyvs_ref yysm (~2)))), (case (yyvs_ref yysm (~1)) of (VS_EXPRESSION_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~1)))), (case (yyvs_ref yysm (0)) of (VS_MODIFIER_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (0)))), NONE, (Annotation [], Comment [])))
 | 123 =>
 (* line 923 "modelica-grammar.y" *)
 (#yyval yysm) := VS_MODIFIER_LIST (
@@ -2095,7 +2095,7 @@ and yyreduce (yylex : yylexstate_t -> int * yyv_t * yylexstate_t)
 		in
 		    Mod_Redefine (modifier_prefixes_replaceable,
 				  (case (yyvs_ref yysm (~1)) of (VS_CLASS_DEFINITION x) => x | _ => raise (bad_parser (yyvs_ref yysm (~1)))),
-				  SOME (t, m, Annotation [], Comment []))
+				  SOME (t, m, (Annotation [], Comment [])))
 		end)
 | 142 =>
 (* line 1013 "modelica-grammar.y" *)
@@ -2110,7 +2110,7 @@ and yyreduce (yylex : yylexstate_t -> int * yyv_t * yylexstate_t)
 		in
 		    Mod_Redeclare (modifier_prefixes_replaceable,
 				   (case (yyvs_ref yysm (~1)) of (VS_COMPONENT x) => x | _ => raise (bad_parser (yyvs_ref yysm (~1)))),
-				   SOME (t, m, Annotation [], Comment []))
+				   SOME (t, m, (Annotation [], Comment [])))
 		end)
 | 144 =>
 (* line 1027 "modelica-grammar.y" *)
@@ -2123,8 +2123,8 @@ and yyreduce (yylex : yylexstate_t -> int * yyv_t * yylexstate_t)
 		    val (aa, ww) = (case (yyvs_ref yysm (0)) of (VS_COMMENT x) => x | _ => raise (bad_parser (yyvs_ref yysm (0))))
 		in
 		    case (case (yyvs_ref yysm (~1)) of (VS_DECLARATION x) => x | _ => raise (bad_parser (yyvs_ref yysm (~1)))) of
-			(v, s, m, NONE, Annotation [], Comment []) =>
-			    (v, s, m, NONE, aa, ww)
+			(v, s, m, NONE, (Annotation [], Comment [])) =>
+			    (v, s, m, NONE, (aa, ww))
 		      | _ => raise Match
 		end)
 | 146 =>
@@ -2186,11 +2186,11 @@ and yyreduce (yylex : yylexstate_t -> int * yyv_t * yylexstate_t)
 | 160 =>
 (* line 1095 "modelica-grammar.y" *)
 (#yyval yysm) := VS_EQUATION (
-		Eq_Eq (((case (yyvs_ref yysm (~2)) of (VS_EXPRESSION x) => x | _ => raise (bad_parser (yyvs_ref yysm (~2)))), (case (yyvs_ref yysm (0)) of (VS_EXPRESSION x) => x | _ => raise (bad_parser (yyvs_ref yysm (0))))), Annotation [], Comment []))
+		Eq_Eq (((case (yyvs_ref yysm (~2)) of (VS_EXPRESSION x) => x | _ => raise (bad_parser (yyvs_ref yysm (~2)))), (case (yyvs_ref yysm (0)) of (VS_EXPRESSION x) => x | _ => raise (bad_parser (yyvs_ref yysm (0))))), (Annotation [], Comment [])))
 | 165 =>
 (* line 1101 "modelica-grammar.y" *)
 (#yyval yysm) := VS_EQUATION (
-		Eq_App (((case (yyvs_ref yysm (~1)) of (VS_EXPRESSION x) => x | _ => raise (bad_parser (yyvs_ref yysm (~1)))), (case (yyvs_ref yysm (0)) of (VS_EXPRESSION_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (0))))), Annotation [], Comment []))
+		Eq_App (((case (yyvs_ref yysm (~1)) of (VS_EXPRESSION x) => x | _ => raise (bad_parser (yyvs_ref yysm (~1)))), (case (yyvs_ref yysm (0)) of (VS_EXPRESSION_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (0))))), (Annotation [], Comment [])))
 | 166 =>
 (* line 1106 "modelica-grammar.y" *)
 (#yyval yysm) := VS_STATEMENT_LIST (
@@ -2198,15 +2198,15 @@ and yyreduce (yylex : yylexstate_t -> int * yyv_t * yylexstate_t)
 | 167 =>
 (* line 1111 "modelica-grammar.y" *)
 (#yyval yysm) := VS_STATEMENT (
-		St_Assign (((case (yyvs_ref yysm (~2)) of (VS_EXPRESSION x) => x | _ => raise (bad_parser (yyvs_ref yysm (~2)))), (case (yyvs_ref yysm (0)) of (VS_EXPRESSION x) => x | _ => raise (bad_parser (yyvs_ref yysm (0))))), Annotation [], Comment []))
+		St_Assign (((case (yyvs_ref yysm (~2)) of (VS_EXPRESSION x) => x | _ => raise (bad_parser (yyvs_ref yysm (~2)))), (case (yyvs_ref yysm (0)) of (VS_EXPRESSION x) => x | _ => raise (bad_parser (yyvs_ref yysm (0))))), (Annotation [], Comment [])))
 | 168 =>
 (* line 1113 "modelica-grammar.y" *)
 (#yyval yysm) := VS_STATEMENT (
-		St_Call (([], (case (yyvs_ref yysm (~1)) of (VS_EXPRESSION x) => x | _ => raise (bad_parser (yyvs_ref yysm (~1)))), (case (yyvs_ref yysm (0)) of (VS_EXPRESSION_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (0))))), Annotation [], Comment []))
+		St_Call (([], (case (yyvs_ref yysm (~1)) of (VS_EXPRESSION x) => x | _ => raise (bad_parser (yyvs_ref yysm (~1)))), (case (yyvs_ref yysm (0)) of (VS_EXPRESSION_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (0))))), (Annotation [], Comment [])))
 | 169 =>
 (* line 1116 "modelica-grammar.y" *)
 (#yyval yysm) := VS_STATEMENT (
-		St_Call (((case (yyvs_ref yysm (~4)) of (VS_EXPRESSION_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~4)))), (case (yyvs_ref yysm (~1)) of (VS_EXPRESSION x) => x | _ => raise (bad_parser (yyvs_ref yysm (~1)))), (case (yyvs_ref yysm (0)) of (VS_EXPRESSION_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (0))))), Annotation [], Comment []))
+		St_Call (((case (yyvs_ref yysm (~4)) of (VS_EXPRESSION_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~4)))), (case (yyvs_ref yysm (~1)) of (VS_EXPRESSION x) => x | _ => raise (bad_parser (yyvs_ref yysm (~1)))), (case (yyvs_ref yysm (0)) of (VS_EXPRESSION_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (0))))), (Annotation [], Comment [])))
 | 170 =>
 (* line 1118 "modelica-grammar.y" *)
 (#yyval yysm) := VS_STATEMENT (
@@ -2218,7 +2218,7 @@ and yyreduce (yylex : yylexstate_t -> int * yyv_t * yylexstate_t)
 | 176 =>
 (* line 1130 "modelica-grammar.y" *)
 (#yyval yysm) := VS_EQUATION (
-		Eq_If (([((case (yyvs_ref yysm (~6)) of (VS_EXPRESSION x) => x | _ => raise (bad_parser (yyvs_ref yysm (~6)))), (case (yyvs_ref yysm (~4)) of (VS_EQUATION_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~4)))))] ++ (case (yyvs_ref yysm (~3)) of (VS_TEST_EQUATIONS_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~3)))) ++ (case (yyvs_ref yysm (~2)) of (VS_TEST_EQUATIONS_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~2))))), Annotation [], Comment []))
+		Eq_If (([((case (yyvs_ref yysm (~6)) of (VS_EXPRESSION x) => x | _ => raise (bad_parser (yyvs_ref yysm (~6)))), (case (yyvs_ref yysm (~4)) of (VS_EQUATION_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~4)))))] ++ (case (yyvs_ref yysm (~3)) of (VS_TEST_EQUATIONS_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~3)))) ++ (case (yyvs_ref yysm (~2)) of (VS_TEST_EQUATIONS_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~2))))), (Annotation [], Comment [])))
 | 177 =>
 (* line 1135 "modelica-grammar.y" *)
 (#yyval yysm) := VS_TEST_EQUATIONS_LIST (
@@ -2238,7 +2238,7 @@ and yyreduce (yylex : yylexstate_t -> int * yyv_t * yylexstate_t)
 | 181 =>
 (* line 1150 "modelica-grammar.y" *)
 (#yyval yysm) := VS_STATEMENT (
-		St_If ([((case (yyvs_ref yysm (~6)) of (VS_EXPRESSION x) => x | _ => raise (bad_parser (yyvs_ref yysm (~6)))), (case (yyvs_ref yysm (~4)) of (VS_STATEMENT_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~4)))))] ++ (case (yyvs_ref yysm (~3)) of (VS_TEST_STATEMENTS_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~3)))) ++ (case (yyvs_ref yysm (~2)) of (VS_TEST_STATEMENTS_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~2)))), Annotation [], Comment []))
+		St_If ([((case (yyvs_ref yysm (~6)) of (VS_EXPRESSION x) => x | _ => raise (bad_parser (yyvs_ref yysm (~6)))), (case (yyvs_ref yysm (~4)) of (VS_STATEMENT_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~4)))))] ++ (case (yyvs_ref yysm (~3)) of (VS_TEST_STATEMENTS_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~3)))) ++ (case (yyvs_ref yysm (~2)) of (VS_TEST_STATEMENTS_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~2)))), (Annotation [], Comment [])))
 | 182 =>
 (* line 1155 "modelica-grammar.y" *)
 (#yyval yysm) := VS_TEST_STATEMENTS_LIST (
@@ -2258,11 +2258,11 @@ and yyreduce (yylex : yylexstate_t -> int * yyv_t * yylexstate_t)
 | 186 =>
 (* line 1169 "modelica-grammar.y" *)
 (#yyval yysm) := VS_EQUATION (
-		Eq_For (((case (yyvs_ref yysm (~4)) of (VS_FOR_INDEX_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~4)))), (case (yyvs_ref yysm (~2)) of (VS_EQUATION_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~2))))), Annotation [], Comment []))
+		Eq_For (((case (yyvs_ref yysm (~4)) of (VS_FOR_INDEX_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~4)))), (case (yyvs_ref yysm (~2)) of (VS_EQUATION_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~2))))), (Annotation [], Comment [])))
 | 187 =>
 (* line 1174 "modelica-grammar.y" *)
 (#yyval yysm) := VS_STATEMENT (
-		St_For (((case (yyvs_ref yysm (~4)) of (VS_FOR_INDEX_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~4)))), (case (yyvs_ref yysm (~2)) of (VS_STATEMENT_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~2))))), Annotation [], Comment []))
+		St_For (((case (yyvs_ref yysm (~4)) of (VS_FOR_INDEX_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~4)))), (case (yyvs_ref yysm (~2)) of (VS_STATEMENT_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~2))))), (Annotation [], Comment [])))
 | 188 =>
 (* line 1179 "modelica-grammar.y" *)
 (#yyval yysm) := VS_FOR_INDEX_LIST (
@@ -2282,11 +2282,11 @@ and yyreduce (yylex : yylexstate_t -> int * yyv_t * yylexstate_t)
 | 192 =>
 (* line 1193 "modelica-grammar.y" *)
 (#yyval yysm) := VS_STATEMENT (
-		St_While (((case (yyvs_ref yysm (~4)) of (VS_EXPRESSION x) => x | _ => raise (bad_parser (yyvs_ref yysm (~4)))), (case (yyvs_ref yysm (~2)) of (VS_STATEMENT_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~2))))), Annotation [], Comment []))
+		St_While (((case (yyvs_ref yysm (~4)) of (VS_EXPRESSION x) => x | _ => raise (bad_parser (yyvs_ref yysm (~4)))), (case (yyvs_ref yysm (~2)) of (VS_STATEMENT_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~2))))), (Annotation [], Comment [])))
 | 193 =>
 (* line 1199 "modelica-grammar.y" *)
 (#yyval yysm) := VS_EQUATION (
-		Eq_When (([((case (yyvs_ref yysm (~5)) of (VS_EXPRESSION x) => x | _ => raise (bad_parser (yyvs_ref yysm (~5)))), (case (yyvs_ref yysm (~3)) of (VS_EQUATION_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~3)))))] ++ (case (yyvs_ref yysm (~2)) of (VS_TEST_EQUATIONS_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~2))))), Annotation [], Comment []))
+		Eq_When (([((case (yyvs_ref yysm (~5)) of (VS_EXPRESSION x) => x | _ => raise (bad_parser (yyvs_ref yysm (~5)))), (case (yyvs_ref yysm (~3)) of (VS_EQUATION_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~3)))))] ++ (case (yyvs_ref yysm (~2)) of (VS_TEST_EQUATIONS_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~2))))), (Annotation [], Comment [])))
 | 194 =>
 (* line 1204 "modelica-grammar.y" *)
 (#yyval yysm) := VS_TEST_EQUATIONS_LIST (
@@ -2298,7 +2298,7 @@ and yyreduce (yylex : yylexstate_t -> int * yyv_t * yylexstate_t)
 | 196 =>
 (* line 1212 "modelica-grammar.y" *)
 (#yyval yysm) := VS_STATEMENT (
-		St_When ([((case (yyvs_ref yysm (~5)) of (VS_EXPRESSION x) => x | _ => raise (bad_parser (yyvs_ref yysm (~5)))), (case (yyvs_ref yysm (~3)) of (VS_STATEMENT_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~3)))))] ++ (case (yyvs_ref yysm (~2)) of (VS_TEST_STATEMENTS_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~2)))), Annotation [], Comment []))
+		St_When ([((case (yyvs_ref yysm (~5)) of (VS_EXPRESSION x) => x | _ => raise (bad_parser (yyvs_ref yysm (~5)))), (case (yyvs_ref yysm (~3)) of (VS_STATEMENT_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~3)))))] ++ (case (yyvs_ref yysm (~2)) of (VS_TEST_STATEMENTS_LIST x) => x | _ => raise (bad_parser (yyvs_ref yysm (~2)))), (Annotation [], Comment [])))
 | 197 =>
 (* line 1217 "modelica-grammar.y" *)
 (#yyval yysm) := VS_TEST_STATEMENTS_LIST (
@@ -2310,7 +2310,7 @@ and yyreduce (yylex : yylexstate_t -> int * yyv_t * yylexstate_t)
 | 199 =>
 (* line 1224 "modelica-grammar.y" *)
 (#yyval yysm) := VS_EQUATION (
-		Eq_Connect (((case (yyvs_ref yysm (~3)) of (VS_EXPRESSION x) => x | _ => raise (bad_parser (yyvs_ref yysm (~3)))), (case (yyvs_ref yysm (~1)) of (VS_EXPRESSION x) => x | _ => raise (bad_parser (yyvs_ref yysm (~1))))), Annotation [], Comment []))
+		Eq_Connect (((case (yyvs_ref yysm (~3)) of (VS_EXPRESSION x) => x | _ => raise (bad_parser (yyvs_ref yysm (~3)))), (case (yyvs_ref yysm (~1)) of (VS_EXPRESSION x) => x | _ => raise (bad_parser (yyvs_ref yysm (~1))))), (Annotation [], Comment [])))
 | 201 =>
 (* line 1232 "modelica-grammar.y" *)
 (#yyval yysm) := VS_EXPRESSION (

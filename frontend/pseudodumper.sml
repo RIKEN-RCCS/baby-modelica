@@ -630,7 +630,7 @@ fun declaration_of_real argument modifiers k = (
 	val max_default = App (Opr Opr_id, [inf])
     in
 	case k of
-	    Def_Body ((u, f, b), (t, p, q), nm, cc, ee, aa, ww) => (
+	    Def_Body ((u, f, b), (t, p, q), nm, cc, ii, ee, (aa, ww)) => (
 	    let
 		val (modality_, variability, causality_) = q
 		val fixed_default = (fixed_value variability)
@@ -681,7 +681,7 @@ fun declaration_of_real argument modifiers k = (
 	  | Def_Der _ => ""
 	  | Def_Primitive _ => raise Match
 	  | Def_Outer_Alias _ => raise Match
-	  | Def_Argument (kx, (ss, mm), aa, ww) => (
+	  | Def_Argument (kx, (ss, mm), (aa, ww)) => (
 	    if (null ss) andalso (null mm) then
 		(declaration_of_real argument "" kx)
 	    else
@@ -706,7 +706,7 @@ fun declaration_of_integer argument modifiers k = (
 	val max_default = App (Opr Opr_id, [inf])
     in
 	case k of
-	    Def_Body ((u, f, b), (t, p, q), nm, cc, ee, aa, ww) => (
+	    Def_Body ((u, f, b), (t, p, q), nm, cc, ii, ee, (aa, ww)) => (
 	    let
 		val (modality_, variability, causality_) = q
 		val fixed_default = (fixed_value variability)
@@ -744,7 +744,7 @@ fun declaration_of_integer argument modifiers k = (
 	  | Def_Der _ => raise Match
 	  | Def_Primitive _ => raise Match
 	  | Def_Outer_Alias _ => raise Match
-	  | Def_Argument (kx, (ss, mm), aa, ww) => (
+	  | Def_Argument (kx, (ss, mm), (aa, ww)) => (
 	    if (null ss) andalso (null mm) then
 		(declaration_of_integer argument "" kx)
 	    else
@@ -765,7 +765,7 @@ fun declaration_of_boolean argument modifiers k = (
 	val subj = (subject_of_class k)
     in
 	case k of
-	    Def_Body ((u, f, b), (t, p, q), nm, cc, ee, aa, ww) => (
+	    Def_Body ((u, f, b), (t, p, q), nm, cc, ii, ee, (aa, ww)) => (
 	    let
 		val (modality_, variability, causality_) = q
 		val fixed_default = (fixed_value variability)
@@ -799,7 +799,7 @@ fun declaration_of_boolean argument modifiers k = (
 	  | Def_Der _ => raise Match
 	  | Def_Primitive _ => raise Match
 	  | Def_Outer_Alias _ => raise Match
-	  | Def_Argument (kx, (ss, mm), aa, ww) => (
+	  | Def_Argument (kx, (ss, mm), (aa, ww)) => (
 	    if (null ss) andalso (null mm) then
 		(declaration_of_boolean argument "" kx)
 	    else
@@ -820,7 +820,7 @@ fun declaration_of_string argument modifiers k = (
 	val subj = (subject_of_class k)
     in
 	case k of
-	    Def_Body ((u, f, b), (t, p, q), nm, cc, ee, aa, ww) => (
+	    Def_Body ((u, f, b), (t, p, q), nm, cc, ii, ee, (aa, ww)) => (
 	    let
 		val (modality_, variability, causality_) = q
 		val fixed_default = (fixed_value variability)
@@ -854,7 +854,7 @@ fun declaration_of_string argument modifiers k = (
 	  | Def_Der _ => raise Match
 	  | Def_Primitive _ => raise Match
 	  | Def_Outer_Alias _ => raise Match
-	  | Def_Argument (kx, (ss, mm), aa, ww) => (
+	  | Def_Argument (kx, (ss, mm), (aa, ww)) => (
 	    if (null ss) andalso (null mm) then
 		(declaration_of_string argument "" kx)
 	    else
@@ -875,7 +875,7 @@ fun declaration_of_enumeration argument modifiers k = (
 	val subj = (subject_of_class k)
     in
 	case k of
-	    Def_Body ((u, f, b), (t, p, q), nm, cc, ee, aa, ww) => (
+	    Def_Body ((u, f, b), (t, p, q), nm, cc, ii, ee, (aa, ww)) => (
 	    let
 		val (modality_, variability, causality_) = q
 		val fixed_default = (fixed_value variability)
@@ -917,7 +917,7 @@ fun declaration_of_enumeration argument modifiers k = (
 	  | Def_Der _ => ""
 	  | Def_Primitive _ => raise Match
 	  | Def_Outer_Alias _ => raise Match
-	  | Def_Argument (kx, (ss, mm), aa, ww) => (
+	  | Def_Argument (kx, (ss, mm), (aa, ww)) => (
 	    if (null ss) andalso (null mm) then
 		(declaration_of_enumeration argument "" kx)
 	    else
@@ -950,7 +950,7 @@ fun declaration_of_record argument modifiers k = (
 	val max_default = App (Opr Opr_id, [inf])
     in
 	case k of
-	    Def_Body ((u, f, b), (t, p, q), nm, cc, ee, aa, ww) => (
+	    Def_Body ((u, f, b), (t, p, q), nm, cc, ii, ee, (aa, ww)) => (
 	    let
 		val (modality_, variability, causality) = q
 		val (_, name, _, _) = nm
@@ -1005,7 +1005,7 @@ fun dump_enumeration s k = (
 	      | _ => false)
     in
 	case k of
-	    Def_Body (mk, (t, p, q), nm, cc, ee, aa, ww) => (
+	    Def_Body (mk, (t, p, q), nm, cc, ii, ee, (aa, ww)) => (
 	    let
 		val tag = (tag_of_body k)
 		val name = (subject_to_string (subject_of_class k))
@@ -1033,7 +1033,7 @@ fun dump_record s k = (
 	      | _ => false)
     in
 	case k of
-	    Def_Body (mk, (t, p, q), nm, cc, ee, aa, ww) => (
+	    Def_Body (mk, (t, p, q), nm, cc, ii, ee, (aa, ww)) => (
 	    let
 		val tag = (tag_of_body k)
 		val name = (subject_to_string (subject_of_class k))
@@ -1092,7 +1092,7 @@ fun dump_conditional key dump s ((e, ee), start) = (
 
 fun dump_equation s q = (
     case q of
-	Eq_Eq ((e0, e1), aa, ww) => (
+	Eq_Eq ((e0, e1), (aa, ww)) => (
 	let
 	    val ss = ((expression_to_string 0 e0)
 		      ^" = "^ (expression_to_string 0 e1))
@@ -1100,7 +1100,7 @@ fun dump_equation s q = (
 	in
 	    ()
 	end)
-      | Eq_Connect ((Cref (e0, side0), Cref (e1, side1)), aa, ww) => (
+      | Eq_Connect ((Cref (e0, side0), Cref (e1, side1)), (aa, ww)) => (
 	let
 	    val _ = (TextIO.output
 			 (s, ("/*connect("^
@@ -1113,7 +1113,7 @@ fun dump_equation s q = (
 	in
 	    ()
 	end)
-      | Eq_Connect ((e0, e1), aa, ww) => (
+      | Eq_Connect ((e0, e1), (aa, ww)) => (
 	let
 	    val _ = (TextIO.output
 			 (s, ("/*connect("^
@@ -1124,7 +1124,7 @@ fun dump_equation s q = (
 	in
 	    ()
 	end)
-      | Eq_If (cc, aa, ww) => (
+      | Eq_If (cc, (aa, ww)) => (
 	let
 	    val f = (dump_conditional "if" dump_equation s)
 	    val _ = (foldl f true cc)
@@ -1132,7 +1132,7 @@ fun dump_equation s q = (
 	in
 	    ()
 	end)
-      | Eq_When (cc, aa, ww) => (
+      | Eq_When (cc, (aa, ww)) => (
 	let
 	    val f = (dump_conditional "when" dump_equation s)
 	    val _ = (foldl f true cc)
@@ -1140,7 +1140,7 @@ fun dump_equation s q = (
 	in
 	    ()
 	end)
-      | Eq_For ((ii, qq), aa, ww) => (
+      | Eq_For ((ii, qq), (aa, ww)) => (
 	let
 	    val ss = ((String.concatWith ", ")
 			  (map for_index_to_string ii))
@@ -1150,7 +1150,7 @@ fun dump_equation s q = (
 	in
 	    ()
 	end)
-      | Eq_App ((f, ee), aa, ww) => (
+      | Eq_App ((f, ee), (aa, ww)) => (
 	let
 	    val nn = (expression_to_string 0 f)
 	    val sa = ((String.concatWith ", ")
@@ -1220,7 +1220,7 @@ fun dump_statement s g = (
 	in
 	    ()
 	end)
-      | St_Assign ((w0, w1), aa, ww) => (
+      | St_Assign ((w0, w1), (aa, ww)) => (
 	let
 	    val lhs = (expression_to_string 0 w0)
 	    val rhs = (expression_to_string 0 w1)
@@ -1229,7 +1229,7 @@ fun dump_statement s g = (
 	in
 	    ()
 	end)
-      | St_Call ((xx0, w0, xx1), aa, ww) => (
+      | St_Call ((xx0, w0, xx1), (aa, ww)) => (
 	let
 	    val lhs = (expression_tuple_to_string false xx0)
 	    val asn = case xx0 of
@@ -1243,7 +1243,7 @@ fun dump_statement s g = (
 	in
 	    ()
 	end)
-      | St_If (cc, aa, ww) => (
+      | St_If (cc, (aa, ww)) => (
 	let
 	    val f = (dump_conditional "if" dump_statement s)
 	    val _ = (foldl f true cc)
@@ -1251,7 +1251,7 @@ fun dump_statement s g = (
 	in
 	    ()
 	end)
-      | St_When (cc, aa, ww) => (
+      | St_When (cc, (aa, ww)) => (
 	let
 	    val f = (dump_conditional "when" dump_statement s)
 	    val _ = (foldl f true cc)
@@ -1259,7 +1259,7 @@ fun dump_statement s g = (
 	in
 	    ()
 	end)
-      | St_For ((ii, gg), aa, ww) => (
+      | St_For ((ii, gg), (aa, ww)) => (
 	let
 	    val ss = ((String.concatWith ", ")
 			  (map for_index_to_string ii))
@@ -1269,7 +1269,7 @@ fun dump_statement s g = (
 	in
 	    ()
 	end)
-      | St_While ((w, gg), aa, ww) => (
+      | St_While ((w, gg), (aa, ww)) => (
 	let
 	    val ss = (expression_to_string 0 w)
 	    val _ = (TextIO.output (s, ("while "^ ss ^" loop\n")))
@@ -1318,7 +1318,7 @@ fun dump_function s k = (
 		    val (kv, _) = (access_node E3 false node)
 		in
 		    case kv of
-			Def_Argument (kx, sm, aa, ww) => (
+			Def_Argument (kx, sm, (aa, ww)) => (
 			(dump_variable true s kx))
 		      | _ => raise Match
 		end)
@@ -1334,7 +1334,7 @@ fun dump_function s k = (
 	    end)
     in
 	case k of
-	    Def_Body (mk, (t, p, q), nm, cc, ee, aa, ww) => (
+	    Def_Body (mk, (t, p, q), nm, cc, ii, ee, (aa, ww)) => (
 	    let
 		val subj = (subject_of_class k)
 		val pp = (kind_string t)

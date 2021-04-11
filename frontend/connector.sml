@@ -153,8 +153,8 @@ fun record_of_connect k = (
 
 fun unmark_expandable_connector k = (
     case k of
-	Def_Body (mk, (Connector true, p, q), nm, cc, ee, aa, ww) => (
-	Def_Body (mk, (Connector false, p, q), nm, cc, ee, aa, ww))
+	Def_Body (mk, (Connector true, p, q), nm, cc, ii, ee, (aa, ww)) => (
+	Def_Body (mk, (Connector false, p, q), nm, cc, ii, ee, (aa, ww)))
       | Def_Body _ => raise Match
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
@@ -171,8 +171,8 @@ fun unmark_expandable_connector k = (
 
 fun connect_mode_marker k = (
     case k of
-	Def_Body (mk, (t, p, (mode, _, _)), nm, cc, ee, aa, ww) => mode
-      | Def_Argument (kx, sm, aa, ww) => (connect_mode_marker kx)
+	Def_Body (mk, (t, p, (mode, _, _)), nm, cc, ii, ee, (aa, ww)) => mode
+      | Def_Argument (kx, sm, (aa, ww)) => (connect_mode_marker kx)
       | _ => raise error_connector_is_not_record)
 
 fun marked_as_effort k = ((connect_mode_marker k) = Effort)
@@ -270,7 +270,7 @@ fun choose_connect_rule r0 rules = (
 
 fun instance_is_enabled k = (
     case k of
-	Def_Body (mk, cs, nm, L_Bool b, ee, aa, ww) => b
+	Def_Body (mk, cs, nm, L_Bool b, ii, ee, (aa, ww)) => b
       | Def_Body _ => raise error_conditional_is_not_determined
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
@@ -305,7 +305,7 @@ fun enable_instance enable0 k0 = (
 	    enable0
 	else
 	    case k0 of
-	        Def_Body (mk, cs, nm, cc0, ee, aa, ww) => (
+	        Def_Body (mk, cs, nm, cc0, ii, ee, (aa, ww)) => (
 		let
 		    val subj = (subject_of_class k0)
 		    val cc1 = (simplify cc0)
@@ -314,7 +314,7 @@ fun enable_instance enable0 k0 = (
 			    else raise error_non_constant_conditional
 		    val enable1 = (enable0 andalso (literal_to_bool cc2))
 		    val cc3 = L_Bool enable1
-		    val k1 = Def_Body (mk, cs, nm, cc3, ee, aa, ww)
+		    val k1 = Def_Body (mk, cs, nm, cc3, ii, ee, (aa, ww))
 		    val _ = (store_to_instance_tree subj k1)
 		in
 		    enable1
@@ -383,7 +383,7 @@ fun make_connects (x0, sidex) (y0, sidey) subj acc0 = (
 fun collect_connects_in_equation kp (q0, acc0) = (
     case q0 of
 	Eq_Eq _ => (q0, acc0)
-      | Eq_Connect ((Cref (x0, sidex), Cref (y0, sidey)), aa, ww) => (
+      | Eq_Connect ((Cref (x0, sidex), Cref (y0, sidey)), (aa, ww)) => (
 	let
 	    val x1 = (literalize_subscripts kp x0)
 	    val y1 = (literalize_subscripts kp y0)
@@ -391,7 +391,7 @@ fun collect_connects_in_equation kp (q0, acc0) = (
 	in
 	    (q0, (make_connects (x1, sidex) (y1, sidey) subj acc0))
 	end)
-      | Eq_Connect ((_, _), aa, ww) => raise Match
+      | Eq_Connect ((_, _), (aa, ww)) => raise Match
       | Eq_If _ => (q0, acc0)
       | Eq_When _ => (q0, acc0)
       | Eq_App _ => (q0, acc0)
@@ -465,7 +465,7 @@ fun insert_cardinality_variable (subj, nn) = (
 	val k1 = (fetch_displaced_class E0 the_integer_class)
 	val q = (Effort, Constant, Acausal)
 	val k2 = Def_Refine (k1, NONE, copy_type, q, (dimension, values),
-			     NIL, Annotation [], Comment [])
+			     NIL, (Annotation [], Comment []))
 	val (dim1, array1) = (instantiate_class (variable, k2))
 	val _ = if (dim0 = dim1) then () else raise Match
 	val _ = (map (bind_in_instance false) array1)
@@ -620,7 +620,7 @@ fun make_record_instances subj dim0 k0 = (
 	val dim1 = (map z_literal dim0)
 	val q = (Effort, Continuous, Acausal)
 	val k1 = Def_Refine (k0, NONE, copy_type, q,
-			     (dim1, []), NIL, Annotation [], Comment [])
+			     (dim1, []), NIL, (Annotation [], Comment []))
 	val (dim, array) = (instantiate_class (subj, k1))
     in
 	(dim, array)
@@ -707,7 +707,7 @@ fun make_loop_rule connectors = (
 	fun term (subj, side) = Instances ([], [subj])
 
 	fun equalize x y = (
-	    Eq_Eq ((x, y), Annotation [], Comment []))
+	    Eq_Eq ((x, y), (Annotation [], Comment [])))
 
 	val terms = (map term connectors)
     in
@@ -734,7 +734,7 @@ fun make_point_rule connectors = (
 	[Eq_Eq ((L_Number (R, "0"),
 		 App ((global_function "sum"),
 		      [Array_Constructor terms])),
-		Annotation [], Comment [])]
+		(Annotation [], Comment []))]
     end)
 
 (* It uses "semiLinear" for "positiveMax". *)
@@ -789,7 +789,7 @@ fun stream_equation iqconnector otherconnectors = (
 		 App (Opr Opr_div,
 		      [(numerator iqconnector otherconnectors),
 		       (denominator iqconnector otherconnectors)])),
-		Annotation [], Comment [])]
+		(Annotation [], Comment []))]
     end)
 
 fun list_mixin_variables connectors = (
@@ -917,7 +917,7 @@ fun make_connect_equations connectors = (
 
 fun make_seal_equation v = (
     Eq_Eq ((L_Number (R, "0"), Instances ([], [v])),
-	   Annotation [], Comment []))
+	   (Annotation [], Comment [])))
 
 (* Collects flow components which are not connected.  It is to seal
    flow components like quick-connects.  It takes the all connectors
@@ -1028,10 +1028,10 @@ fun insert_equations_section eqns = (
 	val model0 = (! kx)
     in
 	case model0 of
-	    Def_Body (mk, cs, nm, cc, ee0, aa, ww) => (
+	    Def_Body (mk, cs, nm, cc, ii, ee0, (aa, ww)) => (
 	    let
 		val ee1 = (ee0 @ [section])
-		val model1 = Def_Body (mk, cs, nm, cc, ee1, aa, ww)
+		val model1 = Def_Body (mk, cs, nm, cc, ii, ee1, (aa, ww))
 		val _ = (kx := model1)
 	    in
 		()

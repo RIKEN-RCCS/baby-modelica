@@ -9,10 +9,6 @@ open plain ast message
 
 type cooker_t = common.cooker_t
 
-(* Prints a trace message. *)
-
-(*fun trace 3 (s : string) = if n <= 3 then (print (s ^"\n")) else ()*)
-
 (* ================================================================ *)
 
 fun make_file_path basepath (Name ss) =
@@ -62,14 +58,14 @@ fun definition_body__ (Defclass ((v, g), b)) = b
 
 fun innate_tag k = (
     case k of
-	Def_Body (mk, cs, (j, n, tag, x), cc, ee, aa, ww) => tag
-      | Def_Der (tag, cs, n, vv, aa, ww) => tag
+	Def_Body (mk, cs, (j, n, tag, x), cc, ii, ee, (aa, ww)) => tag
+      | Def_Der (tag, cs, n, vv, (aa, ww)) => tag
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
       | Def_Argument _ => raise Match
       | Def_Named _ => raise Match
       | Def_Scoped _ => raise Match
-      | Def_Refine (kx, v, ts, q, (ss, mm), cc, aa, ww) => (innate_tag kx)
+      | Def_Refine (kx, v, ts, q, (ss, mm), cc, (aa, ww)) => (innate_tag kx)
       | Def_Extending (_, x, kx) => (innate_tag kx)
       | Def_Replaced (kx, _) => (innate_tag kx)
       | Def_Displaced (tag, _) => tag
@@ -78,7 +74,7 @@ fun innate_tag k = (
 
 fun body_elements (k : definition_body_t) = (
     case k of
-	Def_Body (mk, cs, nm, cc, ee, aa, ww) => ee
+	Def_Body (mk, cs, nm, cc, ii, ee, (aa, ww)) => ee
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
@@ -98,8 +94,8 @@ fun class_elements__ (Defclass ((v, g), k)) = (body_elements k)
 
 fun replace_body_elements (k : definition_body_t) ee = (
     case k of
-	Def_Body (mk, cs, nm, cc, ee_, aa, ww) => (
-	Def_Body (mk, cs, nm, cc, ee, aa, ww))
+	Def_Body (mk, cs, nm, cc, ii, ee_, (aa, ww)) => (
+	Def_Body (mk, cs, nm, cc, ii, ee, (aa, ww)))
       | Def_Der _ => raise Match
       | Def_Primitive _ => raise Match
       | Def_Outer_Alias _ => raise Match
@@ -337,7 +333,7 @@ fun declaration_is_constant (Defvar (v, k)) = (
       | Def_Argument _ => raise Match
       | Def_Named _ => raise Match
       | Def_Scoped _ => raise Match
-      | Def_Refine (kx, v, ts, (fs, vc, io), (ss, mm), cc, aa, ww) => (
+      | Def_Refine (kx, v, ts, (fs, vc, io), (ss, mm), cc, (aa, ww)) => (
 	(vc = Constant orelse vc = Parameter))
       | Def_Extending _ => raise Match
       | Def_Replaced _ => raise Match
@@ -356,7 +352,7 @@ fun body_is_declaration_form k = (
       | Def_Argument _ => raise Match
       | Def_Named _ => true
       | Def_Scoped _ => true
-      | Def_Refine (kx, v, ts, q, (ss, mm), cc, aa, ww) => (
+      | Def_Refine (kx, v, ts, q, (ss, mm), cc, (aa, ww)) => (
 	(body_is_declaration_form kx))
       | Def_Extending _ => false
       | Def_Replaced _ => false

@@ -172,7 +172,7 @@ fun assert_modifiers_are_scoped mm = (
 	      | Def_Argument _ => raise Match
 	      | Def_Named _ => raise Match
 	      | Def_Scoped _ => true
-	      | Def_Refine (kx, v_, ts_, q_, (ssx, mmx), cc, aa, ww) => (
+	      | Def_Refine (kx, v_, ts_, q_, (ssx, mmx), cc, (aa, ww)) => (
 		let
 		    val c0 = (List.all test_expression_is_scoped ssx)
 		    val c1 = (List.all test_modifier_is_scoped mmx)
@@ -194,7 +194,7 @@ fun assert_modifiers_are_scoped mm = (
 		c0
 	    end)
 
-	and test_constraint_is_scoped (kx, mmx, a, w) = (
+	and test_constraint_is_scoped (kx, mmx, (aa, ww)) = (
 	    let
 		val c0 = (test_body_is_scoped kx)
 		val c1 = (List.all test_modifier_is_scoped mmx)
@@ -271,11 +271,11 @@ fun record_defining_class (subj, k0) = (
 	      | Def_Argument _ => raise Match
 	      | Def_Named _ => k0
 	      | Def_Scoped _ => k0
-	      | Def_Refine (x0, rn, ts, q, (ss, mm), cc, aa, ww) => (
+	      | Def_Refine (x0, rn, ts, q, (ss, mm), cc, (aa, ww)) => (
 		let
 		    val x1 = (record_defining_class_in_class (subsubj, x0))
 		in
-		    Def_Refine (x1, rn, ts, q, (ss, mm), cc, aa, ww)
+		    Def_Refine (x1, rn, ts, q, (ss, mm), cc, (aa, ww))
 		end)
 	      | Def_Extending (true, _, _) => raise Match
 	      | Def_Extending (false, (kb, mm), x0) => (
@@ -366,13 +366,13 @@ and closure_declaration modifier (scope : scope_t) dx = (
 	Defvar (v, k1)
     end)
 
-and closure_constraint (scope : scope_t) (k0, mm0, a0, w) = (
+and closure_constraint (scope : scope_t) (k0, mm0, (aa0, ww)) = (
     let
 	val k1 = (closure_class scope k0)
 	val mm1 = (map (closure_modifier scope) mm0)
-	val a1 = (closure_annotation scope a0)
+	val aa1 = (closure_annotation scope aa0)
     in
-	(k1, mm1, a1, w)
+	(k1, mm1, (aa1, ww))
     end)
 
 (* Attaches a scope to a class definition.  It does nothing on a class
@@ -394,13 +394,13 @@ and closure_class (scope : scope_t) k0 = (
       | Def_Argument _ => raise Match
       | Def_Named n => Def_Scoped (n, scope)
       | Def_Scoped _ => raise Match
-      | Def_Refine (x0, rn, ts, q, (ss0, mm0), cc0, aa, ww) => (
+      | Def_Refine (x0, rn, ts, q, (ss0, mm0), cc0, (aa, ww)) => (
 	let
 	    val x1 = (closure_class scope x0)
 	    val ss1 = (map (closure_expression scope) ss0)
 	    val mm1 = (map (closure_modifier scope) mm0)
 	    val cc1 = (closure_expression scope cc0)
-	    val k1 = Def_Refine (x1, rn, ts, q, (ss1, mm1), cc1, aa, ww)
+	    val k1 = Def_Refine (x1, rn, ts, q, (ss1, mm1), cc1, (aa, ww))
 	in
 	    k1
 	end)
@@ -503,7 +503,7 @@ fun prepare_for_modification main pkg (subj, k0) = (
 	val _ = if ((cook_step k0) = E0) then () else raise Match
     in
 	case k0 of
-	    Def_Body ((u, f_, b_), cs, (j_, n, c, x), cc, ee, aa, ww) => (
+	    Def_Body ((u, f_, b_), cs, (j_, n, c, x), cc, ii, ee, (aa, ww)) => (
 	    let
 		val _ = if (f_ = PKG) then () else raise Match
 		val _ = if (b_ = ENUM orelse b_ = MAIN) then ()
@@ -513,7 +513,7 @@ fun prepare_for_modification main pkg (subj, k0) = (
 			else raise Match
 		val mark = (marker (b_, main))
 		val k1 = Def_Body ((u, pkg, mark), cs, (subj, n, c, x),
-				   cc, ee, aa, ww)
+				   cc, ii, ee, (aa, ww))
 		val k2 = (attach_scope (subj, k1))
 		val k3 = (record_defining_class (subj, k2))
 		val k4 = (set_cook_step E1 k3)
@@ -653,7 +653,7 @@ and cook_class_refining main pkg (subj, k0) siblings = (
 
 and collect_refining main pkg (subj, k0) (name1, (t1, p1, q1), mm1, cc1, aa1) siblings = (
     case k0 of
-	Def_Body (mk, (t0, p0, q0), nm0, cc0, ee, aa0, ww0) => (
+	Def_Body (mk, (t0, p0, q0), nm0, cc0, ii, ee, (aa0, ww0)) => (
 	let
 	    val _ = trace 5 (";; collect_refining"^
 			     (if main then ":main" else ":base") ^" ("^
@@ -676,7 +676,7 @@ and collect_refining main pkg (subj, k0) (name1, (t1, p1, q1), mm1, cc1, aa1) si
 	    val identity = (identify_class_name name2)
 
 	    val nmx = (j, identity, tag, enclosing)
-	    val k1 = Def_Body (mk, (tx, px, qx), nmx, ccx, ee, aax, ww0)
+	    val k1 = Def_Body (mk, (tx, px, qx), nmx, ccx, ii, ee, (aax, ww0))
 	    val k3 = (make_modified_class k1 mm1 (Annotation []) (Comment []))
 	in
 	    k3
@@ -715,7 +715,7 @@ and collect_refining main pkg (subj, k0) (name1, (t1, p1, q1), mm1, cc1, aa1) si
 			 (name1, (t1, p1, q1), mm1, cc1, aa1) siblings)
 		end)
 	end)
-      | Def_Refine (k1, name0, ts0, q0, (ss0, mm0), cc0, aa0, ww0) => (
+      | Def_Refine (k1, name0, ts0, q0, (ss0, mm0), cc0, (aa0, ww0)) => (
 	let
 	    val _ = trace 5 (";; collect_refining (refine "^
 			     (class_print_name k0) ^")")
@@ -731,7 +731,7 @@ and collect_refining main pkg (subj, k0) (name1, (t1, p1, q1), mm1, cc1, aa1) si
 	    val namex = (option_or name1 name0)
 	in
 	    if (not (null ss0)) then
-		Def_Refine (k1, namex, (tx, px), qx, (ss0, mmx), ccx, aax, ww0)
+		Def_Refine (k1, namex, (tx, px), qx, (ss0, mmx), ccx, (aax, ww0))
 	    else
 		(collect_refining
 		     main pkg (subj, k1)
@@ -798,7 +798,7 @@ and cook_class_body main pkg (subj, k0) siblings = (
       | Def_Argument _ => raise Match
       | Def_Named _ => raise Match
       | Def_Scoped _ => raise Match
-      | Def_Refine (k1, v, ts, q, (ss, mm), cc, aa, ww) => (
+      | Def_Refine (k1, v, ts, q, (ss, mm), cc, (aa, ww)) => (
 	if (not (null ss)) then
 	    k0
 	else
@@ -907,7 +907,7 @@ and resolve_imports (kp : definition_body_t) = (
 
 	fun resolve e = (
 	    case e of
-		Import_Clause (z, cn, idxid, a, w) => (
+		Import_Clause (z, cn, idxid, (aa, ww)) => (
 		case (find_import_class cooker kp cn) of
 		    NONE => raise (error_class_name_not_found cn kp)
 		  | SOME (defining, id) => (
@@ -916,7 +916,7 @@ and resolve_imports (kp : definition_body_t) = (
 			val tag = surely (subject_to_tag subj)
 			val _ = (ensure_fetch cooker subj)
 		    in
-			[Element_Import (z, tag, idxid, a, w)]
+			[Element_Import (z, tag, idxid, (aa, ww))]
 		    end))
 	      | Extends_Clause _ => [e]
 	      | Element_Class _ => [e]
@@ -959,7 +959,7 @@ and build_imported_packages kp = (
 	      | Element_Algorithms _ => ()
 	      | Element_External _ => ()
 	      | Element_Annotation _ => ()
-	      | Element_Import (z, tag, idxid, a, w) => (
+	      | Element_Import (z, tag, idxid, (aa, ww)) => (
 		let
 		    val subj = (tag_to_subject tag)
 		    val cooker = assemble_package

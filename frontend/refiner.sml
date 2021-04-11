@@ -77,11 +77,11 @@ fun pseudo_split_named_entry m = (
 	    m
 	end)
 
-(* Splits an initializer-value from modifiers.  It returns a pair of a
-   value and modifiers, where a value is NIL if there is no
+(* Separates an initializer-value from modifiers.  It returns a pair
+   of a value and other modifiers, where a value is NIL if there is no
    initializer. *)
 
-fun split_initializer_value mm0 = (
+fun separate_initializer_value mm0 = (
     let
 	fun value m = (
 	    case m of
@@ -306,7 +306,7 @@ fun make_refining_class_choose_order replacing k0 mm1 cc1 aa1 ww1 = (
     else
 	let
 	    val kx = Def_Refine (k0, NONE, copy_type, no_component_prefixes,
-				 ([], mm1), cc1, aa1, ww1)
+				 ([], mm1), cc1, (aa1, ww1))
 	in
 	    case k0 of
 		Def_Body _ => kx
@@ -316,7 +316,7 @@ fun make_refining_class_choose_order replacing k0 mm1 cc1 aa1 ww1 = (
 	      | Def_Argument _ => raise Match
 	      | Def_Named _ => raise Match
 	      | Def_Scoped _ => kx
-	      | Def_Refine (x0, rn, ts, q, (ss0, mm0), cc0, aa0, ww0) => (
+	      | Def_Refine (x0, rn, ts, q, (ss0, mm0), cc0, (aa0, ww0)) => (
 		let
 		    val _ = if (not (class_is_refining x0)) then ()
 			    else raise Match
@@ -330,7 +330,7 @@ fun make_refining_class_choose_order replacing k0 mm1 cc1 aa1 ww1 = (
 		    val ccx = (choose_non_nil cc1 cc0)
 		    val aax = (merge_annotations ctx aa0 aa1)
 		    val wwx = (merge_comments ctx ww0 ww1)
-		    val k1 = Def_Refine (x0, rn, ts, q, (ss0, mmx), ccx, aax, wwx)
+		    val k1 = Def_Refine (x0, rn, ts, q, (ss0, mmx), ccx, (aax, wwx))
 		in
 		    k1
 		end)
@@ -440,7 +440,7 @@ fun extract_redeclares (subj, kp) = (
 
 fun refining_is_initializers k0 = (
     case k0 of
-	Def_Refine (k1, v, ts, q, (ss, mm), cc, Annotation aa, Comment ww) => (
+	Def_Refine (k1, v, ts, q, (ss, mm), cc, (Annotation aa, Comment ww)) => (
 	((ts = copy_type) andalso (q = no_component_prefixes)
 	 andalso (cc = NIL) andalso (null aa) andalso (null ww)
 	 andalso (not (class_is_refining k1))))
@@ -461,7 +461,7 @@ fun switch_class_for_redeclaration state ctx k0 k1 = (
       | Def_Argument _ => raise Match
       | Def_Named _ => raise Match
       | Def_Scoped _ => k1
-      | Def_Refine (kx, v, ts, q, (ss, mm), cc, aa, ww) => (
+      | Def_Refine (kx, v, ts, q, (ss, mm), cc, (aa, ww)) => (
 	let
 	    val _ = print "(AHO) DROP PREFIXES\n"
 	    val _ = if (null ss) then ()
@@ -539,15 +539,15 @@ fun attach_modifiers_to_body ctx k0 mm1 = (
       | Def_Argument _ => raise Match
       | Def_Named _ => (
 	Def_Refine (k0, NONE, copy_type, no_component_prefixes, ([], mm1),
-		    NIL, Annotation [], Comment []))
+		    NIL, (Annotation [], Comment [])))
       | Def_Scoped _ => (
 	Def_Refine (k0, NONE, copy_type, no_component_prefixes, ([], mm1),
-		    NIL, Annotation [], Comment []))
-      | Def_Refine (kx, rn, ts, q, (ss, mm0), cc, aa, ww) => (
+		    NIL, (Annotation [], Comment [])))
+      | Def_Refine (kx, rn, ts, q, (ss, mm0), cc, (aa, ww)) => (
 	let
 	    val mmx = (merge_modifiers ctx mm0 mm1)
 	in
-	    Def_Refine (kx, rn, ts, q, (ss, mmx), cc, aa, ww)
+	    Def_Refine (kx, rn, ts, q, (ss, mmx), cc, (aa, ww))
 	end)
       | Def_Extending _ => raise Match
       | Def_Replaced (x0, ko) => (
@@ -649,19 +649,26 @@ fun redeclare_state_by_elements ctx (z0, r0, d0, h0) (z1, r1, d1, h1) = (
     (redeclare_state In_Elements ctx (z0, r0, d0, h0) (z1, r1, d1, h1)))
 
 (* Associates an initializer value w to the components of a class, and
-   returns a list of modifiers.  For a declaration C~x=w, it makes a
-   modifier x.s=w.s for each component of a class.  (It be better not
-   to decompose a class in the case of a record). *)
+   returns a list of modifiers.  Given a declaration C~x=w, it makes a
+   modifier x.s=w.s for each component of a class. *)
 
-fun associate_initializer cc w = (
-    case w of
-	NIL => []
-      | _ => (
-	(map (fn Id s =>
-		 Mod_Entry (no_each_or_final, Name [s],
-			    [Mod_Value (Component_Ref (w, Id s))],
-			    Comment []))
-	     cc)))
+fun associate_initializer_value kp w = (
+    if (w = NIL) then
+	[]
+    else
+	let
+	    val _ = if (not (class_is_simple_type kp)) then () else raise Match
+	    val nn = (list_component_names kp)
+	in
+	    if ((kind_is_record kp) andalso setting.aggregate_initializer) then
+		[Mod_Value w]
+	    else
+		(map (fn Id s =>
+			 Mod_Entry (no_each_or_final, Name [s],
+				    [Mod_Value (Component_Ref (w, Id s))],
+				    Comment []))
+		     nn)
+	end)
 
 (* Tries to associate a modifier to a class definition.  It creates a
    new class refining or attaches to an existing one.  Note that an
@@ -912,9 +919,8 @@ fun dispatch_modifiers skipmain (subj, kp) mm0 = (
 		      (unify_value_and_initializer kp mm0)
 		  else
 		      mm0
-	val (i, mm2) = (split_initializer_value mm1)
-	val cc = (list_component_names kp)
-	val mm3 = (associate_initializer cc i)
+	val (i, mm2) = (separate_initializer_value mm1)
+	val mm3 = (associate_initializer_value kp i)
 	val mm4 = (merge_modifiers ctx mm2 mm3)
 	val k1 = kp
 
@@ -964,7 +970,7 @@ fun record_new_class_names k0 = (
     let
 	fun make_record name k = (
 	    Def_Refine (k, SOME name, copy_type, no_component_prefixes,
-			([], []), NIL, Annotation [], Comment []))
+			([], []), NIL, (Annotation [], Comment [])))
 
 	fun make_class_renaming name k0 = (
 	    case k0 of
@@ -975,17 +981,17 @@ fun record_new_class_names k0 = (
 	      | Def_Argument _ => raise Match
 	      | Def_Named _ => raise Match
 	      | Def_Scoped _ => k0
-	      | Def_Refine (x0, rn, ts, q, (ss, mm), cc, aa, ww) => (
+	      | Def_Refine (x0, rn, ts, q, (ss, mm), cc, (aa, ww)) => (
 		let
 		    val _ = if (rn = NONE) then () else raise Match
 		in
 		    if (modifiers_have_redeclarations mm) then
-			Def_Refine (x0, SOME name, ts, q, (ss, mm), cc, aa, ww)
+			Def_Refine (x0, SOME name, ts, q, (ss, mm), cc, (aa, ww))
 		    else
 			let
 			    val x1 = (make_class_renaming name x0)
 			in
-			    Def_Refine (x1, rn, ts, q, (ss, mm), cc, aa, ww)
+			    Def_Refine (x1, rn, ts, q, (ss, mm), cc, (aa, ww))
 			end
 		end)
 	      | Def_Extending (true, _, _) => (make_record name k0)
@@ -1053,13 +1059,13 @@ fun record_new_class_names k0 = (
 
 fun rectify_modified_class (k0, q1) (t1, p1) aa1 = (
     case k0 of
-	Def_Body (mk, (t0, p0, q0), nm, cc, ee, aa0, ww0) => (
+	Def_Body (mk, (t0, p0, q0), nm, cc, ii, ee, (aa0, ww0)) => (
 	let
 	    val ctx = k0
 	    val (tx, px) = (merge_type_prefixes (t0, p0) (t1, p1))
 	    val qx = (merge_component_prefixes q0 q1)
 	    val aax = (merge_annotations ctx aa0 aa1)
-	    val k1 = Def_Body (mk, (tx, px, qx), nm, cc, ee, aax, ww0)
+	    val k1 = Def_Body (mk, (tx, px, qx), nm, cc, ii, ee, (aax, ww0))
 	    val k2 = if (class_is_main k0) then
 			 (record_new_class_names k1)
 		     else

@@ -104,19 +104,19 @@ fun contains_connectors (q0, contains0) = (
 	    (foldl contains_connectors contains qq))
     in
 	case q0 of
-	    Eq_Eq ((x, y), _ ,_) => (
+	    Eq_Eq ((x, y), (_ ,_)) => (
 	    (foldl contains_cardinality contains0 [x, y]))
 	  | Eq_Connect _ => true
-	  | Eq_If (cc, _, _) => (
+	  | Eq_If (cc, (_, _)) => (
 	    (foldl contains_connectors_x_qq contains0 cc))
-	  | Eq_When (cc, _, _) => (
+	  | Eq_When (cc, (_, _)) => (
 	    if (foldl contains_connectors_n_qq false cc) then
 		raise error_when_contains_connectors
 	    else
 		(foldl contains_connectors_x_qq contains0 cc))
-	  | Eq_App ((f, xx), _, _) => (
+	  | Eq_App ((f, xx), (_, _)) => (
 	    (foldl contains_cardinality contains0 (f :: xx)))
-	  | Eq_For ((_, qq), _, _) => (
+	  | Eq_For ((_, qq), (_, _)) => (
 	    (foldl contains_connectors contains0 qq))
     end)
 
@@ -179,7 +179,7 @@ fun expand_equations kp env q0 = (
 			(map (fn x =>
 				 Eq_If ([(Otherwise,
 					  (unroll qq0 ((v, x) :: env0) rr1))],
-				    Annotation [], Comment []))
+					(Annotation [], Comment [])))
 			     vv)
 		    end))
 	      | (v, w0) :: rr1 => (
@@ -190,7 +190,7 @@ fun expand_equations kp env q0 = (
 		    (map (fn x =>
 			     Eq_If ([(Otherwise,
 				      (unroll qq0 ((v, x) :: env0) rr1))],
-				    Annotation [], Comment []))
+				    (Annotation [], Comment [])))
 			 vv)
 		end))
     in
@@ -200,19 +200,19 @@ fun expand_equations kp env q0 = (
 	    case q0 of
 		Eq_Eq _ => q0
 	      | Eq_Connect _ => q0
-	      | Eq_If (cc0, aa, ww) => (
+	      | Eq_If (cc0, (aa, ww)) => (
 		let
 		    val qq1 = (branch env cc0)
 		in
-		    Eq_If ([(Otherwise, qq1)], aa, ww)
+		    Eq_If ([(Otherwise, qq1)], (aa, ww))
 		end)
 	      | Eq_When _ => q0
 	      | Eq_App _ => q0
-	      | Eq_For ((rr0, qq0), aa, ww) => (
+	      | Eq_For ((rr0, qq0), (aa, ww)) => (
 		let
 		    val qq1 = (unroll qq0 env rr0)
 		in
-		    Eq_If ([(Otherwise, qq1)], aa, ww)
+		    Eq_If ([(Otherwise, qq1)], (aa, ww))
 		end)
     end)
 

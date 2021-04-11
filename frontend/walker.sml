@@ -337,10 +337,10 @@ and walk_in_constraint walk_x ((h0 : constraint_t), acc0) = (
     let
 	val walk_m = (walk_in_modifier walk_x)
 
-	val (k0, mm0, Annotation aa0, ww) = h0
+	val (k0, mm0, (Annotation aa0, ww)) = h0
 	val (mm1, acc1) = (map_along walk_m (mm0, acc0))
 	val (aa1, acc2) = (map_along walk_m (aa0, acc1))
-	val h1 = (k0, mm1, Annotation aa1, ww)
+	val h1 = (k0, mm1, (Annotation aa1, ww))
     in
 	(h1, acc2)
     end)
@@ -350,11 +350,11 @@ and walk_in_constraint walk_x ((h0 : constraint_t), acc0) = (
 fun walk_in_expression_by_vamper (vamp : 'a vamper_t) (x0, acc0) = (
     let
 	val {vamp_q, vamp_s} = vamp
-	val d0 = Eq_Eq ((x0, NIL), Annotation [], Comment [])
+	val d0 = Eq_Eq ((x0, NIL), (Annotation [], Comment []))
 	val (d1, acc1) = (vamp_q (d0, acc0))
     in
 	case d1 of
-	    Eq_Eq ((x1, _), _, _) => (x1, acc1)
+	    Eq_Eq ((x1, _), (_, _)) => (x1, acc1)
 	  | _ => raise Match
     end)
 
@@ -379,14 +379,14 @@ fun walk_in_class (vamp : 'a vamper_t) (k0 : definition_body_t, acc0) = (
 	  | Def_Der _ => (k0, acc0)
 	  | Def_Primitive _ => (k0, acc0)
 	  | Def_Outer_Alias _ => raise Match
-	  | Def_Argument (x0, (ss0, mm0), aa, ww) => (
+	  | Def_Argument (x0, (ss0, mm0), (aa, ww)) => (
 	    let
 		val walk_x = (walk_in_expression_by_vamper vamp)
 		val walk_m = (walk_in_modifier walk_x)
 		val (ss1, acc1) = (map_along walk_x (ss0, acc0))
 		val (mm1, acc2) = (map_along walk_m (mm0, acc1))
 		val (x1, acc3) = (walk_in_class vamp (x0, acc2))
-		val k1 = Def_Argument (x1, (ss1, mm1), aa, ww)
+		val k1 = Def_Argument (x1, (ss1, mm1), (aa, ww))
 	    in
 		(k1, acc3)
 	    end)
@@ -479,14 +479,14 @@ and walk_in_simple_type (vamp : 'a vamper_t) (k0, acc0) = (
 	    in
 		(k1, acc1)
 	    end)
-	  | Def_Argument (x0, (ss0, mm0), aa, ww) => (
+	  | Def_Argument (x0, (ss0, mm0), (aa, ww)) => (
 	    let
 		val walk_x = (walk_in_expression_by_vamper vamp)
 		val walk_m = (walk_in_modifier walk_x)
 		val (ss1, acc1) = (map_along walk_x (ss0, acc0))
 		val (mm1, acc2) = (map_along walk_m (mm0, acc1))
 		val (x1, acc3) = (walk_in_simple_type vamp (x0, acc2))
-		val k1 = Def_Argument (x1, (ss1, mm1), aa, ww)
+		val k1 = Def_Argument (x1, (ss1, mm1), (aa, ww))
 	    in
 		(k1, acc3)
 	    end)
@@ -568,55 +568,55 @@ fun walk_in_equation vamp_q (vamp_x : 'a x_vamper_t) (q0, acc0) = (
 	    end)
     in
 	case q0 of
-	    Eq_Eq ((x0, y0), Annotation aa0, ww) => (
+	    Eq_Eq ((x0, y0), (Annotation aa0, ww)) => (
 	    let
 		val (x1, acc1) = (walk_x (x0, acc0))
 		val (y1, acc2) = (walk_x (y0, acc1))
 		val (aa1, acc3) = (map_along walk_m (aa0, acc2))
-		val q1 = Eq_Eq ((x1, y1), Annotation aa1, ww)
+		val q1 = Eq_Eq ((x1, y1), (Annotation aa1, ww))
 	    in
 		(vamp_q (q1, acc3))
 	    end)
-	  | Eq_Connect ((x0, y0), Annotation aa0, ww) => (
+	  | Eq_Connect ((x0, y0), (Annotation aa0, ww)) => (
 	    let
 		val (x1, acc1) = (walk_x (x0, acc0))
 		val (y1, acc2) = (walk_x (y0, acc1))
 		val (aa1, acc3) = (map_along walk_m (aa0, acc2))
-		val q1 = Eq_Connect ((x1, y1), Annotation aa1, ww)
+		val q1 = Eq_Connect ((x1, y1), (Annotation aa1, ww))
 	    in
 		(vamp_q (q1, acc3))
 	    end)
-	  | Eq_If (cc0, Annotation aa0, ww) => (
+	  | Eq_If (cc0, (Annotation aa0, ww)) => (
 	    let
 		val (cc1, acc1) = (map_along walk_x_qq (cc0, acc0))
 		val (aa1, acc2) = (map_along walk_m (aa0, acc1))
-		val q1 = Eq_If (cc1, Annotation aa1, ww)
+		val q1 = Eq_If (cc1, (Annotation aa1, ww))
 	    in
 		(vamp_q (q1, acc2))
 	    end)
-	  | Eq_When (cc0, Annotation aa0, ww) => (
+	  | Eq_When (cc0, (Annotation aa0, ww)) => (
 	    let
 		val (cc1, acc1) = (map_along walk_x_qq (cc0, acc0))
 		val (aa1, acc2) = (map_along walk_m (aa0, acc1))
-		val q1 = Eq_When (cc1, Annotation aa1, ww)
+		val q1 = Eq_When (cc1, (Annotation aa1, ww))
 	    in
 		(vamp_q (q1, acc2))
 	    end)
-	  | Eq_App ((x0, yy0), Annotation aa0, ww) => (
+	  | Eq_App ((x0, yy0), (Annotation aa0, ww)) => (
 	    let
 		val (x1, acc1) = (walk_x (x0, acc0))
 		val (yy1, acc2) = (map_along walk_x (yy0, acc1))
 		val (aa1, acc3) = (map_along walk_m (aa0, acc2))
-		val q1 = Eq_App ((x1, yy1), Annotation aa1, ww)
+		val q1 = Eq_App ((x1, yy1), (Annotation aa1, ww))
 	    in
 		(vamp_q (q1, acc3))
 	    end)
-	  | Eq_For ((ii0, qq0), Annotation aa0, ww) => (
+	  | Eq_For ((ii0, qq0), (Annotation aa0, ww)) => (
 	    let
 		val (ii1, acc1) = (map_along walk_n_x (ii0, acc0))
 		val (qq1, acc2) = (map_along walk_q (qq0, acc1))
 		val (aa1, acc3) = (map_along walk_m (aa0, acc2))
-		val q1 = Eq_For ((ii1, qq1), Annotation aa1, ww)
+		val q1 = Eq_For ((ii1, qq1), (Annotation aa1, ww))
 	    in
 		(vamp_q (q1, acc3))
 	    end)
@@ -654,56 +654,56 @@ fun walk_in_statement vamp_s (vamp_x : 'a x_vamper_t) (s0, acc0) = (
 	    in
 		(vamp_s (s1, acc1))
 	    end)
-	  | St_Assign ((x0, y0), Annotation mm0, ww) => (
+	  | St_Assign ((x0, y0), (Annotation mm0, ww)) => (
 	    let
 		val (x1, acc1) = (walk_x (x0, acc0))
 		val (y1, acc2) = (walk_x (y0, acc1))
 		val (mm1, acc3) = (map_along walk_m (mm0, acc2))
-		val s1 = St_Assign ((x1, y1), Annotation mm1, ww)
+		val s1 = St_Assign ((x1, y1), (Annotation mm1, ww))
 	    in
 		(vamp_s (s1, acc3))
 	    end)
-	  | St_Call ((xx0, y0, zz0), Annotation mm0, ww) => (
+	  | St_Call ((xx0, y0, zz0), (Annotation mm0, ww)) => (
 	    let
 		val (xx1, acc1) = (map_along walk_x (xx0, acc0))
 		val (y1, acc2) = (walk_x (y0, acc1))
 		val (zz1, acc3) = (map_along walk_x (zz0, acc2))
 		val (mm1, acc4) = (map_along walk_m (mm0, acc3))
-		val s1 = St_Call ((xx1, y1, zz1), Annotation mm1, ww)
+		val s1 = St_Call ((xx1, y1, zz1), (Annotation mm1, ww))
 	    in
 		(vamp_s (s1, acc4))
 	    end)
-	  | St_If (cc0, Annotation mm0, ww) => (
+	  | St_If (cc0, (Annotation mm0, ww)) => (
 	    let
 		val (cc1, acc1) = (map_along walk_x_ss (cc0, acc0))
 		val (mm1, acc2) = (map_along walk_m (mm0, acc1))
-		val s1 = St_If (cc1, Annotation mm1, ww)
+		val s1 = St_If (cc1, (Annotation mm1, ww))
 	    in
 		(vamp_s (s1, acc2))
 	    end)
-	  | St_While ((x0, ss0), Annotation mm0, ww) => (
+	  | St_While ((x0, ss0), (Annotation mm0, ww)) => (
 	    let
 		val (x1, acc1) = (walk_x (x0, acc0))
 		val (ss1, acc2) = (map_along walk_s (ss0, acc1))
 		val (mm1, acc3) = (map_along walk_m (mm0, acc2))
-		val s1 = St_While ((x1, ss1), Annotation mm1, ww)
+		val s1 = St_While ((x1, ss1), (Annotation mm1, ww))
 	    in
 		(vamp_s (s1, acc3))
 	    end)
-	  | St_When (cc0, Annotation mm0, ww) => (
+	  | St_When (cc0, (Annotation mm0, ww)) => (
 	    let
 		val (cc1, acc1) = (map_along walk_x_ss (cc0, acc0))
 		val (mm1, acc2) = (map_along walk_m (mm0, acc1))
-		val s1 = St_When (cc1, Annotation mm1, ww)
+		val s1 = St_When (cc1, (Annotation mm1, ww))
 	    in
 		(vamp_s (s1, acc2))
 	    end)
-	  | St_For ((ii0, ss0), Annotation mm0, ww) => (
+	  | St_For ((ii0, ss0), (Annotation mm0, ww)) => (
 	    let
 		val (ii1, acc1) = (map_along walk_n_x (ii0, acc0))
 		val (ss1, acc2) = (map_along walk_s (ss0, acc1))
 		val (mm1, acc3) = (map_along walk_m (mm0, acc2))
-		val s1 = St_For ((ii1, ss1), Annotation mm1, ww)
+		val s1 = St_For ((ii1, ss1), (Annotation mm1, ww))
 	    in
 		(vamp_s (s1, acc3))
 	    end)
