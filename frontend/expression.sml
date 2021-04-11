@@ -34,7 +34,6 @@ open plain ast common message
 val fetch_from_instance_tree = classtree.fetch_from_instance_tree
 val instance_tree = classtree.instance_tree
 val class_tree = classtree.class_tree
-val traverse_tree = classtree.traverse_tree
 val descend_instance_tree_node = classtree.descend_instance_tree_node
 
 val take_enumarator_element = simpletype.take_enumarator_element

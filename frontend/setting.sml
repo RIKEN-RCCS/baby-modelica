@@ -52,8 +52,11 @@ fun make_modelica_versioned_path qn = (
 
 (* ================================================================ *)
 
-(* A flag to control decomposing an initializer (C~x=w) to each
-   component for records. *)
+(* aggregate_initializer is a flag to control decomposing an
+   initializer (R~x=w) to each component of a record.  It keeps an
+   initializer (x=w) for a record R, when aggregate_initializer=true.
+   Otherwise, component-wise initializers {x.c=w.c,...} are
+   generated. *)
 
 val aggregate_initializer = false
 

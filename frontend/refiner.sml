@@ -652,23 +652,50 @@ fun redeclare_state_by_elements ctx (z0, r0, d0, h0) (z1, r1, d1, h1) = (
    returns a list of modifiers.  Given a declaration C~x=w, it makes a
    modifier x.s=w.s for each component of a class. *)
 
-fun associate_initializer_value kp w = (
-    if (w = NIL) then
-	[]
-    else
-	let
-	    val _ = if (not (class_is_simple_type kp)) then () else raise Match
-	    val nn = (list_component_names kp)
-	in
-	    if ((kind_is_record kp) andalso setting.aggregate_initializer) then
-		[Mod_Value w]
-	    else
-		(map (fn Id s =>
-			 Mod_Entry (no_each_or_final, Name [s],
-				    [Mod_Value (Component_Ref (w, Id s))],
-				    Comment []))
-		     nn)
-	end)
+fun associate_initializer_value k0 w = (
+    let
+	fun store_value k0 w = (
+	    case k0 of
+		Def_Body (mk, cs, nm, cc, ii, ee, aa) => (
+		case ii of
+		    Mod_Value NIL => (
+		    Def_Body (mk, cs, nm, cc, Mod_Value w, ee, aa))
+		  | Mod_Value v => raise Match
+		  | _ => raise Match)
+	      | Def_Der _ => raise Match
+	      | Def_Primitive _ => raise Match
+	      | Def_Outer_Alias _ => raise Match
+	      | Def_Argument _ => raise Match
+	      | Def_Named _ => raise Match
+	      | Def_Scoped _ => raise Match
+	      | Def_Refine _ => raise Match
+	      | Def_Extending _ => raise Match
+	      | Def_Replaced _ => raise Match
+	      | Def_Displaced _ => raise Match
+	      | Def_In_File _ => raise Match
+	      | Def_Mock_Array _ => raise Match)
+
+	fun access_slot w slot = (
+	    Mod_Entry (no_each_or_final, Name [slot],
+		       [Mod_Value (Component_Ref (w, Id slot))],
+		       Comment []))
+
+    in
+	if (w = NIL) then
+	    (k0, [])
+	else
+	    let
+		val _ = if (not (class_is_simple_type k0)) then ()
+			else raise Match
+		val slots = (list_component_names k0)
+	    in
+		if (setting.aggregate_initializer
+		    andalso (kind_is_record k0)) then
+		    ((store_value k0 w), [])
+		else
+		    (k0, (map (fn Id s => (access_slot w s)) slots))
+	    end
+    end)
 
 (* Tries to associate a modifier to a class definition.  It creates a
    new class refining or attaches to an existing one.  Note that an
@@ -915,15 +942,14 @@ fun dispatch_modifiers skipmain (subj, kp) mm0 = (
 	    end)
 
 	val ctx = kp
+	val k0 = kp
 	val mm1 = if (class_is_simple_type kp) then
 		      (unify_value_and_initializer kp mm0)
 		  else
 		      mm0
 	val (i, mm2) = (separate_initializer_value mm1)
-	val mm3 = (associate_initializer_value kp i)
+	val (k1, mm3) = (associate_initializer_value k0 i)
 	val mm4 = (merge_modifiers ctx mm2 mm3)
-	val k1 = kp
-
 	val (k2, mm5) = (foldl
 			     (fn (m, (x0, residue)) =>
 				 case (dispatch_to_class skipmain m x0) of

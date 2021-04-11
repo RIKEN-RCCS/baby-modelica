@@ -81,6 +81,8 @@ sig
 
     val traverse_tree :
 	(definition_body_t * 'a -> 'a) -> instance_node_t * 'a -> 'a
+    val traverse_tree_with_stop :
+	(definition_body_t * 'a -> bool * 'a) -> instance_node_t * 'a -> 'a
 
     val access_node :
 	cook_step_t -> bool -> instance_node_t
@@ -1011,7 +1013,8 @@ fun access_node step (exclude_outer_alias : bool) node0 = (
     end)
 
 (* Calls f on each package/instance with a folding argument in the
-   class_tree/instance_tree. *)
+   class_tree/instance_tree.  It calls f with (node,acc) for
+   folding. *)
 
 fun traverse_tree f (node0, acc0) = (
     let
@@ -1022,6 +1025,24 @@ fun traverse_tree f (node0, acc0) = (
 			  acc1 components)
     in
 	acc2
+    end)
+
+(* Calls f on each package/instance in the class_tree/instance_tree,
+   but stops traversing.  It calls f with (node,acc) and assumes f
+   returns a boolean along with a folding result.  It will not descend
+   to its components when f returns false. *)
+
+fun traverse_tree_with_stop f (node0, acc0) = (
+    let
+	val (kp, components) = (access_node E5 true node0)
+	val (stop, acc1) = (f (kp, acc0))
+    in
+	if (not stop) then
+	    acc1
+	else
+	    (foldl (fn (Slot (v, dim, nodes, _), accx) =>
+		       (foldl (traverse_tree_with_stop f) accx nodes))
+		   acc1 components)
     end)
 
 (* ================================================================ *)

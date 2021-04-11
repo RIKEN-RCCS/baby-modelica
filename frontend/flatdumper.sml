@@ -17,9 +17,10 @@ val package_root_node = classtree.package_root_node
 val model_root_node = classtree.model_root_node
 val subject_to_instance_tree_path = classtree.subject_to_instance_tree_path
 val extract_base_classes = classtree.extract_base_classes
-val traverse_tree = classtree.traverse_tree
 val fetch_instance_tree_node = classtree.fetch_instance_tree_node
 val access_node = classtree.access_node
+val traverse_tree = classtree.traverse_tree
+val traverse_tree_with_stop = classtree.traverse_tree_with_stop
 
 val list_elements = finder.list_elements
 
@@ -404,19 +405,19 @@ fun collect_variables root = (
 
 	fun collect (k, acc) = (
 	    if (step_is_less E3 k) then
-		acc
+		(true, acc)
 	    else
 		let
 		    val subj = (subject_of_class k)
 		in
 		    if (class_is_enumerator k) then
-			acc
+			(true, acc)
 		    else if (class_is_argument k) then
-			acc
+			(true, acc)
 		    else if (class_is_package k) then
-			acc
+			(true, acc)
 		    else if (subj = the_time orelse subj = the_end) then
-			acc
+			(true, acc)
 		    else if (class_is_simple_type k) then
 			let
 			    val _ = if (not (class_is_outer_alias k)) then ()
@@ -424,14 +425,23 @@ fun collect_variables root = (
 			    val _ = if (step_is_at_least E5 k) then ()
 				    else raise Match
 			in
-			    acc @ [k]
+			    (true, (acc @ [k]))
+			end
+		    else if (kind_is_record k) then
+			let
+			    val _ = if (not (class_is_outer_alias k)) then ()
+				    else raise Match
+			    val _ = if (step_is_at_least E5 k) then ()
+				    else raise Match
+			in
+			    (false, (acc @ [k]))
 			end
 		    else
-			acc
+			(true, acc)
 		end)
 
 	val node = if (root = PKG) then package_root_node else model_root_node
-	val vars = (traverse_tree collect (node, []))
+	val vars = (traverse_tree_with_stop collect (node, []))
     in
 	vars
     end)
@@ -958,7 +968,12 @@ fun declaration_of_record argument modifiers k = (
 		val ts = (subject_to_string name)
 		val ns = (component_to_string argument subj)
 		val xs = modifiers
-		val ss = ((concat_strings " " [vs, ts, ns, xs])
+		val ws = case ii of
+			     Mod_Value NIL => ""
+			   | Mod_Value w => (
+			     (" = "^ (expression_to_string 0 w)))
+			   | _ => raise Match
+		val ss = ((concat_strings " " [vs, ts, ns, xs, ws])
 			  ^";")
 	    in
 		ss
