@@ -112,7 +112,7 @@ fun unify_value_and_initializer kp mm0 = (
 
 	val (v, mm1) = (foldl select (NONE, []) mm0)
     in
-	((if (isSome v) then [valOf v] else []) @ mm1)
+	((option_as_list v) @ mm1)
     end)
 
 (* ================================================================ *)

@@ -358,4 +358,12 @@ fun foldl_one_and_others f acc ee = (
 fun list_count_true f ee = (
     (foldl (fn (x, sum) => if (f x) then (sum + 1) else sum) 0 ee))
 
+(* Makes a singleton or empty list for an option. *)
+
+fun option_as_list x = (if (isSome x) then [valOf x] else [])
+
+(* Chooses SOME of options x or y, favoring x. *)
+
+fun option_or x y = (if (isSome x) then x else y)
+
 end

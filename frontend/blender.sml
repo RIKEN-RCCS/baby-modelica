@@ -728,7 +728,7 @@ and collect_refining main pkg (subj, k0) (name1, (t1, p1, q1), mm1, cc1, aa1) si
 	    val aax = (merge_annotations ctx aa0 aa1)
 	    val (tx, px) = (merge_type_prefixes ts0 (t1, p1))
 	    val qx = (merge_component_prefixes q0 q1)
-	    val namex = if (isSome name1) then name1 else name0
+	    val namex = (option_or name1 name0)
 	in
 	    if (not (null ss0)) then
 		Def_Refine (k1, namex, (tx, px), qx, (ss0, mmx), ccx, aax, ww0)
