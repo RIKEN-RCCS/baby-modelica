@@ -18,9 +18,7 @@ sig
 	ctx_t -> binder_t -> definition_body_t -> definition_body_t
 end = struct
 
-open ast
-open plain
-open small1
+open plain ast common message small0
 
 type ctx_t = binder.ctx_t
 type binder_t = binder.binder_t
@@ -54,7 +52,7 @@ val make_iterator_binder = binder.make_iterator_binder
 val secure_reference = builder.secure_reference
 val resolve_function_components = function.resolve_function_components
 
-fun tr_bind (s : string) = if true then (print (s ^"\n")) else ()
+fun trace n (s : string) = if n <= 3 then (print (s ^"\n")) else ()
 
 (* ================================================================ *)
 
@@ -136,7 +134,7 @@ and bind_in_class_element ctx binder e0 = (
 		e0
 	    else
 		let
-		    val _ = tr_bind (";; - [bind] Bind in equations in ("^
+		    val _ = trace 3 (";; - [bind] Bind in equations in ("^
 				     (class_print_name kp) ^")")
 
 		    val qq1 = (map walk_q qq0)
@@ -148,7 +146,7 @@ and bind_in_class_element ctx binder e0 = (
 		e0
 	    else
 		let
-		    val _ = tr_bind (";; - [bind] Bind in statements in ("^
+		    val _ = trace 3 (";; - [bind] Bind in statements in ("^
 				     (class_print_name kp) ^")")
 
 		    val ss1 = (map walk_s ss0)

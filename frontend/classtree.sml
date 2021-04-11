@@ -111,10 +111,7 @@ sig
     val xfetch1 : string -> definition_body_t option
 end = struct
 
-open plain
-open settings
-open ast
-open small0
+open plain ast common message small0
 
 fun trace n (s : string) = if (n <= 1) then (print (s ^"\n")) else ()
 

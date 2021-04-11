@@ -9,9 +9,7 @@ sig
     val expression_to_string : expression_t -> string
 end = struct
 
-open plain
-open ast
-open small0
+open plain ast common message
 
 fun expression_to_string w = (
     let

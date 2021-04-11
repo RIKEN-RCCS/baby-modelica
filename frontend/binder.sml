@@ -36,9 +36,7 @@ sig
 	ctx_t -> bool -> binder_t -> expression_t -> expression_t
 end = struct
 
-open ast
-open plain
-open small1
+open plain ast common message small0
 
 type binder_t = expression_t -> expression_t
 type ctx_t = {k : definition_body_t}
@@ -56,9 +54,7 @@ val assemble_package = blender.assemble_package
 
 val obtain_array_dimension = operator.obtain_array_dimension
 
-fun tr_bind (s : string) = if true then (print (s ^"\n")) else ()
-fun tr_bind_vvv (s : string) = if false then (print (s ^"\n")) else ()
-fun tr_build (s : string) = if true then (print (s ^"\n")) else ()
+fun trace n (s : string) = if n <= 3 then (print (s ^"\n")) else ()
 
 (* ================================================================ *)
 

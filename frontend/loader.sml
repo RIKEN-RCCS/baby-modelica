@@ -20,10 +20,7 @@ sig
 	cook_step_t -> definition_body_t -> definition_body_t
 end = struct
 
-open plain
-open settings
-open ast
-open small0
+open plain ast common message small0 setting
 
 val loaded_classes = classtree.loaded_classes
 val fetch_from_loaded_classes = classtree.fetch_from_loaded_classes

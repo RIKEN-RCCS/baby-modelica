@@ -36,9 +36,7 @@ sig
 	-> definition_body_t * 'a -> 'a
 end = struct
 
-open plain
-open ast
-open small0
+open plain ast common message small0
 
 type 'a x_vamper_t = expression_t * 'a -> expression_t * 'a
 type 'a q_vamper_t = equation_t * 'a -> equation_t * 'a
@@ -48,8 +46,7 @@ type 'a vamper_t = {vamp_q : 'a q_vamper_t, vamp_s : 'a s_vamper_t}
 val store_to_instance_tree = classtree.store_to_instance_tree
 val expression_to_string = dumper.expression_to_string
 
-fun tr_expr (s : string) = if true then (print (s ^"\n")) else ()
-fun tr_expr_vvv (s : string) = if false then (print (s ^"\n")) else ()
+fun trace n (s : string) = if n <= 3 then (print (s ^"\n")) else ()
 
 (* ================================================================ *)
 
@@ -126,8 +123,8 @@ fun walk_in_expression (vamp_x : 'a x_vamper_t) (w0, acc0) = (
 	val walk_subscript = (walk_in_n_xx walk_x)
 	val walk_xx = (map_along walk_x)
 
-	val _ = tr_expr_vvv (";; walk_in_expression ("^
-			     (expression_to_string w0) ^")")
+	val _ = trace 5 (";; walk_in_expression ("^
+			 (expression_to_string w0) ^")")
     in
 	case w0 of
 	    NIL => (NIL, acc0)
@@ -427,7 +424,7 @@ and walk_in_class_element (vamp : 'a vamper_t) kp (e0 : element_t, acc0) = (
 		(e0, acc0)
 	    else
 		let
-		    val _ = tr_expr (";; - [walk] Walk in equations in ("^
+		    val _ = trace 3 (";; - [walk] Walk in equations in ("^
 				     (class_print_name kp) ^")")
 
 		    val (qq1, acc1) = (map_along vamp_q (qq0, acc0))
@@ -440,7 +437,7 @@ and walk_in_class_element (vamp : 'a vamper_t) kp (e0 : element_t, acc0) = (
 		(e0, acc0)
 	    else
 		let
-		    val _ = tr_expr (";; - [walk] Walk in statements in ("^
+		    val _ = trace 3 (";; - [walk] Walk in statements in ("^
 				     (class_print_name kp) ^")")
 
 		    val (ss1, acc1) = (map_along vamp_s (ss0, acc0))

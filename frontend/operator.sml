@@ -39,18 +39,15 @@ sig
     val operator_type : predefined_operator_t -> operator_type_t
 end = struct
 
-open ast plain
-open small1
-open expression
-
-fun tr_expr (s : string) = if true then (print (s ^"\n")) else ()
-fun tr_expr_vvv (s : string) = if false then (print (s ^"\n")) else ()
+open plain ast common message expression
 
 val fetch_from_instance_tree = classtree.fetch_from_instance_tree
 
 val take_enumarator_element = simpletype.take_enumarator_element
 
 val expression_is_literal = expression.expression_is_literal
+
+(*fun trace 3 (s : string) = if n <= 3 then (print (s ^"\n")) else ()*)
 
 datatype operator_type_t
     = ARITHMETIC_UOP | ARITHMETIC_BOP

@@ -1,7 +1,7 @@
 (* blender.sml -*-Coding: us-ascii-unix;-*- *)
 (* Copyright (C) 2018-2021 RIKEN R-CCS *)
 
-(* BASE CLASS COLLECTOR.  This collects base classes and applies
+(* A BASE CLASS COLLECTOR.  This collects base classes and applies
    modifiers. *)
 
 structure blender :
@@ -17,9 +17,7 @@ sig
 	(subject_t * definition_body_t) -> definition_body_t
 end = struct
 
-open plain
-open ast
-open small0
+open plain ast common message small0
 
 val instance_tree = classtree.instance_tree
 val fetch_from_loaded_classes = classtree.fetch_from_loaded_classes
@@ -59,8 +57,7 @@ val make_modified_class = refiner.make_modified_class
 
 (* Prints a trace message. *)
 
-fun tr_cook (s : string) = if true then (print (s ^"\n")) else ()
-fun tr_cook_vvv (s : string) = if false then (print (s ^"\n")) else ()
+fun trace n (s : string) = if n <= 3 then (print (s ^"\n")) else ()
 
 (* ================================================================ *)
 
@@ -478,8 +475,9 @@ fun attach_scope (subj, k0) = (
 	      | Base_List _ => e
 	      | Base_Classes _ => e)
 
-	val _ = tr_cook_vvv (";; attach_scope ("^
-			     (subject_tag_to_string scope) ^")")
+	val _ = trace 5 (";; attach_scope ("^
+			 (subject_tag_to_string scope) ^")")
+
 	val ee0 = (body_elements k0)
 	val ee1 = (map attach ee0)
 	val k1 = (replace_body_elements k0 ee1)
@@ -499,8 +497,9 @@ fun prepare_for_modification main pkg (subj, k0) = (
 	    else
 		BASE)
 
-	val _ = tr_cook_vvv (";; prepare_for_modification ("^
-			     (subject_tag_to_string scope) ^")")
+	val _ = trace 5 (";; prepare_for_modification ("^
+			 (subject_tag_to_string scope) ^")")
+
 	val _ = if ((cook_step k0) = E0) then () else raise Match
     in
 	case k0 of
@@ -620,17 +619,17 @@ and assemble_instance (subj, k0) = (
 
 and cook_class_binary pkg (subj, k0) = (
     let
-	val _ = tr_cook_vvv (";; cook_class_binary : ("^
-			     (subject_body_to_string (subj, k0))
-			     ^")...")
+	val _ = trace 5 (";; cook_class_binary : ("^
+			 (subject_body_to_string (subj, k0))
+			 ^")...")
 
 	val siblings = []
 	val k1 = (cook_class_refining true pkg (subj, k0) siblings)
 	val k2 = (cook_class_body true pkg (subj, k1) siblings)
 
-	val _ = tr_cook_vvv (";; cook_class_binary : ("^
-			     (subject_body_to_string (subj, k0))
-			     ^")... done")
+	val _ = trace 5 (";; cook_class_binary : ("^
+			 (subject_body_to_string (subj, k0))
+			 ^")... done")
     in
 	k2
     end)
@@ -656,9 +655,9 @@ and collect_refining main pkg (subj, k0) (name1, (t1, p1, q1), mm1, cc1, aa1) si
     case k0 of
 	Def_Body (mk, (t0, p0, q0), nm0, cc0, ee, aa0, ww0) => (
 	let
-	    val _ = tr_cook_vvv (";; collect_refining"^
-				 (if main then ":main" else ":base") ^" ("^
-				 (subject_body_to_string (subj, k0)) ^")")
+	    val _ = trace 5 (";; collect_refining"^
+			     (if main then ":main" else ":base") ^" ("^
+			     (subject_body_to_string (subj, k0)) ^")")
 
 	    val _ = if (not (class_is_root k0)) then () else raise Match
 	    val _ = if (not (body_is_unmodifiable k0)) then () else raise Match
@@ -705,11 +704,11 @@ and collect_refining main pkg (subj, k0) (name1, (t1, p1, q1), mm1, cc1, aa1) si
 		NONE => raise (error_class_not_found name k2)
 	      | SOME x0 => (
 		let
-		    val _ = tr_cook_vvv (";; collect_refining find ("^
-					 (class_print_name x0)
-					 ^") in ("^
-					 (subject_body_to_string (subj1, k2))
-					 ^")")
+		    val _ = trace 5 (";; collect_refining find ("^
+				     (class_print_name x0)
+				     ^") in ("^
+				     (subject_body_to_string (subj1, k2))
+				     ^")")
 		in
 		    (collect_refining
 			 main pkg (subj, x0)
@@ -718,8 +717,9 @@ and collect_refining main pkg (subj, k0) (name1, (t1, p1, q1), mm1, cc1, aa1) si
 	end)
       | Def_Refine (k1, name0, ts0, q0, (ss0, mm0), cc0, aa0, ww0) => (
 	let
-	    val _ = tr_cook_vvv (";; collect_refining (refine "^
-				(class_print_name k0) ^")")
+	    val _ = trace 5 (";; collect_refining (refine "^
+			     (class_print_name k0) ^")")
+
 	    val _ = (assert_modifiers_are_scoped mm0)
 	    val _ = (assert_expressions_are_scoped ss0)
 	    val ctx = k0
@@ -850,12 +850,12 @@ and cook_class_with_modifiers main pkg (subj, k0) mm cc aa siblings0 = (
 
 	val packagemain = (main andalso (pkg = PKG))
 
-	val _ = tr_cook_vvv (";; cook_body:"^
-			     (if main then "main" else "base")
-			     ^" ("^
-			     (subject_body_to_string (subj, k0))
-			     ^" modifiers="^ (modifier_list_to_string mm)
-			     ^")...")
+	val _ = trace 5 (";; cook_body:"^
+			 (if main then "main" else "base")
+			 ^" ("^
+			 (subject_body_to_string (subj, k0))
+			 ^" modifiers="^ (modifier_list_to_string mm)
+			 ^")...")
 
 	val k1 = (prepare_for_modification main pkg (subj, k0))
 	val _ = (store_to_instance_tree_if packagemain subj k1)
@@ -871,15 +871,15 @@ and cook_class_with_modifiers main pkg (subj, k0) mm cc aa siblings0 = (
 	val _ = (store_to_instance_tree_if packagemain subj k9)
 	val _ = (register_enumerators_for_enumeration k9)
 
-	val _ = tr_cook_vvv (";; cook_body:"^
-			     (if main then "main" else "base")
-			     ^" ("^
-			     (subject_body_to_string (subj, k0))
-			     ^")... done")
-	val _ = tr_cook_vvv (";; ... bases("^ (class_print_name k9) ^")={"^
-			     ((String.concatWith " ")
-				  (map tag_to_string (list_base_names k9)))
-			     ^"}")
+	val _ = trace 5 (";; cook_body:"^
+			 (if main then "main" else "base")
+			 ^" ("^
+			 (subject_body_to_string (subj, k0))
+			 ^")... done")
+	val _ = trace 5 (";; ... bases("^ (class_print_name k9) ^")={"^
+			 ((String.concatWith " ")
+			      (map tag_to_string (list_base_names k9)))
+			 ^"}")
     in
 	k9
     end)
@@ -1059,11 +1059,11 @@ and gather_bases main pkg kp siblings = (
 	(*val k4 = (set_cook_step E3 k3)*)
 	val k4 = k3
 
-	val _ = tr_cook_vvv (";; gather_bases ("^ (class_print_name kp)
-			     ^") bases={"^
-			     ((String.concatWith " ")
-				  (map tag_to_string (list_base_names k4)))
-			     ^"}")
+	val _ = trace 5 (";; gather_bases ("^ (class_print_name kp)
+			 ^") bases={"^
+			 ((String.concatWith " ")
+			      (map tag_to_string (list_base_names k4)))
+			 ^"}")
     in
 	k4
     end)

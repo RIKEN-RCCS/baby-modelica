@@ -24,9 +24,7 @@ sig
     val list_component_names : definition_body_t -> id_t list
 end = struct
 
-open ast
-open plain
-open small0
+open plain ast common message small0
 
 type cooker_t = common.cooker_t
 

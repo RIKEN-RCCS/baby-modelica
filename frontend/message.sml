@@ -5,9 +5,7 @@
 
 structure message = struct
 
-open plain
-open ast
-open common
+open plain ast common
 
 (* ================================================================ *)
 

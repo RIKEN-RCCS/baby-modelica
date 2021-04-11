@@ -20,9 +20,7 @@ sig
 	cooker_t -> definition_body_t -> name_t -> (subject_t * id_t) option
 end = struct
 
-open ast
-open plain
-open small0
+open plain ast common message small0
 
 type cooker_t = common.cooker_t
 

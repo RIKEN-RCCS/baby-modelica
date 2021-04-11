@@ -39,9 +39,7 @@ structure refiner : sig
 	int list -> modifier_t list -> modifier_t list
 end = struct
 
-open plain
-open ast
-open small0
+open plain ast common message small0
 
 val instance_tree = classtree.instance_tree
 val fetch_from_instance_tree = classtree.fetch_from_instance_tree
@@ -62,8 +60,7 @@ val list_component_names = finder.list_component_names
 
 (* Prints a trace message. *)
 
-fun tr_cook (s : string) = if true then (print (s ^"\n")) else ()
-fun tr_cook_vvv (s : string) = if false then (print (s ^"\n")) else ()
+fun trace n (s : string) = if n <= 3 then (print (s ^"\n")) else ()
 
 (* ================================================================ *)
 
@@ -134,9 +131,9 @@ fun print_removed_modifiers ctx all new = (
 	    let
 		val s = ((String.concatWith ",")
 			     (map modifier_to_string mm))
-		val _ = tr_cook (";; merge_modifiers: "^
-				     "modifiers removed in "^
-				     (class_print_name ctx) ^":"^ s)
+		val _ = trace 3 (";; merge_modifiers: "^
+				 "modifiers removed in "^
+				 (class_print_name ctx) ^":"^ s)
 	    in
 		()
 	    end)
@@ -161,7 +158,7 @@ fun merge_modifiers ctx mm0 mm1 = (
 fun merge_annotations ctx (Annotation m0) (Annotation m1) = (
     let
 	val _ = if ((null m0) orelse (null m1)) then ()
-		else tr_cook (";; AHO ANNOTATION MERGED")
+		else trace 3 (";; AHO ANNOTATION MERGED")
     in
 	Annotation (merge_modifiers ctx m0 m1)
     end)
@@ -587,10 +584,10 @@ fun replace_class source ctx (z0, r0, d0, h0) (z1, r1, d1, h1) = (
 	val Defclass ((v1, g1), k1) = d1
 	val _ = (assert_class_is_good_to_dispatch k1)
 
-	val _ = tr_cook_vvv (";; - Replace class ("^
-			     (name_of_definition d0) ^" by "^
-			     (class_print_name k1) ^" in "^
-			     (class_print_name ctx) ^")")
+	val _ = trace 5 (";; - Replace class ("^
+			 (name_of_definition d0) ^" by "^
+			 (class_print_name k1) ^" in "^
+			 (class_print_name ctx) ^")")
 
 	val x1 = (switch_class_for_redefinition ctx k0 k1)
 	val dx = Defclass ((v0, g0), Def_Replaced (x1, old0))
@@ -625,10 +622,10 @@ fun redeclare_state source ctx (z0, r0, d0, h0) (z1, r1, d1, h1) = (
 	val Defvar (v1, k1) = d1
 	val _ = (assert_class_is_good_to_dispatch k1)
 
-	val _ = tr_cook_vvv (";; - Replace state ("^
-			     (id_to_string v0) ^" by "^
-			     (class_print_name k1) ^" in "^
-			     (class_print_name ctx) ^")")
+	val _ = trace 5 (";; - Replace state ("^
+			 (id_to_string v0) ^" by "^
+			 (class_print_name k1) ^" in "^
+			 (class_print_name ctx) ^")")
 
 	val x1 = (switch_class_for_redeclaration true ctx k0 k1)
 	val dx = Defvar (v0, Def_Replaced (x1, oldx))
@@ -857,8 +854,8 @@ fun dispatch_modifiers skipmain (subj, kp) mm0 = (
 	val _ = if (class_is_body kp) then () else raise Match
 	val _ = if ((cook_step kp) = E2) then () else raise Match
 
-	val _ = tr_cook_vvv (";; dispatch_modifiers ("^ (class_print_name kp)
-			     ^") modifiers="^ (modifier_list_to_string mm0))
+	val _ = trace 5 (";; dispatch_modifiers ("^ (class_print_name kp)
+			 ^") modifiers="^ (modifier_list_to_string mm0))
 
 	fun dispatch m (e, used) = (
 	    case e of
@@ -939,8 +936,8 @@ fun dispatch_modifiers skipmain (subj, kp) mm0 = (
 
 fun associate_modifiers k0 mm0 = (
     let
-	val _ = tr_cook_vvv (";; associate_modifiers ("^ (class_print_name k0)
-			     ^") modifiers="^ (modifier_list_to_string mm0))
+	val _ = trace 5 (";; associate_modifiers ("^ (class_print_name k0)
+			 ^") modifiers="^ (modifier_list_to_string mm0))
 
 	val _ = if ((cook_step k0) = E2) then () else raise Match
 	val subj = (subject_of_class k0)

@@ -21,18 +21,16 @@ sig
     val explicitize_range : expression_t -> expression_t list
 end = struct
 
-open plain
-open ast
-(*open small0*)
-open small1
-open expression
+open plain ast common message
 
 val fetch_from_instance_tree = classtree.fetch_from_instance_tree
 
 val simple_type_attribute = simpletype.simple_type_attribute
 
 val simplify_ite = walker.simplify_ite
+
 val expression_is_literal = expression.expression_is_literal
+val triple_value = expression.triple_value
 
 (*val unary_operator = operator.unary_operator*)
 (*val binary_operator = operator.binary_operator*)
@@ -45,8 +43,7 @@ val take_enumarator_element = simpletype.take_enumarator_element
 
 val expression_to_string = dumper.expression_to_string
 
-fun tr_expr (s : string) = if true then (print (s ^"\n")) else ()
-fun tr_expr_vvv (s : string) = if false then (print (s ^"\n")) else ()
+fun trace n (s : string) = if n <= 3 then (print (s ^"\n")) else ()
 
 (*fun loop_bind_components (subj, kx) = raise Match*)
 
@@ -175,8 +172,8 @@ fun fold_expression ctx oneshot env w0 = (
 	val walk_x_x = (fn (x, y) => ((walk_x x), (walk_x y)))
 	val walk_x_option = (Option.map walk_x)
 
-	val _ = tr_expr_vvv (";; fold_expression ("^
-			     (expression_to_string w0) ^")")
+	val _ = trace 5 (";; fold_expression ("^
+			 (expression_to_string w0) ^")")
     in
 	case w0 of
 	    NIL => NIL
@@ -357,9 +354,9 @@ fun fold_constants kp oneshot env w0 = (
 	val _= if ((not oneshot) orelse (null env)) then () else raise Match
 	val ctx = {k = kp}
 	val w1 = (fold_expression ctx oneshot env w0)
-	val _ = tr_expr_vvv (";; fold_constants ("^
-			     (expression_to_string w0) ^"=>"^
-			     (expression_to_string w1) ^")")
+	val _ = trace 5 (";; fold_constants ("^
+			 (expression_to_string w0) ^"=>"^
+			 (expression_to_string w1) ^")")
     in
 	w1
     end)

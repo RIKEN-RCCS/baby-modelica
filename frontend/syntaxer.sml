@@ -10,8 +10,7 @@ val expand_equations_for_connects : unit -> 'a list
 
 end = struct
 
-open ast plain
-open small1
+open plain ast common message
 
 val instance_tree = classtree.instance_tree
 val traverse_tree = classtree.traverse_tree
@@ -31,8 +30,7 @@ val walk_in_expression = walker.walk_in_expression
 val walk_in_equation = walker.walk_in_equation
 val walk_in_statement = walker.walk_in_statement
 
-fun tr_conv (s : string) = if true then (print (s ^"\n")) else ()
-fun tr_conv_vvv (s : string) = if false then (print (s ^"\n")) else ()
+fun trace n (s : string) = if n <= 3 then (print (s ^"\n")) else ()
 
 (* Removes record constructors that take class instances (casting). *)
 

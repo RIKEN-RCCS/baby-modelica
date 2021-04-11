@@ -5,16 +5,13 @@
 
 structure small0 = struct
 
-open plain
-open ast
-open message
+open plain ast message
 
 type cooker_t = common.cooker_t
 
 (* Prints a trace message. *)
 
-fun tr_tree (s : string) = if true then (print (s ^"\n")) else ()
-fun tr_tree_vvv (s : string) = if false then (print (s ^"\n")) else ()
+(*fun trace 3 (s : string) = if n <= 3 then (print (s ^"\n")) else ()*)
 
 (* ================================================================ *)
 

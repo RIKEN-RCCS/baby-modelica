@@ -1,9 +1,9 @@
-(* settings.sml -*-Coding: us-ascii-unix;-*- *)
+(* setting.sml -*-Coding: us-ascii-unix;-*- *)
 (* Copyright (C) 2018-2021 RIKEN R-CCS *)
 
 (* LIBRARY PATHS. *)
 
-structure settings :
+structure setting :
 sig
     val modelica_paths : string list
     val modelica_msl : string

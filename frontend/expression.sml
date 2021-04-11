@@ -29,11 +29,9 @@ sig
     val find_iterator_range : expression_t -> equation_t list -> int option
 end = struct
 
-open ast plain
-open small1
+open plain ast common message
 
-fun tr_expr (s : string) = if true then (print (s ^"\n")) else ()
-fun tr_expr_vvv (s : string) = if false then (print (s ^"\n")) else ()
+(*fun trace n (s : string) = if n <= 3 then (print (s ^"\n")) else ()*)
 
 val fetch_from_instance_tree = classtree.fetch_from_instance_tree
 val instance_tree = classtree.instance_tree

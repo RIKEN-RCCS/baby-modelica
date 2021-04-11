@@ -5,8 +5,7 @@
 
 structure common = struct
 
-open plain
-open ast
+open plain ast
 
 (* ================================================================ *)
 
@@ -1333,6 +1332,27 @@ and test_modifier_is_redeclaration m = (
       | Mod_Elemental_Redeclare _ => true
       | Mod_Entry (ef, v, mmx, ww) => (modifiers_have_redeclarations mmx)
       | Mod_Value e => false)
+
+(* ================================================================ *)
+
+(* Converts a variable reference to a subject, requiring array
+   subscripts being literals.  It is called only when it is certain
+   that array subscripts are literals and the referenced variable is
+   instantiated. *)
+
+fun reference_as_subject x = (
+    case x of
+	Vref (_, []) => raise Match
+      | Vref (NONE, _) => raise Match
+      | Vref (SOME ns, rr) => (
+	let
+	    fun mapr f (x0, x1) = (x0, f x1)
+	    val cc0 = (map (mapr (map literal_to_int)) rr)
+	    (*val cc1 = (drop_dot_of_package_root ns cc0)*)
+	in
+	    Subj (ns, cc0)
+	end)
+      | _ => raise Match)
 
 (* ================================================================ *)
 

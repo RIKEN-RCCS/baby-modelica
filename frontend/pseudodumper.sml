@@ -12,9 +12,7 @@ sig
     val xdump : unit -> unit
 end = struct
 
-open plain
-open ast
-open small0
+open plain ast common message small0
 
 val package_root_node = classtree.package_root_node
 val model_root_node = classtree.model_root_node
@@ -34,8 +32,7 @@ val enumeration_bounds = simpletype.enumeration_bounds
 datatype operator_type_t = datatype operator.operator_type_t
 val operator_type = operator.operator_type
 
-fun tr_flat (s : string) = if true then (print (s ^"\n")) else ()
-fun tr_flat_vvv (s : string) = if false then (print (s ^"\n")) else ()
+fun trace n (s : string) = if n <= 3 then (print (s ^"\n")) else ()
 
 (* ================================================================ *)
 
@@ -1361,7 +1358,7 @@ fun dump_function s k = (
 
 fun dump_flat_model () = (
     let
-	val _ = tr_flat (";; Flatten a model in \"x.mo\"...")
+	val _ = trace 3 (";; Flatten a model in \"x.mo\"...")
 
 	val filename = "x.mo"
 	val s = (TextIO.openOut filename)

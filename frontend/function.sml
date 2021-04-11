@@ -10,9 +10,7 @@ sig
     val resolve_function_components : definition_body_t -> unit
 end = struct
 
-open ast
-open plain
-open small1
+open plain ast common message small0
 
 val fetch_from_instance_tree = classtree.fetch_from_instance_tree
 val store_to_instance_tree = classtree.store_to_instance_tree
@@ -33,8 +31,7 @@ val obtain_array_dimension = operator.obtain_array_dimension
 
 val bind_in_scoped_expression = binder.bind_in_scoped_expression
 
-fun tr_build (s : string) = if true then (print (s ^"\n")) else ()
-fun tr_build_vvv (s : string) = if false then (print (s ^"\n")) else ()
+fun trace 3 (s : string) = if true then (print (s ^"\n")) else ()
 
 fun strip_dimension k0 = (
     case k0 of

@@ -27,6 +27,7 @@ use "lexer.sml" ;
 use "common.sml" ;
 use "message.sml" ;
 use "small0.sml" ;
+
 use "classtree.sml" ;
 use "simpletype.sml" ;
 
@@ -36,7 +37,6 @@ use "seeker.sml" ;
 use "refiner.sml" ;
 use "blender.sml" ;
 
-use "small1.sml" ;
 use "dumper.sml" ;
 
 use "walker.sml" ;

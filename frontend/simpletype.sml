@@ -33,14 +33,12 @@ sig
 	definition_body_t -> ast.primitive_type_t
 end = struct
 
-open ast
-open plain
-open small0
+open plain ast common message small0
 
 val store_to_instance_tree = classtree.store_to_instance_tree
 val assert_stored_in_instance_tree = classtree.assert_stored_in_instance_tree
 
-fun tr_bind_vvv (s : string) = if true then (print (s ^"\n")) else ()
+(*fun trace n (s : string) = if n <= 3 then (print (s ^"\n")) else ()*)
 
 (* ================================================================ *)
 

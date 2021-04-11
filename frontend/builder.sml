@@ -1,7 +1,7 @@
 (* builder.sml -*-Coding: us-ascii-unix;-*- *)
 (* Copyright (C) 2018-2021 RIKEN R-CCS *)
 
-(* MODEL BUILDER.  The builder instantiates a model by traversaling
+(* A MODEL BUILDER.  The builder instantiates a model by traversaling
    the state variables. *)
 
 structure builder :
@@ -24,9 +24,7 @@ sig
     val xbuild : string -> unit
 end = struct
 
-open ast
-open plain
-open small1
+open plain ast common message small0
 
 type ctx_t = {k : definition_body_t}
 type binder_t = expression_t -> expression_t
@@ -61,8 +59,7 @@ val obtain_array_dimension = operator.obtain_array_dimension
 
 val bind_in_scoped_expression = binder.bind_in_scoped_expression
 
-fun tr_build (s : string) = if true then (print (s ^"\n")) else ()
-fun tr_build_vvv (s : string) = if false then (print (s ^"\n")) else ()
+fun trace n (s : string) = if n <= 3 then (print (s ^"\n")) else ()
 
 (* Tests if a subject stored in the binding is a subcomponent name. *)
 
@@ -152,9 +149,9 @@ fun instantiate_class (subj, k0) = (
 
 and instantiate_with_dimension (subj, k0) = (
     let
-	val _= tr_build_vvv (";; instantiate_with_dimension ("^
-			     (subject_print_string subj) ^" : "^
-			     (class_print_name k0) ^")...")
+	val _= trace 5 (";; instantiate_with_dimension ("^
+			(subject_print_string subj) ^" : "^
+			(class_print_name k0) ^")...")
 
 	val k1 = (assemble_instance (subj, k0))
     in

@@ -14,11 +14,7 @@ sig
     val xconnect : unit -> subject_t list * subject_t list * subject_t list
 end = struct
 
-open ast plain
-open small1
-
-fun tr_conn (s : string) = if true then (print (s ^"\n")) else ()
-fun tr_conn_vvv (s : string) = if false then (print (s ^"\n")) else ()
+open plain ast common message small0
 
 val find_element = finder.find_element
 
@@ -55,6 +51,8 @@ val instantiate_components = builder.instantiate_components
 val bind_in_instance = postbinder.bind_in_instance
 
 val expand_equations_for_connects = syntaxer.expand_equations_for_connects
+
+fun trace n (s : string) = if n <= 3 then (print (s ^"\n")) else ()
 
 (* ================================================================ *)
 
