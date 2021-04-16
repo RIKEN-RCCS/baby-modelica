@@ -1,7 +1,7 @@
 (* postbinder.sml -*-Coding: us-ascii-unix;-*- *)
 (* Copyright (C) 2018-2021 RIKEN R-CCS *)
 
-(* NAME RESOLVER, SECOND PART.  The second part resolves variable
+(* A NAME RESOLVER, SECOND PART.  The second part resolves variable
    references in equations/algorithms sections. *)
 
 structure postbinder :
@@ -13,9 +13,6 @@ sig
     val bind_in_model : unit -> unit
     val substitute_outer : unit -> unit
     val bind_in_instance : bool -> definition_body_t -> bool
-
-    val bind_in_class :
-	ctx_t -> binder_t -> definition_body_t -> definition_body_t
 end = struct
 
 open plain ast common message small0
@@ -43,7 +40,6 @@ val find_class = finder.find_class
 val assemble_package = blender.assemble_package
 
 val make_reference = binder.make_reference
-(*val bind_in_class = binder.bind_in_class*)
 val bind_in_simple_type = binder.bind_in_simple_type
 val bind_in_expression = binder.bind_in_expression
 val discern_connector_component = binder.discern_connector_component
@@ -65,7 +61,7 @@ fun trace n (s : string) = if n <= 3 then (print (s ^"\n")) else ()
 
 fun bind_in_class ctx binder k0 = (
     case k0 of
-	Def_Body (mk, cs, nm, cc0, ii, ee0, (aa, ww)) => (
+	Def_Body (mk, cs, nm, cc0, ii0, ee0, (aa, ww)) => (
 	if (class_is_simple_type k0) then
 	    let
 		val buildphase = false
@@ -79,12 +75,14 @@ fun bind_in_class ctx binder k0 = (
 		val _ = if (step_is_at_least E3 k0) then () else raise Match
 		(*val ctx = {k = kp}*)
 		(*fun binder w = raise error_undefined_variable*)
-
+		val {k = kp} = ctx
 		val walk_x = (bind_in_expression ctx false binder)
+		val walk_m = (bind_in_modifier kp binder)
 		val walk_e = (bind_in_class_element ctx binder)
 		val cc1 = (walk_x cc0)
+		val ii1 = (walk_m ii0)
 		val ee1 = (map walk_e ee0)
-		val k1 = Def_Body (mk, cs, nm, cc1, ii, ee1, (aa, ww))
+		val k1 = Def_Body (mk, cs, nm, cc1, ii1, ee1, (aa, ww))
 		val k2 = (set_cook_step E5 k1)
 	    in
 		k2

@@ -1356,6 +1356,24 @@ fun reference_as_subject x = (
 
 (* ================================================================ *)
 
+fun drop_last_subscript_of_subject subj = (
+    if (subj = the_model_subject) then
+	subj
+    else if (subj = the_package_root_subject) then
+	subj
+    else
+	let
+	    val (prefix, (v, ss)) = (subject_prefix subj)
+	in
+	    (compose_subject prefix v [])
+	end)
+
+fun subject_equal_sans_subscript subj0 subj1 = (
+    ((drop_last_subscript_of_subject subj0)
+     = (drop_last_subscript_of_subject subj1)))
+
+(* ================================================================ *)
+
 (*fun scan_as_subject0 (s : string) : subject_t = (
     (name_to_subject (Name (String.fields (fn c => (c = #".")) s))))*)
 

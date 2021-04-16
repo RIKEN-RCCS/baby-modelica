@@ -2331,7 +2331,7 @@ an enclosing class (needed in packages).
 
 %%%%%%%%%%%%%%%%
 
-\subsection{Class_equality}\label{class-equality}
+\subsection{Class_equality}\label{sec:class-equality}
 
 Generally, an equality or identity of a class is not significant, but
 class_compatibility is used, instead.  An identity of a class is not
@@ -2768,7 +2768,7 @@ end M;
 \end{lstlisting}
 \end{quote}
 
-See also Section~\ref{class-equality}.  (*CHECK*) Function calls may
+See also Section~\ref{sec:class-equality}.  (*CHECK*) Function calls may
 require stricter equality.
 
 \subsubsection*{Casting}
@@ -2778,10 +2778,15 @@ casting.  See \specref{12.6.1}.
 
 \subsubsection*{equalityConstraint}
 
-A function $\mathit{equalityConstraint}$ can be defined in types and
-records.  $\mathit{equalityConstraint(...)}=0$ is added as equations,
-when it is defined (0 in the RHS is used for an array of zeros).
-See \specref{9.4.1}.
+A function $\mathit{equalityConstraint}$ may be defined in types and
+records.  When it is defined, $\mathit{equalityConstraint(...)}=0$ is
+added as equations (0 in the RHS is used for an array of zeros).  See
+\specref{9.4.1}.
+
+\subsubsection*{Record constructors}\label{sec:no-record-constructor}
+
+There is no syntactic construct (expression) to construct records.  A
+record need be declared as a variable.
 
 %%%%%%%%%%%%%%%%
 
@@ -3975,6 +3980,11 @@ _:_ _:_:_
 \noindent Tuples are comma separated expressions.  Tuples are only
 used in equalities and assignments for functions returning multiple
 values.
+
+\subsubsection*{Records}
+
+There is no operator to construct records.  See
+Section~\ref{sec:no-record-constructor}.
 
 %%%%%%%%%%%%%%%%
 
@@ -5209,14 +5219,27 @@ $\mathrm{inStream}\,(v)$, \verb|_actual_in_| for
 $\mathrm{actualStream}\,(v)$, and \verb|_cardinality_| for
 $\mathrm{cardinality}\,(c)$.
 
+\subsection{Record initializers}
+
+The_syntaxer internally holds both a record initializer and the
+decomposed initializers for it.  For $R\;x=i$, it holds both $x=i$ and
+$x.c=i.c$, for the components $c$ of a record.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Baby-Modelica -- Flattening}
 
-\subsection{Variable references}
+%% \subsection{Variable references}
+%%
+%% A flattener moves array dimensions to the last part.  It prints
+%% $a[i].b[j].c[k]$ as something like $a\_b\_c[i,j,k]$.
 
-A flattener moves array dimensions to the last part.  It prints
-$a[i].b[j].c[k]$ as something like $a\_b\_c[i,j,k]$.
+\subsection{Record initializers}
+
+The_flattener generates initializers for an array of records as
+$R\;r\;[N]=\{r_1,r_2,...\}$ by introducing fresh variables
+$R\;r_i\;(\mathit{modifiers})$.  It is because records need be
+declared as variables.  See Section~\ref{sec:no-record-constructor}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

@@ -232,8 +232,8 @@ and settle_dimension kp ss mm = (
 	end)
 
 (* Tries to fold a constant to a literal value.  Folding constants
-   needs to be step-by-step, because resolving new variables is
-   necessary at each step. *)
+   needs to be done step-by-step, because resolving new occurrences of
+   variables is necessary at each step. *)
 
 and simplify_expression ctx buildphase_ w0 = (
     let

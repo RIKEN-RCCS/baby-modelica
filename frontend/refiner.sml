@@ -688,12 +688,10 @@ fun associate_initializer_value k0 w = (
 		val _ = if (not (class_is_simple_type k0)) then ()
 			else raise Match
 		val slots = (list_component_names k0)
+		(*(setting.aggregate_initializer andalso (kind_is_record k0))*)
+		val k1 = (store_value k0 w)
 	    in
-		if (setting.aggregate_initializer
-		    andalso (kind_is_record k0)) then
-		    ((store_value k0 w), [])
-		else
-		    (k0, (map (fn Id s => (access_slot w s)) slots))
+		(k1, (map (fn Id s => (access_slot w s)) slots))
 	    end
     end)
 

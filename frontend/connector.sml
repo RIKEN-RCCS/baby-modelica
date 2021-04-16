@@ -43,8 +43,6 @@ val fetch_displaced_class = loader.fetch_displaced_class
 val fold_constants = folder.fold_constants
 val explicitize_range = folder.explicitize_range
 
-val bind_in_scoped_expression = binder.bind_in_scoped_expression
-
 val instantiate_class = builder.instantiate_class
 val instantiate_components = builder.instantiate_components
 

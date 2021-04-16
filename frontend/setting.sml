@@ -58,6 +58,6 @@ fun make_modelica_versioned_path qn = (
    Otherwise, component-wise initializers {x.c=w.c,...} are
    generated. *)
 
-val aggregate_initializer = false
+val aggregate_initializer = true
 
 end

@@ -17,10 +17,13 @@ val package_root_node = classtree.package_root_node
 val model_root_node = classtree.model_root_node
 val subject_to_instance_tree_path = classtree.subject_to_instance_tree_path
 val extract_base_classes = classtree.extract_base_classes
+val fetch_from_instance_tree = classtree.fetch_from_instance_tree
 val fetch_instance_tree_node = classtree.fetch_instance_tree_node
+val unwrap_array_of_instances = classtree.unwrap_array_of_instances
 val access_node = classtree.access_node
 val traverse_tree = classtree.traverse_tree
 val traverse_tree_with_stop = classtree.traverse_tree_with_stop
+val traverse_tree_with_stop_one = classtree.traverse_tree_with_stop_one
 
 val list_elements = finder.list_elements
 
@@ -395,53 +398,82 @@ fun expression_to_string assoc w = (
 
 (* ================================================================ *)
 
-(* Packages are processed to step=E3, but some packages which are
-   named but unused remain at step=E0 (.Modelica.Icons.Package). *)
+(* Collects variables as a list of subjects.  It collects variables if
+   state=true or constants if state=false.  Packages are processed to
+   step=E3, but some packages which are named but unused remain at
+   step=E0 (.Modelica.Icons.Package). *)
 
-fun collect_variables root = (
+fun collect_variables state root = (
     let
 	val the_time = Subj (VAR, [(Id "time", [])])
 	val the_end = Subj (VAR, [(Id "end", [])])
 
-	fun collect (k, acc) = (
+	fun check subj (k, acc) = (
 	    if (step_is_less E3 k) then
 		(true, acc)
-	    else
+	    else if (class_is_enumerator k) then
+		(true, acc)
+	    else if (class_is_argument k) then
+		(true, acc)
+	    else if (class_is_package k) then
+		(true, acc)
+	    else if (subj = the_time orelse subj = the_end) then
+		(true, acc)
+	    else if (class_is_simple_type k) then
 		let
-		    val subj = (subject_of_class k)
+		    val _ = if (not (class_is_outer_alias k)) then ()
+			    else raise Match
+		    val _ = if (step_is_at_least E5 k) then ()
+			    else raise Match
 		in
-		    if (class_is_enumerator k) then
-			(true, acc)
-		    else if (class_is_argument k) then
-			(true, acc)
-		    else if (class_is_package k) then
-			(true, acc)
-		    else if (subj = the_time orelse subj = the_end) then
-			(true, acc)
-		    else if (class_is_simple_type k) then
-			let
-			    val _ = if (not (class_is_outer_alias k)) then ()
-				    else raise Match
-			    val _ = if (step_is_at_least E5 k) then ()
-				    else raise Match
-			in
-			    (true, (acc @ [k]))
-			end
-		    else if (kind_is_record k) then
-			let
-			    val _ = if (not (class_is_outer_alias k)) then ()
-				    else raise Match
-			    val _ = if (step_is_at_least E5 k) then ()
-				    else raise Match
-			in
-			    (false, (acc @ [k]))
-			end
+		    if ((not (class_is_constant k)) = state) then
+			(false, (acc @ [subj]))
 		    else
-			(true, acc)
-		end)
+			(false, acc)
+		end
+	    else if (kind_is_record k) then
+		let
+		    val _ = if (not (class_is_outer_alias k)) then ()
+			    else raise Match
+		    val _ = if (step_is_at_least E5 k) then ()
+			    else raise Match
+		in
+		    if ((not (class_is_constant k)) = state) then
+			(false, (acc @ [subj]))
+		    else
+			(false, acc)
+		end
+	    else
+		(true, acc))
+
+	fun collect ((dim, nodes), acc) = (
+	    if (null dim) then
+		case nodes of
+		    [] => raise Match
+		  | [node] => (
+		    let
+			val (kp, _) = (access_node E5 true node)
+			val subj = (subject_of_class kp)
+		    in
+			check subj (kp, acc)
+		    end)
+		  | _ => raise Match
+	    else if ((array_size dim) = 0) then
+		(false, acc)
+	    else
+		case nodes of
+		    [] => raise Match
+		  | node :: tl_  => (
+		    let
+			val (kp, _) = (access_node E5 true node)
+			val subj0 = (subject_of_class kp)
+			val subj = (drop_last_subscript_of_subject subj0)
+		    in
+			check subj (kp, acc)
+		    end))
 
 	val node = if (root = PKG) then package_root_node else model_root_node
-	val vars = (traverse_tree_with_stop collect (node, []))
+	val vars = (traverse_tree_with_stop collect (([], [node]), []))
     in
 	vars
     end)
@@ -961,6 +993,9 @@ fun declaration_of_record argument modifiers k = (
 	case k of
 	    Def_Body ((u, f, b), (t, p, q), nm, cc, ii, ee, (aa, ww)) => (
 	    let
+		(*val _ = if (ii = Mod_Value NIL) then ()
+			else raise Match*)
+
 		val (modality_, variability, causality) = q
 		val (_, name, _, _) = nm
 
@@ -992,7 +1027,7 @@ fun declaration_of_record argument modifiers k = (
 	  | Def_Mock_Array _ => raise Match
     end)
 
-fun dump_variable argument s k = (
+fun dump_variable_scalar argument s k = (
     if (kind_is_record k) then
 	let
 	    val sx = (declaration_of_record argument "" k)
@@ -1009,6 +1044,20 @@ fun dump_variable argument s k = (
 	in
 	    ()
 	end)
+
+fun dump_variable argument s subj = (
+    let
+	val x = surely (fetch_from_instance_tree subj)
+	val (dim, array) = (unwrap_array_of_instances x)
+    in
+	if (null dim) then
+	    case array of
+		[] => raise Match
+	      | [k] => (dump_variable_scalar argument s k)
+	      | _ => raise Match
+	else
+	    raise Match
+    end)
 
 fun dump_enumeration s k = (
     let
@@ -1333,7 +1382,7 @@ fun dump_function s k = (
 		in
 		    case kv of
 			Def_Argument (kx, sm, (aa, ww)) => (
-			(dump_variable true s kx))
+			(dump_variable_scalar true s kx))
 		      | _ => raise Match
 		end)
 	      | _ => raise Match)
@@ -1388,16 +1437,18 @@ fun dump_flat_model () = (
 	val _ = (TextIO.output (s, "\n"))
 	val _ = (TextIO.output (s, "/* Constants in packages. */\n"))
 	val _ = (TextIO.output (s, "\n"))
-	val vars0 = (collect_variables PKG)
+	val vars0 = (collect_variables false PKG)
+	val vars1 = (collect_variables true PKG)
+	val _ = if (null vars1) then () else raise Match
 	val _ = (app (dump_variable false s) vars0)
 
-	(* Variables. *)
+	(* Constants and variables. *)
 
 	val _ = (TextIO.output (s, "\n"))
 	val _ = (TextIO.output (s, "/* Constants in the model. */\n"))
 	val _ = (TextIO.output (s, "\n"))
-	val vars1 = (collect_variables VAR)
-	val (vars2, vars3) = (List.partition class_is_constant vars1)
+	val vars2 = (collect_variables false VAR)
+	val vars3 = (collect_variables true VAR)
 	val _ = (app (dump_variable false s) vars2)
 
 	val _ = (TextIO.output (s, "\n"))

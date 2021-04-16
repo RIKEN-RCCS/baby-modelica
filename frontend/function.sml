@@ -29,8 +29,6 @@ val fold_constants = folder.fold_constants
 
 val obtain_array_dimension = operator.obtain_array_dimension
 
-val bind_in_scoped_expression = binder.bind_in_scoped_expression
-
 fun trace n (s : string) = if n <= 3 then (print (s ^"\n")) else ()
 
 fun strip_dimension k0 = (

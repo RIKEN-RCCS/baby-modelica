@@ -130,22 +130,6 @@ fun assert_no_subscript_to_subject subj = (
 fun assert_match_subject subj k = (
     if (subj = (subject_of_class k)) then () else raise Match)
 
-fun drop_last_subscript_of_subject subj = (
-    if (subj = the_model_subject) then
-	subj
-    else if (subj = the_package_root_subject) then
-	subj
-    else
-	let
-	    val (prefix, (v, ss)) = (subject_prefix subj)
-	in
-	    (compose_subject prefix v [])
-	end)
-
-fun subject_equal_sans_subscript subj0 subj1 = (
-    ((drop_last_subscript_of_subject subj0)
-     = (drop_last_subscript_of_subject subj1)))
-
 (* Checks the subjects ignoring the subscripts of an instance k. *)
 
 fun assert_match_subject_sans_subscript subj0 k = (

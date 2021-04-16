@@ -23,8 +23,6 @@ val fold_constants = folder.fold_constants
 val explicitize_range = folder.explicitize_range
 val expression_to_string = dumper.expression_to_string
 
-val bind_in_scoped_expression = binder.bind_in_scoped_expression
-
 val walk_in_class = walker.walk_in_class
 val walk_in_expression = walker.walk_in_expression
 val walk_in_equation = walker.walk_in_equation

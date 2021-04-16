@@ -1451,9 +1451,6 @@ fun dump_flat_model () = (
 
 fun xdump s = (
     let
-	val _ = if (not setting.aggregate_initializer) then ()
-		else raise (Fail "require aggregate_initializer=false")
-
 	val _ = (dump_flat_model ())
     in
 	()

@@ -60,7 +60,8 @@ fun trace n (s : string) = if n <= 3 then (print (s ^"\n")) else ()
 
 (* Takes a declared component of a reference in a class pointed by a
    subject.  It returns an ID or NONE if a reference is not a
-   component.  It assumes the subscripts are the same. *)
+   component.  It ignores the subscripts because it is certain they
+   are equal. *)
 
 fun take_declared_component subj w = (
     case w of
@@ -172,9 +173,9 @@ fun refer_in_variable kp (d as Defvar _) subj rr = (
 		(make_reference_in_function kp subj rr))
     end)
 
-(* Resolves a variable reference in the given package/instance.  It is
-   passed to binding routines.  It adds a prefix to "x.y" as
-   "a.b.x.y", when "a.b" is a class B and B contains a declaration of
+(* Resolves a variable reference in the given package/instance.  This
+   is called via binding routines.  It adds a prefix to "x.y" as
+   "a.b.x.y", when "a.b" is class B and B contains a declaration of
    "x".  It also resolves functions and constants. *)
 
 fun make_reference kp (_ : bool) w0 = (
