@@ -3415,8 +3415,6 @@ model M1
     initial equation
     x1=10;
 end M1;
-end M;
-
 \end{lstlisting}
 \end{quote}
 
@@ -3452,29 +3450,30 @@ that we refer here by constants to both constants and parameters
 \begin{qquote} (\specref{3.8.2}\/) a function or operator with
 parameter subexpressions is a parameter expression.\end{qquote}
 
-\specref{3.8.1}\/ and \specref{3.8.2}\/ list constant expressions
-(functions and variables) which can take non-constant arguments:
+The_specification lists the functions and variables of constant values
+which can take non-constant arguments.  See \specref{3.8.1}\/ and
+\specref{3.8.2}.
 %%%%
 \begin{quote}%\spaceskip=2em
 \def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
-\w initial
-\w terminal
+\w change
 \w der
 \w edge
-\w change
-\w sample
+\w end
+\w initial
 \w pre
+\w sample
+\w terminal
 \end{quote}
 %%%%
 \begin{quote}%\spaceskip=2em
 \def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
-\w ndims(A)
 \w cardinality(c)
-\w end
+\w ndims(A)
 \w size(A)
 \w size(A,~j)
-   Connections.isRoot(A.R)
-   Connections.rooted(A.R)
+\makebox[12em][l]{Connections.isRoot(A.R)}
+\makebox[12em][l]{Connections.rooted(A.R)}
 \end{quote}
 
 %%%%%%%%%%%%%%%%
