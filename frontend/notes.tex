@@ -168,7 +168,7 @@ Some rules are assumed in the_implementation on syntaxing.
 
 \subsection{Variable references in general}
 
-\subsubsection*{Composite names}
+\subsubsection{Composite names}
 
 A non-constant variable (instance) reference is in the form like
 $x[...].y[...].z[...]$.  Subscripts are optional in a variable
@@ -205,7 +205,7 @@ indexing to general expressions is ungrammatical.\end{QFACT}
 %%%%
 For example, (illegal) $\{1,2,3\}[1]$ is not allowed.
 
-\subsubsection*{Predefined_variables}
+\subsubsection{Predefined_variables}
 
 \begin{QRULE}\label{time-and-end} A variable $\mathit{time}$ is
 visible everywhere.  Variables $\mathit{end}$ are visible in array
@@ -225,7 +225,7 @@ end M;
 \end{lstlisting}
 \end{quote}
 
-\subsubsection*{Scopes}
+\subsubsection{Scopes}
 
 The scope is flat in most cases, spanning from the main (non-base)
 class to the base classes.  The class and variable names should be
@@ -251,7 +251,7 @@ the specified package to the present class.  The inclusion is from any
 classes but they are treated as packages.  The inclusion is limited to
 the public elements. \baseimport. \noimport.
 
-\subsubsection*{Import-clause syntax}
+\subsubsection{Import-clause syntax}
 
 See \specref{13.2.1}.  Importing is only from packages.  However,
 classes of any class_kinds are treated as packages.  A package name in
@@ -306,7 +306,7 @@ classes to the present class.  \baseimport.  \noimport.  The
 visibility is nothing to do with the bases because it is either
 $\mathbf{public}$ or $\mathbf{protected}$.
 
-\subsubsection*{Checks for extends clauses}
+\subsubsection{Checks for extends clauses}
 
 \begin{QRULE}\label{uniqueness-after-extension} It is illegal if a
 base class $A$ of $\mathbf{extends}\;A$ is defined in the class $A$
@@ -364,7 +364,7 @@ Note that some_implementations accept the first case with warnings
 extends-clauses are swapped, i.e., when $\mathbf{extends}\;A$ comes
 early.
 
-\subsubsection*{Mutual dependence of extends-clauses}
+\subsubsection{Mutual dependence of extends-clauses}
 
 \begin{QRULE}\label{ban-mutual-inheritance} Mutual dependence of
 extends-clauses is prohibited.\end{QRULE}
@@ -380,7 +380,7 @@ the base classes.
 
 %% ("diamond"-paths of inheritance)
 
-\subsubsection*{Extending a single base multiple times (?)}
+\subsubsection{Extending a single base multiple times (?)}
 
 \begin{QRULE}\label{multiple-extensions-of-single-base} (?) Extending
 a single class multiple times (usually via a common base class) is
@@ -404,7 +404,7 @@ sufficient with class modifications.  Consider for example,
 $\mathbf{extends}\;A(x=a)$ and $\mathbf{extends}\;A(x=b)$ with $a=0$
 and $b=0$.
 
-\subsubsection*{Operator_record}
+\subsubsection{Operator_record}
 
 Operator_records have restrictions on extends-clauses.
 
@@ -413,7 +413,7 @@ only extend from an operator record [as a short class definition, and
 not from another specialized class].  It is not legal to extend from
 any of its enclosing scopes.\end{qquote}
 
-\subsubsection*{Unifying defined classes}
+\subsubsection{Unifying defined classes}
 
 \begin{QRULE}\label{multiple-definitions} It is legal if classes with
 the same name are defined multiple times in the main class and its
@@ -447,7 +447,7 @@ $\mathit{Modelica}.\mathit{Fluid}.\mathit{Machines}.\mathit{BaseClasses}$.\\
 $\mathit{PartialTwoPort}$ and $\mathit{PartialLumpedVolume}$ are
 defined in $\mathit{Modelica}.\mathit{Fluid}.\mathit{Interfaces}$.
 
-\subsubsection*{Restrictions on adding elements}
+\subsubsection{Restrictions on adding elements}
 
 \begin{QFACT}\label{extending-simple-types} Extending simple_types is
 legal either by a short_class_definition or by an extends-clause.
@@ -564,7 +564,7 @@ A lookup in the base_classes is only necessary for error detection.  A
 lookup in the base_classes can simply be ignored in a lookup of a
 class of an extends-clause.
 
-\subsubsection*{Ignoring base_classes}
+\subsubsection{Ignoring base_classes}
 
 A lookup of a base_class name searches in the imported_names but may
 not search in the base_classes in some cases.
@@ -608,7 +608,7 @@ enclosing classes~(s0+s2).
 
 \subsection{A short-cut in a lookup}\label{sec:lookup-cycle}
 
-\subsubsection*{A cycle in a lookup for importing/extending}
+\subsubsection{A cycle in a lookup for importing/extending}
 
 It is common to import/extend a package defined in the class or in its
 subpackages.  Such a package reference, when it appears in a remaining
@@ -652,7 +652,7 @@ end W;
 A similar code can be found in MSL~3.2.3, where $M.M$ as
 Modelica.Media, $W$ as Water, and $C$ as ConstantPropertyLiquidWater.
 
-\subsubsection*{A short-cut in a lookup for an element class}
+\subsubsection{A short-cut in a lookup for an element class}
 
 \begin{QRULE}\label{lexical-enclosing}\label{lookup-shortcut} Lexically enclosing
 classes (the relation that is not extended by importing and extending)
@@ -698,7 +698,7 @@ usually instantiated directly or via extends-clauses.  It is
 considered as a package, when a class name appears in the middle of a
 composite name.  Semantics of a class differs in these uses.
 
-\subsubsection*{Model nesting}
+\subsubsection{Model nesting}
 
 A non-package class can contain a class, and it is possible to
 instantiate an enclosed one.  Here, to instantiate a class means to
@@ -732,7 +732,7 @@ end M;
 \end{lstlisting}
 \end{quote}
 
-\subsubsection*{Processing a class as a package}
+\subsubsection{Processing a class as a package}
 
 Rule~\ref{model-nesting} implies a fact:
 %%%%
@@ -754,7 +754,7 @@ package, but it is allowed unless it is used. \end{QRULE}
 
 \subsection{Modifications}
 
-\subsubsection*{Modification syntax}
+\subsubsection{Modification syntax}
 
 There is no syntactic difference of a modification on a class or a
 variable: $A(...)$ or $x(...)$.  A class form applies to a declaration
@@ -780,7 +780,7 @@ end M;
 parenthesized modifiers may be attached to the LHS).  Especially, the
 LHS does not admit array indexing.\end{QFACT}
 
-\subsubsection*{Modifications to enumerations or {der}-classes}
+\subsubsection{Modifications to enumerations or {der}-classes}
 
 \begin{QRULE}\label{modifications-to-der} (?) Modifications to
 {der}-classes are illegal. \end{QRULE}
@@ -792,7 +792,7 @@ $\mathit{Connections}$, it is not checked.  Note that the grammar in
 the_specification defines initializers (e.g., in $C\;x=e$) as a form
 of modification, and they modify the $\mathit{value}$ attribute.
 
-\subsubsection*{Merging modifiers}
+\subsubsection{Merging modifiers}
 
 Muliple modifications can be applied to the same class.
 
@@ -800,7 +800,7 @@ Muliple modifications can be applied to the same class.
 class have the same $\mathbf{each}$, $\mathbf{final}$,
 $\mathbf{redeclare}$, and $\mathbf{replaceable}$ statuses. \end{QFACT}
 
-\subsubsection*{Resolving names in modifiers}
+\subsubsection{Resolving names in modifiers}
 
 Resolving names in modifiers differs in the LHS and the RHS of
 modifiers.  The LHS of modifiers means $x$ in $x=e$ or in $x(e)$.
@@ -851,7 +851,7 @@ It should be noted that modifiers to extends-redeclarations have
 different scoping rules.  See
 Rule~\ref{scope-rule-in-extends-redeclaration}.
 
-\subsubsection*{Value_modifiers}
+\subsubsection{Value_modifiers}
 
 The components of the simple_types are specially call as attributes.
 
@@ -873,7 +873,7 @@ end M;
 \end{lstlisting}
 \end{quote}
 
-\subsubsection*{Independence of importing and extending from modifications}
+\subsubsection{Independence of importing and extending from modifications}
 
 \begin{QFACT}\label{renaming-in-resolving} Resolving a class of an
 import-clause or extends-clause can be performed ignoring
@@ -891,7 +891,7 @@ element itself takes effect (* in the step of "the element itself"
 up, but empty extends clause nodes are created and inserted into the
 current instance~...\end{qquote}
 
-\subsubsection*{Initializers}
+\subsubsection{Initializers}
 
 Initializers attached to declarations like $C\;x=e$ are modifiers.  An
 initializer_modifier to classes is a set of modifiers to each of the
@@ -958,7 +958,7 @@ end M;
 
 \subsection{Ordering of modifications}
 
-\subsubsection*{Modifier ordering}
+\subsubsection{Modifier ordering}
 
 \begin{QRULE}\label{modifier-precedence} A latter application of
 modifiers has a precedence.  The ordering is defined by a way how
@@ -996,7 +996,7 @@ order.\end{qquote}
 %% (\specref{5.6.1.4}\/), especially
 %% step 4, it suggests the existence of the ordering.
 
-\subsubsection*{Redeclaration ordering}
+\subsubsection{Redeclaration ordering}
 
 \begin{QFACT}\label{modification-ordering} Ordering of modifications
 is inner to outer as strict applications.\end{QFACT}
@@ -1048,7 +1048,7 @@ end M;
 \end{lstlisting}
 \end{quote}
 
-\subsubsection*{Modifiers over redeclarations}
+\subsubsection{Modifiers over redeclarations}
 
 %% \begin{QRULE} Redeclaring a component does not drop the modifiers
 %% attached to the original component declaration.\end{QRULE}
@@ -1156,7 +1156,7 @@ end M;
 \end{lstlisting}
 \end{quote}
 
-\subsubsection*{A target of a redeclaration}
+\subsubsection{A target of a redeclaration}
 
 Note that a target (replaceable) class of a redeclaration cannot be
 defined at the same class, which results in duplicate definitions.
@@ -1213,7 +1213,7 @@ end M;
 \end{lstlisting}
 \end{quote}
 
-\subsubsection*{Imported names being not replaceable}
+\subsubsection{Imported names being not replaceable}
 
 \begin{QRULE}\label{imported-not-replaceable} Imported names are not
 replaceable. \end{QRULE}
@@ -1247,7 +1247,7 @@ To make it replaceable in the code above, it needs to be rewritten as
 $\mathbf{import}\;A;$ and
 $\mathbf{replaceable}\;\mathbf{class}\;X=A.X;$ in $B$.
 
-\subsubsection*{Base names being not replaceable}
+\subsubsection{Base names being not replaceable}
 
 \begin{QRULE}\label{base-not-replaceable} A base class in an
 extends-clause cannot be replaceable, implying it cannot be
@@ -1337,7 +1337,7 @@ end M;
 \end{lstlisting}
 \end{quote}
 
-\subsubsection*{Redeclarations of dimension sizes}
+\subsubsection{Redeclarations of dimension sizes}
 
 Redeclaring dimension sizes works non-$\mathbf{replaceable}$ elements.
 
@@ -1345,7 +1345,7 @@ Redeclaring dimension sizes works non-$\mathbf{replaceable}$ elements.
 provided the sub-typing rules in 6.3 are satisfied. [This is one
 example of redeclare of non-replaceable elements.]\end{qquote}
 
-\subsubsection*{Redeclarations to a class and a component}
+\subsubsection{Redeclarations to a class and a component}
 
 \begin{QFACT} Redeclaring a class and redefining a component are
 independent and both are effective.  \end{QFACT}
@@ -1419,7 +1419,7 @@ end M;
 \end{lstlisting}
 \end{quote}
 
-\subsubsection*{Ordering of redeclarations}
+\subsubsection{Ordering of redeclarations}
 
 \begin{QRULE} A redeclaration in a derived class is applied later to a
 redeclaration in a modifier to a base class (in-element vs.\@
@@ -1472,7 +1472,7 @@ end M;
 \end{lstlisting}
 \end{quote}
 
-\subsubsection*{Redeclarations with prefixes}
+\subsubsection{Redeclarations with prefixes}
 
 \begin{QFACT}\label{inner-outer-in-redeclarations} Replaceables accept
 prefixes inner/outer.  In-element redeclarations accept inner/outer,
@@ -1485,7 +1485,7 @@ but in-modifier redeclarations do not.\end{QFACT}
 A redeclaration merges a part of a replaceable (original) declaration.
 It is called inheriting in the_specification.
 
-\subsubsection*{Merging prefixes in a redeclaration}
+\subsubsection{Merging prefixes in a redeclaration}
 
 \begin{qquote} (\specref{7.3}\/) In redeclarations some parts of the
 original declaration is automatically inherited by the new
@@ -1514,7 +1514,7 @@ That is, $\mathit{parameter}$ on a replaceable replaces one if a
 redeclaration is $\mathit{discrete}$ or $\mathit{continuous}$, but
 does not replace $\mathit{constant}$.
 
-\subsubsection*{Merging modifiers in a redeclaration}
+\subsubsection{Merging modifiers in a redeclaration}
 
 The_implementation follows the rules of merging modifiers, when
 modifiers are in a redeclaration.  Note that it may not be compatible
@@ -1524,7 +1524,7 @@ with some_implementations.
 redeclaration is merged to ones in a replaceable with modifiers in a
 redeclaration being applied later.\end{QRULE}
 
-\subsubsection*{More on merging parts of a redeclaration}
+\subsubsection{More on merging parts of a redeclaration}
 
 \paragraph {Remark}
 
@@ -1632,7 +1632,7 @@ An extends-redeclaration defines a new class based on an inherited
 class and replaces it.  It redefines an inherited class as other
 redeclarations.
 
-\subsubsection*{A base being replaceable}
+\subsubsection{A base being replaceable}
 
 \begin{QFACT} An extends-redeclaration applies to an inherited class.
 It implies that it searches for a base class in the base classes of
@@ -1657,7 +1657,7 @@ simply a duplicate definition, when it were allowed.
 
 %% Rule~\ref{no-colocate-redeclare-replaceable} implies that.
 
-\subsubsection*{A scope of modifiers}
+\subsubsection{A scope of modifiers}
 
 \begin{QRULE}\label{scope-rule-in-extends-redeclaration} The scope of
 the RHS of a modifier to an extends-redeclaration is the class that is
@@ -1731,7 +1731,7 @@ outer instance visible in an inner instance.
 %% modifiers) can have different classes for elements at each
 %% instantiation.
 
-\subsubsection*{An inner-outer relation}
+\subsubsection{An inner-outer relation}
 
 Inner-outer refers to a relation of component embedding.  A word
 {\it{}instance_hierarchy\/} is also used to refer to it.  Assume class
@@ -1784,7 +1784,7 @@ end M;
 \end{lstlisting}
 \end{quote}
 
-\subsubsection*{Class_compatibility}
+\subsubsection{Class_compatibility}
 
 There is a compatibility restriction among classes of inner-outer.
 %%%%
@@ -1805,7 +1805,7 @@ An example of inner/outer prefixes on classes is given in
 the_specification as function definitions (functions are a kind of
 classes).  See \specref{5.4.1}.
 
-\subsubsection*{Syntax restrictions of modifiers}
+\subsubsection{Syntax restrictions of modifiers}
 
 \begin{QFACT} Outer class definitions are short_class_definition.
 Modifiers to outer definitions/declarations are usually ignored unless
@@ -1817,18 +1817,18 @@ matching inner. \end{QFACT}
 %%%%
 See \specref{5.5}.
 
-\subsubsection*{Outers in a class during lookups}
+\subsubsection{Outers in a class during lookups}
 
 \begin{QFACT} Outer classes and constants are treated as non-existent
 when a class is processed as a package. \end{QFACT}
 %%%%
 See also Fact~\ref{class-as-package}.
 
-\subsubsection*{Extending outers}
+\subsubsection{Extending outers}
 
 \begin{QFACT} It is legal to extend an outer class. \end{QFACT}
 
-\subsubsection*{Simultaneous inner/outer}
+\subsubsection{Simultaneous inner/outer}
 
 \begin{QFACT} A simultaneous inner/outer definition/declaration can be
 regarded as being with inner and outer separately.  The only definite
@@ -1865,7 +1865,7 @@ redeclarations.
 A lookup of a name in a class sometimes continues to the enclosing
 class of the class.
 
-\subsubsection*{An enclosing class of a definition-body}
+\subsubsection{An enclosing class of a definition-body}
 
 \begin{QFACT} An enclosing class is a class which defines the
 definition-body of the requested class (assigning a name does not
@@ -1874,7 +1874,7 @@ one, and thus, it is not just the lexical relation.  An enclosing
 class respects the relation of a definition-body, that is, each
 main/base class has a separate enclosing class.\end{QFACT}
 
-\subsubsection*{Scopes not extending to enclosing classes}
+\subsubsection{Scopes not extending to enclosing classes}
 
 Elements from enclosing classes are not visible through import- or
 extends-clauses.  The following code is illegal, because $v$ is
@@ -1902,7 +1902,7 @@ end M1;
 \end{lstlisting}
 \end{quote}
 
-\subsubsection*{A scope to each base class}
+\subsubsection{A scope to each base class}
 
 An enclosing class is associated to each base class.  Different
 classes are visible by the same name in a class.
@@ -1930,7 +1930,7 @@ end M;
 \end{lstlisting}
 \end{quote}
 
-\subsubsection*{An enclosing class is the defining class}
+\subsubsection{An enclosing class is the defining class}
 
 In the following, the enclosing class of $D0.B1$ is $D0|B0$, a base of
 $D0$ (as denoting a base part of a class by $D0|B0$).
@@ -1954,7 +1954,7 @@ end M;
 \end{lstlisting}
 \end{quote}
 
-\subsubsection*{An enclosing class of a reclaration}
+\subsubsection{An enclosing class of a reclaration}
 
 A redeclaration works as expected, as it does not change the scope.
 
@@ -1991,7 +1991,7 @@ end M;
 
 \subsection{Restrictions of within}
 
-\subsubsection*{Processing a target model}
+\subsubsection{Processing a target model}
 
 A target model is usually loaded from a user specified file.  It is
 possible to modify a target model, when it is defined in an enclosing
@@ -2087,7 +2087,7 @@ See \specref{3.8.3}\/ for discrete values.
 A connector is a type or a record that is marked to be used in
 connect_equations.
 
-\subsubsection*{Sides of connectors}
+\subsubsection{Sides of connectors}
 
 A side is an aspect of a connector whether it is connected in a
 declaring class.  An outside_connector is an internal connection in
@@ -2112,7 +2112,7 @@ $m$ is a possibly empty list of components (connectors or
 non-connectors).  (*CHECK*) It is an outside_connector in the case
 when a non-connector intervenes like $c.m.d$.
 
-\subsubsection*{A connection_set}
+\subsubsection{A connection_set}
 
 A connector is a record that may contain simple_types, records,
 operator_records, and connectors (but not models specifically).  A
@@ -2127,10 +2127,10 @@ record in a connector is broken down to its components, but an
 overdetermined_record (or every operator_record (?)) is treated as a
 single element.
 
-\subsubsection*{(?) Connect equations on arrays}
+\subsubsection{(?) Connect equations on arrays}
 (?) Array sizes are determined?
 
-\subsubsection*{Connection restrictions}
+\subsubsection{Connection restrictions}
 
 Connect equations are fixed at translation-time.
 
@@ -2144,7 +2144,7 @@ have parameter expressions for the array expression.]\end{qquote}
 shall be a vector expression. ... The expression of a for-equation
 shall be a parameter expression.\end{qquote}
 
-\subsubsection*{Expandable_connectors}
+\subsubsection{Expandable_connectors}
 
 An expandable_connector is a set of connectors, and it is only
 connected to expandable_connectors.  A component will be included when
@@ -2177,7 +2177,7 @@ potentially present.\end{qquote}
 used in connect_equations unless they are connected to connectors not
 in some expandable_connectors.
 
-\subsubsection*{Stream_connectors}
+\subsubsection{Stream_connectors}
 
 See \specref{15}.
 
@@ -2189,25 +2189,25 @@ stream_variable are considered as stream_variables.
 $\mathrm{inStream}\,(v)$ and $\mathrm{actualStream}\,(v)$ take a
 stream_variable (which may be an array).
 
-\subsubsection*{Overdetermined_types/records}
+\subsubsection{Overdetermined_types/records}
 
 A type/record defining $\mathrm{equalityConstraint}\,(x,y)$ is called
 overdetermined_type/record.  The {Connections} class defines some
 predefined_functions to reduce overdetermined constraints.
 
-\subsubsection*{(?) Operator_record components}
+\subsubsection{(?) Operator_record components}
 
 (?) A connection component of an operator_record is used as an
 aggregate in generated equations with defined eqaulity, summation, or
 negation.
 
-\subsubsection*{Unconnected connectors}
+\subsubsection{Unconnected connectors}
 
 Flow variables are set to zero for unconnected connectors.
 Conditional connectors are unconnected if their conditions are false.
 See Section~\ref{conditional-component}.
 
-\subsubsection*{cardinality operator}
+\subsubsection{cardinality operator}
 
 The $\mathrm{cardinality}\,(c)$ operator returns the count of the uses
 of connect_equations on the inside part of the argument connector.  It
@@ -2248,13 +2248,13 @@ used only in connect_equations, and connect_equations with a disabled
 connector are considered removed.  Connectors in a disabled component
 are disabled.
 
-\subsubsection*{Conditional non-connectors}
+\subsubsection{Conditional non-connectors}
 
 A disabled non-connector component is unusable.  Thus, usually,
 conditional non-connector components are used for the purpose to
 observe particular states in a simulation.
 
-\subsubsection*{Restrictions of conditional connectors}
+\subsubsection{Restrictions of conditional connectors}
 
 Conditional_components are only used in connections.
 %%%%
@@ -2284,7 +2284,7 @@ It is indicated by the example in \specref{4.4.5}.
 Conditional_components cannot have ":" as an array dimension.
 It is described in \specref{6.3}.
 
-\subsubsection*{Conditional declarations}
+\subsubsection{Conditional declarations}
 
 \begin{QFACT}\label{scope-with-conditional-declaration} A condition of
 a conditional_component does not affect the scope.  Particularly, a
@@ -2358,7 +2358,7 @@ uniqueness), thus, the equality of functions needs be defined.
 
 A redefinition/redeclaration can be applied to compatible classes.
 
-\subsubsection*{Compatibility}
+\subsubsection{Compatibility}
 
 \specref{6.3}\/ defines compatibility, which applies when a class is
 redeclared.  It is APPROXIMATELY summarized here.  The conditions of
@@ -2445,11 +2445,11 @@ element being modified.
 inheriting the prefixes from a replaceable to a
 redeclaration.\end{QRULE}
 
-\subsubsection*{Plug-compatibility}
+\subsubsection{Plug-compatibility}
 
 Plug-compatibility is defined in \specref{6.4}.
 
-\subsubsection*{Function compatibility}
+\subsubsection{Function compatibility}
 
 Function compatibility is defined in \specref{6.5}.
 
@@ -2461,7 +2461,7 @@ The table in \specref{4.6}\/ shows the class_kinds.  Every kind is
 syntactically the same as a class, but some restrictions on its
 contents apply to the class with regard to its kind.
 
-\subsubsection*{Class_kinds}\label{sec:class-kinds}
+\subsubsection{Class_kinds}\label{sec:class-kinds}
 
 The following is the copy of the table in \specref{4.6}.
 
@@ -2525,7 +2525,7 @@ A function is described in Section~\ref{sec:functions}.
 (* $\mathbf{function}$ is not stated as a restriction of
 $\mathbf{package}$ while $\mathbf{operator~function}$ is. *)
 
-\subsubsection*{Kind restrictions}
+\subsubsection{Kind restrictions}
 
 The contents of a class are: import-clauses, extends-clauses, class
 definitions (class/enumeration/der), component declarations
@@ -2563,7 +2563,7 @@ $\mathbf{expandable~connector}$, $\mathbf{function}$.  Conversely, the
 classes that do not contain states are: $\mathbf{package}$,
 $\mathbf{operator}$, and $\mathbf{operator~function}$.\end{QFACT}
 
-\subsubsection*{Extending and class_kinds}
+\subsubsection{Extending and class_kinds}
 
 The table in \specref{7.1.3}\/ shows the restrictions on derived vs.\@
 base class relations.  It shows that one class can extend some class.
@@ -2590,14 +2590,14 @@ The excerpt is the entries that are highlighted by shading in the
 table.  We omit the reflexive relation on the same kind:
 $\mathit{kind}_A<:_k\mathit{kind}_A$.
 
-\subsubsection*{(?) Kind compatibilty}
+\subsubsection{(?) Kind compatibilty}
 
 (?) It is unsure that the extending relation is a part of the
 subtyping relation.  See Section~\ref{class-compatibility} for the
 subtyping relation.  (?) A kind is not compatible (accepting
 redeclarations) to other kinds.
 
-\subsubsection*{Kind restrictions in short_class_definitions}
+\subsubsection{Kind restrictions in short_class_definitions}
 
 \begin{QFACT}\label{kind-restriction} Short_class_definitions follow
 the base class restrictions (in \specref{7.1.3}\/).  For example, it
@@ -2612,7 +2612,7 @@ short_class_definition to a class definition with an extends-clause:
 class definition of the form ... is identical ... to the longer
 form.\end{qquote}
 
-\subsubsection*{The class kind}
+\subsubsection{The class kind}
 
 \paragraph{Remark}
 
@@ -2636,7 +2636,7 @@ respect the restriction.\end{QFACT}
 Predefined_classes are called predefined_types in the_specification,
 but some are not types.
 
-\subsubsection*{Simple_types}
+\subsubsection{Simple_types}
 
 A simple_type is one of {Real}, {Integer}, {Boolean}, {String}, and
 $\mathit{enumeration}$.  Enumerations are types.  And, thus, an
@@ -2672,7 +2672,7 @@ The least required ranges of the domains of types are defined by
 Modelica.Constants.inf for Real, and Modelica.Constants.Integer_inf
 for Integer.  (?) The behavior on overflows is unspecified.
 
-\subsubsection*{Integer, String, enumerations}
+\subsubsection{Integer, String, enumerations}
 
 \begin{QFACT}\label{simple-type-conversions} The class names of
 $\mathrm{Integer}$, $\mathrm{String}$, and $\mathit{enumeration}$ can
@@ -2685,11 +2685,11 @@ convert between integers and enumerations.
 An enumeration definition by $\mathbf{enumeration}\,(:)$ is an
 unspecified list, which must be redeclared (\specref{4.8.5.4}\/).
 
-\subsubsection*{Ordering of simple_types}
+\subsubsection{Ordering of simple_types}
 
 See relational operators in Section~\ref{sec:relational-operators}.
 
-\subsubsection*{Predefined_classes}
+\subsubsection{Predefined_classes}
 
 Predefined_type is simple_types and other classes defined in
 \specref{4.8.8}.  They are {Clock}, {StateSelect}, {ExternalObject},
@@ -2710,7 +2710,7 @@ annotations.
 
 \end{description}
 
-\subsubsection*{Connections}
+\subsubsection{Connections}
 
 Connections is a package is used to remove overdetermined equations.
 It is described in \specref{9.4}.  A type/record defining
@@ -2743,7 +2743,7 @@ by $\mathit{equalityConstraint}\,(x,y)$ equations.
 A record is a record in a usual sense.  Restrictions on components of
 a record are described in Section~\ref{sec:class-kinds}.
 
-\subsubsection*{Class_equality}
+\subsubsection{Class_equality}
 
 \begin{QFACT}\label{record-class-identity} An identity of a record
 class is not clearly defined.  The equality of the lists of the
@@ -2771,19 +2771,19 @@ end M;
 See also Section~\ref{sec:class-equality}.  (*CHECK*) Function calls may
 require stricter equality.
 
-\subsubsection*{Casting}
+\subsubsection{Casting}
 
 A record constructor can take a class instance, and it is called
 casting.  See \specref{12.6.1}.
 
-\subsubsection*{equalityConstraint}
+\subsubsection{equalityConstraint}
 
 A function $\mathit{equalityConstraint}$ may be defined in types and
 records.  When it is defined, $\mathit{equalityConstraint(...)}=0$ is
 added as equations (0 in the RHS is used for an array of zeros).  See
 \specref{9.4.1}.
 
-\subsubsection*{Record constructors}\label{sec:no-record-constructor}
+\subsubsection{Record constructors}\label{sec:no-record-constructor}
 
 There is no syntactic construct (expression) to construct records.  A
 record need be declared as a variable.
@@ -2792,7 +2792,7 @@ record need be declared as a variable.
 
 \subsection{Arrays}
 
-\subsubsection*{Component array declarations}
+\subsubsection{Component array declarations}
 
 \begin{QFACT} Dimensions of component arrays are translation-time
 constants, while dimensions of other arrays (appearing in functions)
@@ -2815,7 +2815,7 @@ indirectly causes cycles in the dependency.  For example,
 $\mathit{dim}$ in $x[\mathit{dim}]$ may not refer to a constant
 $x[1].c$.
 
-\subsubsection*{Array dimension ordering}
+\subsubsection{Array dimension ordering}
 
 \begin{QFACT} Multi-dimensional arrays are arrays of arrays.  The
 ordering of an array dimension is "row-major".\end{QFACT}
@@ -2837,12 +2837,12 @@ that Fortran is column-major.
 The definition of the {fill} operator by recursion also implies the
 row-major ordering (\specref{10.3.3}\/).
 
-\subsubsection*{Rectangle-ness of array dimension}
+\subsubsection{Rectangle-ness of array dimension}
 
 An array is rectangular, and an array of arrays has the same size in
 each element.  This applies to the uses of nested array constructors.
 
-\subsubsection*{Non-integer array dimension}
+\subsubsection{Non-integer array dimension}
 
 Enumeration types and Boolean can be used as a dimension, and their
 elements are used in indexing.  They can also be used as ranges in
@@ -2871,19 +2871,19 @@ bound true.  $\bullet$\,An array dimension indexed by enumeration
 values of the type E=enumeration(e1, e2, ..., en) has the lower bound
 E.e1 and the upper bound E.en.\end{qquote}
 
-\subsubsection*{Function promotions to arrays}
+\subsubsection{Function promotions to arrays}
 
 Functions are promoted to array arugments.  In promoting functions,
 array arguments are promoted to higher dimensinal arrays.
 
-\subsubsection*{Redeclaring array dimensions}
+\subsubsection{Redeclaring array dimensions}
 
 Array dimensions may be redeclared.
 %%%%
 \begin{qquote} (\specref{7.3.3}\/) Modification on array dimensions
 are redeclarations.\end{qquote}
 
-\subsubsection*{Empty arrays}
+\subsubsection{Empty arrays}
 
 \begin{QFACT} An array indexed with
 $\mathit{lower~bound}>\mathit{upper~bound}$, such as $x[1{:}0]$, is an
@@ -2906,7 +2906,7 @@ Media/package.mo).
 A {fill} with a zero dimension can be used to create an empty array,
 such as $\mathrm{fill}\,("",0)$.
 
-\subsubsection*{Homogeneity of array elements}
+\subsubsection{Homogeneity of array elements}
 
 Instances of an array elements are similar, in that, the classes of
 the elements are similar, and the number of dimenions of them are the
@@ -2918,13 +2918,13 @@ they can be disabled.  This ensures the identity of promoting
 operators to arrays.  (?) Class similarity is defined by class
 compatibility.
 
-\subsubsection*{(?) Array class definition}
+\subsubsection{(?) Array class definition}
 
 An array type definition for simple types
 $\mathbf{type}\;B=\mathrm{Real}\;[4]$ is legal.  (?) In contrast, a
 definition like $\mathbf{model}\;B=A\;[4]$ does not work.
 
-\subsubsection*{Array package definition}
+\subsubsection{Array package definition}
 
 \begin{QFACT} An array package definition like
 $\mathbf{package}\;B=A\;[4]$ is illegal.\end{QFACT}
@@ -2936,13 +2936,13 @@ alias of $A$.
 
 \subsection{Array expressions}
 
-\subsubsection*{Array indexing}
+\subsubsection{Array indexing}
 
 \begin{QFACT} Array indexing is only in
 $\mathit{identifier}\,[i0,i1,...]$.  General forms
 $\mathit{expression}\,[i0,i1,...]$ are not allowed.\end{QFACT}
 
-\subsubsection*{Array ranges}\label{sec:array-ranges}
+\subsubsection{Array ranges}\label{sec:array-ranges}
 
 $\textrm{-}:\textrm{-}$ and $\textrm{-}:\textrm{-}:\textrm{-}$ create
 a one dimensional array (vector) of Real, Integer, Boolean, and
@@ -2951,7 +2951,7 @@ are Integers, or Real vectors otherwise.  Triple argument ones are not
 defined for Boolean and enumerations.  They may create an empty
 vector.  See \specref{10.4.3}\/ and also \specref{3.2}.
 
-\subsubsection*{Array constructors}
+\subsubsection{Array constructors}
 
 An expression $\{...\}$ creates an array, which is one-dimensional if
 the elements are scalar or multidimensional otherwise.  An array
@@ -2959,7 +2959,7 @@ constructor cannot be empty by the syntax definition, although an
 array can have zero in its dimension (it ensures the type an array
 constructor returns).
 
-\subsubsection*{Predefined_functions on arrays}\label{sec:array-size}
+\subsubsection{Predefined_functions on arrays}\label{sec:array-size}
 
 $\mathrm{ndims}\,(A)=0$ and $\mathrm{size}\,(A)=\{\}$ (an empty array)
 for a scalar $A$ (See \specref{10.3.1}\/).
@@ -2988,7 +2988,7 @@ comprehensions.  An iterator ranges in Real, Integer, Boolean, and an
 enumeration, and its range is specified by a vector expression or by a
 type of Boolean or an enumeration.
 
-\subsubsection*{Range expressions of iterators}
+\subsubsection{Range expressions of iterators}
 
 For-iterators with multiple iterators are defined by expanding to
 nested ones.
@@ -3022,7 +3022,7 @@ handling by nesting iterators.
 evaluated once for each for-equation, and is evaluated in the scope
 immediately enclosing the for-equation.\end{qquote}
 
-\subsubsection*{Implicit iterator ranges}\label{sec:implicit-iterator-ranges}
+\subsubsection{Implicit iterator ranges}\label{sec:implicit-iterator-ranges}
 
 A range expression of an iterator is optional, and the range is
 inferred from the uses of an iterator.  Implicit ranges are accepted
@@ -3080,7 +3080,7 @@ Real x[R];
 Operators can be overloaded on the arguments, one of which is an
 operator record or an array of it.
 
-\subsubsection*{Overloading}
+\subsubsection{Overloading}
 
 \begin{QFACT} Functions are not overloaded.  Functions are classes and
 having the same name is a duplication.\end{QFACT}
@@ -3093,7 +3093,7 @@ reductions (min, max, sum, and product).  Also note that, functions
 which take indefinite number of arguments cannot be defined as
 functions.
 
-\subsubsection*{List of operators}
+\subsubsection{List of operators}
 
 The operators can be overloaded.  See \specref{14}.  The set of the
 overloaded operators is fixed.
@@ -3132,7 +3132,7 @@ Real x = Real(10);
 \end{lstlisting}
 \end{quote}
 
-\subsubsection*{Resolution rules}
+\subsubsection{Resolution rules}
 
 The rules of resolving overloading are described in \specref{14.4}\/
 and \specref{14.5}.
@@ -3177,7 +3177,7 @@ applicable on the first argument.
 
 \end{itemize}
 
-\subsubsection*{Operators}
+\subsubsection{Operators}
 
 The names of the operators need be quoted by {\tt{}'} to make them
 recognized as ordinary identifiers, for example, \verb|'+'|.  (?) It
@@ -3187,7 +3187,7 @@ is not clear quoting is redundant for {\tt{}'constructor'} and
 Refer to sections, {14.2} for constructors, {14.3} for conversions,
 {14.4} for binaries, and {14.5} for unaries.
 
-\subsubsection*{Operators on arrays}
+\subsubsection{Operators on arrays}
 
 Arrays are the general entity including scalars, vectors and matrices.
 Scalars are arrays with no dimensions, vectors with one dimension, and
@@ -3203,7 +3203,7 @@ must be encapsulated;\end{qquote}
 operator record, except as a short class definition modifying the
 default attributes...\end{qquote}
 
-\subsubsection*{(?) Default constructors}
+\subsubsection{(?) Default constructors}
 
 %%%%%%%%%%%%%%%%
 
@@ -3213,7 +3213,7 @@ Operators are overloaded on the arguments of a simple_type or an array
 of it.  The set of operators is different from the one for operator
 records.
 
-\subsubsection*{List of operators}
+\subsubsection{List of operators}
 
 \begin{quote}
 \spaceskip=1.5em
@@ -3224,7 +3224,7 @@ records.
 \end{verbatim}
 \end{quote}
 
-\subsubsection*{Equalities}
+\subsubsection{Equalities}
 
 \paragraph{(?) Equality {\tt{}=}}
 
@@ -3232,7 +3232,7 @@ The equality and assignment are element-wise.  Classes which admit
 equality are simple_types or records whose components admit equality.
 Arrays admit equality when the class of the elements admits equality.
 
-\subsubsection*{Operators on numbers}
+\subsubsection{Operators on numbers}
 
 The numbers (or the numerical types) are subtypes of either Real or
 Integer.  Conversion from an Integer to a Real is applied, when an
@@ -3314,20 +3314,20 @@ The operator \verb'.^' on numbers is the element-wise exponentiation.
 If one of the arguments is a scalar, it is promoted to an array.
 Arguments of Integers are promoted to Reals.
 
-\subsubsection*{Operators on booleans}
+\subsubsection{Operators on booleans}
 
 \paragraph{Booleans {\tt{}and} {\tt{}or} {\tt{}not}}
 
 The operators work on boolean values and element-wise.
 
-\subsubsection*{Operators on strings}
+\subsubsection{Operators on strings}
 
 \paragraph{Binary {\tt{}+}}
 
 The operator \verb'+' on strings is the concatenation and
 element-wise.
 
-\subsubsection*{Relational operators}\label{sec:relational-operators}
+\subsubsection{Relational operators}\label{sec:relational-operators}
 
 \paragraph{Relationals {\tt{}==} {\tt{}<>} {\tt{}<} {\tt{}<=} {\tt{}>}
 {\tt{}>=}}
@@ -3375,15 +3375,79 @@ legal.\end{qquote}
 
 %%%%%%%%%%%%%%%%
 
-\subsection{Constant expressions}
+\subsection{Constants}
+
+Variables declared with parameter or constant variability do not
+change their values during simulation.  Also, some expressions are
+required to be translation-time constants.
+
+\subsubsection{Values of constants}
+
+The value of a constant is specified by an initializer.  In contrast,
+the value of a parameter may be specified by an initializer, the
+$\mathit{start}$ attribute, or an initial_equation.  When specifying
+by the $\mathit{start}$ attribute, $\mathit{fixed}=\mathit{true}$ is
+required.  When specifying by an initial_equation,
+$\mathit{fixed}=\mathit{false}$ is required.  When specifying by an
+initial_equation, a $\mathit{start}$ value is ignored.
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+model M0
+    parameter Real x0=0;
+    /* Start value with fixed=true: */
+    parameter Real x1 (fixed=true,start=10);
+    /* Initial equation with fixed=false: */
+    parameter Real x2 (fixed=false);
+    /* Initial equation with fixed=false, with start value ignored: */
+    parameter Real x3 (fixed=false,start=10);
+    initial equation
+    x2=20;
+    x3=30;
+end M0;
+
+/*ILLEGAL*/
+model M1
+    /* Start value with fixed=false: */
+    parameter Real x0 (fixed=false,start=10);
+    /* Initial equation with fixed=true implied: */
+    parameter Real x1;
+    initial equation
+    x1=10;
+end M1;
+end M;
+
+\end{lstlisting}
+\end{quote}
+
+For example, in .Modelica.Fluid.Valves.BaseClasses.PartialValve in the
+MSL (with some editting),
+%%%%
+\begin{quote}
+\begin{lstlisting}[aboveskip=-\baselineskip]
+partial model PartialValve
+  parameter SI.Area Av(
+    fixed = CvData == Modelica.Fluid.Types.CvTypes.Av,
+    start = m_flow_nominal
+                / sqrt(rho_nominal * dp_nominal)
+                * valveCharacteristic(opening_nominal));
+initial equation
+  if CvData == CvTypes.Kv then
+    Av = Kv * Kv2Av;
+  elseif CvData == CvTypes.Cv then
+    Av = Cv * Cv2Av;
+  end if;
+\end{lstlisting}
+\end{quote}
+
+\subsubsection{Constant expressions}
 
 A dimension of a component array needs to be translation-time
 constants, and thus, folding constants is essentially required.  A
-vast set of expressions are allowed for array dimensions, and
-especially for example, they include array indexing because it is an
-operator.  They include user defined functions, too.  Note that we
-refer here by constants to both constants and parameters (parameter is
-a wider set in the_specification).
+vast set of expressions are allowed for array dimensions.  They
+include array indexing and user defined functions, for example.  Note
+that we refer here by constants to both constants and parameters
+(parameter is a wider set in the_specification).
 
 \begin{qquote} (\specref{3.8.2}\/) a function or operator with
 parameter subexpressions is a parameter expression.\end{qquote}
@@ -3437,7 +3501,7 @@ element.
 
 \subsection{Expressions}
 
-\subsubsection*{(?) pure}\label{pure-expression}
+\subsubsection{(?) pure}\label{pure-expression}
 
 $\mathrm{pure}\,(...)$ is not well specified.
 %%%%
@@ -3447,11 +3511,11 @@ allows calling impure functions in any pure context,\end{qquote}
 $\mathrm{pure}$ accepts only one argument, although it can accept a
 list of arguments by the syntax definition.
 
-\subsubsection*{Predefined_operators}
+\subsubsection{Predefined_operators}
 
 See Section~\ref{sec:predefined-operators}.
 
-\subsubsection*{Result types}
+\subsubsection{Result types}
 
 A result type of an expression can be determined by subexpressions,
 like C~Language.
@@ -3472,7 +3536,7 @@ connectors, operator_records) and arrays of them, and functions.
 contain components of the restricted classes type, record, operator
 record, and function; i.e. no model or block components.\end{qquote}
 
-\subsubsection*{(?) Array dimensions}
+\subsubsection{(?) Array dimensions}
 
 A dimension of an array variable in a function can be a runtime value.
 A part of a dimension of a type defined elsewhere is a
@@ -3485,7 +3549,7 @@ input formal parameters, or given by constant or parameter
 expressions, or by expressions containing combinations of
 those...\end{qquote}
 
-\subsubsection*{Local variables}
+\subsubsection{Local variables}
 
 An input/output or local variable declaration accepts general form of
 modifiers as well as initializers by =-sign.
@@ -3497,12 +3561,12 @@ value in its declaration, ...\end{qquote}
 Local variables (non-input/output ones) need be declared in the
 protected section.
 
-\subsubsection*{(?) Restriction}
+\subsubsection{(?) Restriction}
 
 \begin{qquote} (\specref{12.2}\/) $\bullet$\,A function may not be used
 in connections...\end{qquote}
 
-\subsubsection*{(?) No results}
+\subsubsection{(?) No results}
 
 An output of an empty array is used to return no values.  See an
 example in \specref{9.4.3.1}.
@@ -3521,12 +3585,12 @@ function equalityConstraint
 
 \subsection{Equations}
 
-\subsubsection*{if-equation}
+\subsubsection{if-equation}
 
 Each branch of $\mathbf{if}$ is tested sequentially, and the first
 true branch is taken.
 
-\subsubsection*{for-equation}
+\subsubsection{for-equation}
 
 A range of $\mathbf{for}$ is a vector expression (real or integer)
 that is a translation-time constant, or types of Boolean or an
@@ -3561,7 +3625,7 @@ refers to a class or a variable.
 
 \subsection{Additional rules}
 
-\subsubsection*{(?) Steps of class name resolution}
+\subsubsection{(?) Steps of class name resolution}
 
 Class name resolution in a class may not proceed to process component
 classes at once.  It may stop at resolving classes of
@@ -3599,7 +3663,7 @@ step, the base-classes are not ready to lookup in (.Modelica) yet.
 \end{verbatim}
 \end{quote}
 
-\subsubsection*{No non-each redeclarations}
+\subsubsection{No non-each redeclarations}
 
 It is not possible to apply distinct redeclarations to elements of an
 array.  Splitting of a redeclaration is not defined, and there is no
@@ -3685,7 +3749,7 @@ etc.
 
 (\specref{2.3.3}\/)
 
-\subsubsection*{Syntactic keywords}
+\subsubsection{Syntactic keywords}
 
 \begin{quote}%\widespacing
 \def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
@@ -3751,7 +3815,7 @@ etc.
 \hfill
 \end{quote}
 
-\subsubsection*{Reserved type names}
+\subsubsection{Reserved type names}
 
 \begin{quote}%\widespacing
 \def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
@@ -3774,7 +3838,7 @@ These names have overloaded meanings.
 
 (\specref{4.8}\/)
 
-\subsubsection*{Classes}
+\subsubsection{Classes}
 
 \begin{quote}
 %\spaceskip=2em
@@ -3796,7 +3860,7 @@ These names have overloaded meanings.
 enumerations are members of simple_types.  It may be referred to as
 {\it{}EnumTypeName\/} in the_specification.
 
-\subsubsection*{Attributes}
+\subsubsection{Attributes}
 
 \begin{quote}%\widespacing
 \def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
@@ -3810,7 +3874,7 @@ enumerations are members of simple_types.  It may be referred to as
 
 \subsection{Predefined_variables}
 
-\subsubsection*{time}
+\subsubsection{time}
 
 (\specref{3.6.7}\/)
 
@@ -3822,7 +3886,7 @@ enumerations are members of simple_types.  It may be referred to as
 
 $\mathit{time}$ has a special scoping rule.
 
-\subsubsection*{end}
+\subsubsection{end}
 
 \begin{quote}%\widespacing
 \def\w#1 {\makebox[8em][l]{#1} }\raggedright\let~=\enspace
@@ -3835,7 +3899,7 @@ Variables $\mathit{end}$ have a special scoping rule.
 
 \subsection{Operators with special syntax}
 
-\subsubsection*{Arithmetic operators (on scalars or arrays of Real, Integer)}
+\subsubsection{Arithmetic operators (on scalars or arrays of Real, Integer)}
 
 (\specref{10.6}\/)
 
@@ -3855,7 +3919,7 @@ Variables $\mathit{end}$ have a special scoping rule.
 \specref{10.6.7},
 \specref{10.6.8}.
 
-\subsubsection*{Relational operators (on scalars of Real, Integer, Boolean, String)}
+\subsubsection{Relational operators (on scalars of Real, Integer, Boolean, String)}
 
 (\specref{10.6.10}\/)
 
@@ -3866,7 +3930,7 @@ Variables $\mathit{end}$ have a special scoping rule.
 \end{verbatim}
 \end{quote}
 
-\subsubsection*{Boolean operators (on scalars or arrays of Boolean)}
+\subsubsection{Boolean operators (on scalars or arrays of Boolean)}
 
 (\specref{10.6.11}\/)
 
@@ -3877,7 +3941,7 @@ and or not
 \end{verbatim}
 \end{quote}
 
-\subsubsection*{Class constructors}
+\subsubsection{Class constructors}
 
 \begin{quote}
 \spaceskip=2em
@@ -3888,7 +3952,7 @@ and or not
 
 \noindent These are used in defining constructors.
 
-\subsubsection*{Array constructor}
+\subsubsection{Array constructor}
 (\specref{10.4}\/)
 
 \begin{quote}
@@ -3899,7 +3963,7 @@ and or not
 
 \noindent This can be written as $\mathrm{array}\,(...)$.
 
-\subsubsection*{Matrix constructor}
+\subsubsection{Matrix constructor}
 (\specref{10.4.2}\/)
 
 \begin{quote}
@@ -3912,7 +3976,7 @@ and or not
 is a restricted notation of $\mathrm{cat}\,(...)$ for two dimensional
 cases.
 
-\subsubsection*{String literal}
+\subsubsection{String literal}
 
 \begin{quote}
 \begin{verbatim}
@@ -3920,7 +3984,7 @@ cases.
 \end{verbatim}
 \end{quote}
 
-\subsubsection*{String operators}
+\subsubsection{String operators}
 
 \begin{quote}
 \begin{verbatim}
@@ -3928,7 +3992,7 @@ cases.
 \end{verbatim}
 \end{quote}
 
-\subsubsection*{Array indexing operator}
+\subsubsection{Array indexing operator}
 (\specref{10.5}\/)
 
 \begin{quote}
@@ -3937,7 +4001,7 @@ _ [...]
 \end{verbatim}
 \end{quote}
 
-\subsubsection*{Record access operator}
+\subsubsection{Record access operator}
 
 \begin{quote}
 \begin{verbatim}
@@ -3945,7 +4009,7 @@ _ [...]
 \end{verbatim}
 \end{quote}
 
-\subsubsection*{Function call}
+\subsubsection{Function call}
 
 \begin{quote}
 \begin{verbatim}
@@ -3953,7 +4017,7 @@ _ (...)
 \end{verbatim}
 \end{quote}
 
-\subsubsection*{Array range}
+\subsubsection{Array range}
 (\specref{10.4.3}\/)
 
 %%({3.6.4 Array Range Operator} is just a pointer to {10.4.3})
@@ -3967,7 +4031,7 @@ _:_ _:_:_
 
 \noindent See Section~\ref{sec:array-ranges}.
 
-\subsubsection*{Tuples}
+\subsubsection{Tuples}
 (\specref{8.3.1}, \specref{11.2.1.1}\/)
 
 \begin{quote}
@@ -3981,7 +4045,7 @@ _:_ _:_:_
 used in equalities and assignments for functions returning multiple
 values.
 
-\subsubsection*{Records}
+\subsubsection{Records}
 
 There is no operator to construct records.  See
 Section~\ref{sec:no-record-constructor}.
@@ -4004,7 +4068,7 @@ call syntax.
 to define it as a function.  Note that a $v[i]$ form only works on
 variables. *)
 
-\subsubsection*{Numeric functions and conversion functions}
+\subsubsection{Numeric functions and conversion functions}
 (\specref{3.7.1}\/)
 
 \begin{quote}%\widespacing
@@ -4017,7 +4081,7 @@ variables. *)
 \w String(...)
 \end{quote}
 
-\subsubsection*{Event triggering mathematical functions}
+\subsubsection{Event triggering mathematical functions}
 (\specref{3.7.1.1}\/)
 
 \begin{quote}%\widespacing
@@ -4030,7 +4094,7 @@ variables. *)
 \w integer(x)
 \end{quote}
 
-\subsubsection*{Predefined mathematical functions}
+\subsubsection{Predefined mathematical functions}
 (\specref{3.7.1.2}\/)
 
 \begin{quote}%\widespacing
@@ -4050,7 +4114,7 @@ variables. *)
 \w log10(x)
 \end{quote}
 
-\subsubsection*{Derivative and special purpose operators}
+\subsubsection{Derivative and special purpose operators}
 (\specref{3.7.2}\/)
 
 \begin{quote}%\widespacing
@@ -4073,7 +4137,7 @@ can accept a list of arguments by the syntax definition.
 inStream(v) and actualStream(v) introduce a new state variable and
 equations related to a given steam variable $v$.
 
-\subsubsection*{Event-related operators}
+\subsubsection{Event-related operators}
 (\specref{3.7.3}\/)
 
 \begin{quote}%\widespacing
@@ -4089,21 +4153,21 @@ equations related to a given steam variable $v$.
 \w reinit(x,~expr)
 \end{quote}
 
-\subsubsection*{Assert}
+\subsubsection{Assert}
 (\specref{8.3.7}\/)
 
 \begin{quote}\widespacing
 assert(condition,~message,~level)
 \end{quote}
 
-\subsubsection*{Terminate}
+\subsubsection{Terminate}
 (\specref{8.3.8}\/)
 
 \begin{quote}\widespacing
 terminate(s)
 \end{quote}
 
-\subsubsection*{Array dimension and size functions}
+\subsubsection{Array dimension and size functions}
 (\specref{10.3.1}\/)
 
 \begin{quote}%\widespacing
@@ -4115,7 +4179,7 @@ terminate(s)
 
 \noindent See~\ref{sec:array-size}.
 
-\subsubsection*{Dimensionality conversion functions}
+\subsubsection{Dimensionality conversion functions}
 (\specref{10.3.2}\/)
 
 \begin{quote}%\widespacing
@@ -4125,7 +4189,7 @@ terminate(s)
 \w matrix(A)
 \end{quote}
 
-\subsubsection*{Array constructor}
+\subsubsection{Array constructor}
 (\specref{10.4.1}\/)
 
 \begin{quote}\widespacing
@@ -4134,7 +4198,7 @@ array(...)
 
 \noindent This can be written as $\{...\}$.
 
-\subsubsection*{Specialized array constructor functions}
+\subsubsection{Specialized array constructor functions}
 (\specref{10.3.3}\/)
 
 \begin{quote}%\widespacing
@@ -4149,7 +4213,7 @@ array(...)
 
 \noindent See~\ref{sec:array-size}.
 
-\subsubsection*{Array concatenation}
+\subsubsection{Array concatenation}
 (\specref{10.4.2}\/)
 
 \begin{quote}\widespacing
@@ -4159,7 +4223,7 @@ cat(k,~A,~B,~C,~...)
 \noindent This can be written as $[...]$ in the two dimensional
 case.
 
-%% \subsubsection*{Predefined array functions}
+%% \subsubsection{Predefined array functions}
 %% (\specref{10.3})
 %% \begin{quote}
 %% \spaceskip=2em
@@ -4168,7 +4232,7 @@ case.
 %% promote(A,n)
 %% \end{quote}
 
-\subsubsection*{Matrix and vector algebra functions}
+\subsubsection{Matrix and vector algebra functions}
 (\specref{10.3.5}\/)
 
 \begin{quote}%\widespacing
@@ -4180,7 +4244,7 @@ case.
 \w skew(x)
 \end{quote}
 
-\subsubsection*{Reduction functions and operators}
+\subsubsection{Reduction functions and operators}
 (\specref{10.3.4}\/)
 
 \begin{quote}%\widespacing
@@ -4197,7 +4261,7 @@ case.
    product(e(i,~...,~j)~for~i~in~u,~...,~j~in~v)
 \end{quote}
 
-\subsubsection*{pure}
+\subsubsection{pure}
 (\specref{12.3}\/)
 
 \begin{quote}\widespacing
@@ -4210,7 +4274,7 @@ pure(...)
 
 \subsection{Predefined elements}
 
-\subsubsection*{Functions in types and records}
+\subsubsection{Functions in types and records}
 
 \begin{quote}\widespacing
 equalityConstraint(x,~y)
@@ -4220,20 +4284,20 @@ equalityConstraint(x,~y)
 
 \subsection{Synchronous language}
 
-\subsubsection*{Clock class}
+\subsubsection{Clock class}
 
 \begin{quote}
 class Clock;
 \end{quote}
 
-\subsubsection*{Discrete states}
+\subsubsection{Discrete states}
 (\specref{16.4}\/)
 
 \begin{quote}\widespacing
 previous(u)
 \end{quote}
 
-\subsubsection*{Base-clock conversion operators}
+\subsubsection{Base-clock conversion operators}
 (\specref{16.5.1}\/)
 
 \begin{quote}%\widespacing
@@ -4242,7 +4306,7 @@ previous(u)
 \w hold(u)
 \end{quote}
 
-\subsubsection*{Sub-clock conversion operators}
+\subsubsection{Sub-clock conversion operators}
 (\specref{16.5.2}\/)
 
 \begin{quote}%\widespacing
@@ -4254,7 +4318,7 @@ previous(u)
 \w noClock(u)
 \end{quote}
 
-\subsubsection*{Other operators}
+\subsubsection{Other operators}
 (\specref{16.10}\/)
 
 \begin{quote}%\widespacing
@@ -4267,7 +4331,7 @@ previous(u)
 
 \subsection{State machines}
 
-\subsubsection*{Transitions}
+\subsubsection{Transitions}
 (\specref{17.1}\/)
 
 \begin{quote}%\widespacing
@@ -4292,7 +4356,7 @@ annotations for simulation experiments (18.4), annotations for
 functions (12.7, 12.8 and 12.9).  Some of them are likely mandatory to
 translators.
 
-\subsubsection*{Derivative and inverses}
+\subsubsection{Derivative and inverses}
 (\specref{12.7.1}, \specref{12.8}\/)
 
 \begin{quote}\spaceskip=2em
@@ -4302,7 +4366,7 @@ inverse
 
 These directives are placed in function body elements.
 
-\subsubsection*{(Redeclaration choices)}
+\subsubsection{(Redeclaration choices)}
 (\specref{7.3.4}\/)
 
 \begin{quote}\spaceskip=2em
@@ -4314,14 +4378,14 @@ choice
 and is placed at replacable and non-replacable elements by
 short_class_definitons or declarations.
 
-\subsubsection*{Fortran interface}
+\subsubsection{Fortran interface}
 (\specref{12.9.1.2}\/)
 
 \begin{quote}\spaceskip=2em
 arrayLayout
 \end{quote}
 
-\subsubsection*{External libraries}
+\subsubsection{External libraries}
 (\specref{12.9.4}\/)
 
 \begin{quote}%\spaceskip=2em
@@ -4332,7 +4396,7 @@ arrayLayout
 \w LibraryDirectory
 \end{quote}
 
-\subsubsection*{Code generation}
+\subsubsection{Code generation}
 (\specref{18.3}\/)
 
 \begin{quote}%\spaceskip=2em
@@ -4357,7 +4421,7 @@ definitions.
 $\mathit{smoothOrder}=n$ is placed in algorithm sections of functions.
 It takes optional argument $\mathit{normallyConstant}$.
 
-\subsubsection*{Simulation setting}
+\subsubsection{Simulation setting}
 (\specref{18.4}\/)
 
 \begin{quote}%\spaceskip=2em
@@ -4371,7 +4435,7 @@ It takes optional argument $\mathit{normallyConstant}$.
 
 (?) $\mathit{experiment}$ is placed in class body elements.
 
-\subsubsection*{Singleton instances}
+\subsubsection{Singleton instances}
 (\specref{18.5}\/)
 
 \begin{quote}\spaceskip=2em
@@ -4380,7 +4444,7 @@ singleInstance
 
 (?) $\mathit{singleInstance}$ is palced in class body elements.
 
-\subsubsection*{Diagnostics messages}
+\subsubsection{Diagnostics messages}
 (\specref{18.7}\/)
 
 \begin{quote}%\spaceskip=2em
@@ -4392,7 +4456,7 @@ singleInstance
 
 $\mathit{obsolete}$ applies to classes.
 
-\subsubsection*{Version setting}
+\subsubsection{Version setting}
 (\specref{18.8.2}\/)
 
 \begin{quote}%\spaceskip=2em
@@ -4955,14 +5019,14 @@ import n2 = pkg.n2;
 
 \subsection{Handling of modifiers}
 
-\subsubsection*{Modifier applications}
+\subsubsection{Modifier applications}
 
 The_syntaxer associates an application of modifiers to a declaration
 which is converted to a modification.  Association to a class
 definition $C$ is by temporarily creating a syntax element
 $\mathit{refine}\,(C, ...)$ with modifiers.
 
-\subsubsection*{Redeclarations}
+\subsubsection{Redeclarations}
 
 The_syntaxer handles a redeclaration by replacing a replaceable.
 Similarly, it handles an extends-redeclaration by replacing a
@@ -4973,7 +5037,7 @@ replaceable in class elements, because the_syntaxer delays merging
 elements in a main and base classes.  See
 Rule~\ref{multiple-definitions}.
 
-\subsubsection*{Scoped modifiers}
+\subsubsection{Scoped modifiers}
 
 Names and expressions are attached with an environment which records
 the scope where they occur, especially for the RHS of modifiers.  This
@@ -4984,7 +5048,7 @@ modifiers attached to extends-clauses.  Such modifiers have to be
 moved inside a base class before resolving the modifiers, because it
 lacks the information of the base classes at that time.
 
-\subsubsection*{A value attribute}
+\subsubsection{A value attribute}
 
 An initializer_modifier to the simple_types and a modifier to the
 $\mathit{value}$ attribute are synonymous.  The_implementation handles
@@ -4992,7 +5056,7 @@ them by converting an initializer_modifier to a $\mathit{value}$
 modfier.  See Fact~\ref{value-attribute} about a $\mathit{value}$
 attribute.
 
-\subsubsection*{Initializer_modifiers}
+\subsubsection{Initializer_modifiers}
 
 An initializer_modifier like $x=e$ is converted to modifiers
 corresponding to components.  That is, $x=e$ is converted to
@@ -5035,7 +5099,7 @@ section~\ref{sec:lookup-cycle}.
 
 \subsection{Other specific behaviors}
 
-\subsubsection*{Class prefixes}
+\subsubsection{Class prefixes}
 
 The_implementation accepts $\mathbf{encapsulated}$ only to a
 long-class-specifier but errs/ignores to a short-class-specifier and a
@@ -5044,24 +5108,24 @@ der-class-specifier.  See Fact~\ref{encapsulated-class}.
 The_implementation ignores $\mathbf{final}$ to a class.  See
 Fact~\ref{final-class}.
 
-\subsubsection*{Folding constants}
+\subsubsection{Folding constants}
 
 The_implementation uses int of SML for Integer values.  It may raises
 exceptions on overflows in folding constants.
 
-\subsubsection*{Constants and parameters}
+\subsubsection{Constants and parameters}
 
 The_implementation does not distinguish constants and parameters.
 Both are treated as translation-time constants.  See
 Fact~\ref{parameters}.
 
-\subsubsection*{Variables {time} and {end}}
+\subsubsection{Variables {time} and {end}}
 
 The_implementation treats {time} and {end} as if they were defined in
 the unnamed-enclosing-class, because a look up of a name ends there.
 It violates the Rule~\ref{time-and-end}.
 
-\subsubsection*{Unifying multiply inherited classes/variables}
+\subsubsection{Unifying multiply inherited classes/variables}
 
 The_implementation does not check the equivalence of modifiers, and
 arbitrary selects one modification.  See
